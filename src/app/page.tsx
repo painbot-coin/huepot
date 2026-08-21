@@ -1,5 +1,5 @@
 import { GameClient } from "@/components/GameClient";
 
 export default function Home() {
-  return <GameClient />;
+  return <GameClient slug="classic" />;
 }

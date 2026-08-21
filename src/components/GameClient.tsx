@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -10,9 +11,24 @@ import {
   type CSSProperties,
   type MouseEvent,
 } from "react";
+import { CreateRoomForm } from "@/components/CreateRoomForm";
+import {
+  IconChat,
+  IconCoin,
+  IconHideLeft,
+  IconPlus,
+  IconShowLeft,
+  IconShowRight,
+  IconTable,
+  IconUsers,
+} from "@/components/Icons";
 import { PadRune } from "@/components/PadRune";
-import { COLORS, colorById, type ColorId } from "@/lib/colors";
+import { PlayerBoard } from "@/components/PlayerBoard";
+import { RoomFeed } from "@/components/RoomFeed";
+import { SearchDock } from "@/components/SearchDock";
+import { colorById, type ColorId } from "@/lib/colors";
 import { REVEAL_SECONDS } from "@/lib/config";
+import { emitFx } from "@/lib/fx";
 import { formatClock, formatUsdt } from "@/lib/money";
 import type { GameState, PublicRound } from "@/lib/types";
 
@@ -40,7 +56,12 @@ function estimateIfWins(round: PublicRound, colorId: ColorId) {
   return yourClicks * round.clickPrice + (yourClicks / colorClicks) * losingPot;
 }
 
-export function GameClient() {
+export function GameClient({ slug }: { slug: string }) {
+  const router = useRouter();
+  const [pane, setPane] = useState<"play" | "rooms" | "table" | "chat">("play");
+  const [railOpen, setRailOpen] = useState(true);
+  const [newsOpen, setNewsOpen] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [state, setState] = useState<GameState | null>(null);
   const [error, setError] = useState("");
   const [busyColor, setBusyColor] = useState<ColorId | null>(null);
@@ -50,26 +71,88 @@ export function GameClient() {
   const [potPulse, setPotPulse] = useState(false);
   const skew = useRef(0);
   const lastPot = useRef(0);
+  const lastStatus = useRef("");
+  const lastRound = useRef(0);
+  const urgentSent = useRef(false);
   const burstId = useRef(0);
 
   const applyState = useCallback((next: GameState) => {
+    if (next.room.slug !== slug) return;
     skew.current = Date.now() - next.now;
     if (next.round.pot > lastPot.current) {
       setPotPulse(true);
       window.setTimeout(() => setPotPulse(false), 700);
+      if (lastPot.current > 0) {
+        emitFx({
+          kind: "pot",
+          color: "#ffb020",
+          label: `Pot surge · ${formatUsdt(next.round.pot)} USDT`,
+        });
+      }
+    }
+    if (next.round.status === "revealing" && lastStatus.current !== "revealing") {
+      const winnerId = next.round.result?.winners[0];
+      if (winnerId) {
+        const winner = colorById(winnerId);
+        emitFx({
+          kind: "take",
+          color: winner.hex,
+          label: `${winner.name} takes the pot`,
+        });
+      }
+    }
+    if (next.round.number !== lastRound.current && lastRound.current > 0) {
+      urgentSent.current = false;
+      emitFx({
+        kind: "round",
+        color: "#2ea8ff",
+        label: `Round #${next.round.number} live`,
+      });
     }
     lastPot.current = next.round.pot;
+    lastStatus.current = next.round.status;
+    lastRound.current = next.round.number;
     setState(next);
-  }, []);
+  }, [slug]);
 
   const refresh = useCallback(async () => {
     try {
-      applyState(await readApi("/api/state"));
+      applyState(await readApi(`/api/rooms/${slug}/state`));
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load game");
+      const message = err instanceof Error ? err.message : "Could not load game";
+      setError(message);
+      if (message.toLowerCase().includes("not open") && slug !== "classic") {
+        router.replace("/rooms/classic");
+      }
     }
-  }, [applyState]);
+  }, [applyState, router, slug]);
+
+  useEffect(() => {
+    lastPot.current = 0;
+    lastStatus.current = "";
+    lastRound.current = 0;
+    urgentSent.current = false;
+    setState(null);
+  }, [slug]);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("huepot-rail") === "0") setRailOpen(false);
+      if (window.localStorage.getItem("huepot-news") === "0") setNewsOpen(false);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("huepot-rail", railOpen ? "1" : "0");
+      window.localStorage.setItem("huepot-news", newsOpen ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [railOpen, newsOpen]);
 
   useEffect(() => {
     void refresh();
@@ -93,13 +176,20 @@ export function GameClient() {
     return state.round.endsAt - now;
   }, [now, state]);
 
+  useEffect(() => {
+    if (!state || state.round.status !== "live") return;
+    if (remainingMs > 0 && remainingMs < 10_000 && !urgentSent.current) {
+      urgentSent.current = true;
+      emitFx({ kind: "urgent", color: "#ff355e", label: "Final seconds" });
+    }
+  }, [remainingMs, state]);
+
   const leader = useMemo(() => {
     if (!state) return [];
-    const max = Math.max(...COLORS.map((color) => state.round.totals[color.id]));
+    const ids = state.round.buttonIds;
+    const max = Math.max(...ids.map((id) => state.round.totals[id]));
     if (max <= 0) return [];
-    return COLORS.filter((color) => state.round.totals[color.id] === max).map(
-      (color) => color.id,
-    );
+    return ids.filter((id) => state.round.totals[id] === max);
   }, [state]);
 
   async function onClick(colorId: ColorId, event: MouseEvent<HTMLButtonElement>) {
@@ -113,6 +203,7 @@ export function GameClient() {
     };
     setBursts((list) => [...list.slice(-8), burst]);
     setSparks((list) => [...list.slice(-6), { id: burst.id, colorId }]);
+    emitFx({ kind: "click", color: colorById(colorId).hex });
     window.setTimeout(() => {
       setBursts((list) => list.filter((item) => item.id !== burst.id));
       setSparks((list) => list.filter((item) => item.id !== burst.id));
@@ -122,7 +213,7 @@ export function GameClient() {
     setError("");
     try {
       applyState(
-        await readApi("/api/click", {
+        await readApi(`/api/rooms/${slug}/click`, {
           method: "POST",
           body: JSON.stringify({ colorId }),
         }),
@@ -139,12 +230,21 @@ export function GameClient() {
     return (
       <div className="loader-stage">
         <div className="loader-ring" />
-        <p>Opening the arena…</p>
+        <p>{error || "Opening the arena…"}</p>
+        {error ? (
+          <Link className="underline" href="/">
+            Back to rooms
+          </Link>
+        ) : null}
       </div>
     );
   }
 
-  const { user, round } = state;
+  const { user, round, room, feed } = state;
+  const rooms = state.rooms ?? [];
+  const seats = state.seats ?? [];
+  const table = round.buttonIds.map((id) => colorById(id));
+  const liveLeft = room.closesAt ? room.closesAt - now : null;
   const revealing = round.status === "revealing";
   const urgent = !revealing && remainingMs > 0 && remainingMs < 10_000;
   const canClick =
@@ -155,13 +255,75 @@ export function GameClient() {
   const winnerColor = winner ? colorById(winner) : null;
 
   return (
+    <div className="pit-app">
+      <div className="pit-top">
+        <SearchDock onPickRoom={(next) => router.push(`/rooms/${next}`)} />
+        <button aria-label="Create room" className="pit-create" onClick={() => setCreating(true)} type="button">
+          <IconPlus />
+        </button>
+      </div>
+      <div className={`pit-grid ${railOpen ? "" : "is-rail-off"} ${newsOpen ? "" : "is-news-off"}`}>
+        <aside className={`pit-rail ${pane === "rooms" ? "is-open" : ""} ${railOpen ? "" : "is-slim"}`}>
+          <div className="pit-rail-head">
+            <button
+              aria-label="Hide rooms"
+              className="pit-ico desk-only"
+              onClick={() => setRailOpen(false)}
+              type="button"
+            >
+              <IconHideLeft />
+            </button>
+            <button aria-label="Create room" className="pit-ico" onClick={() => setCreating(true)} type="button">
+              <IconPlus />
+            </button>
+            <button
+              aria-label="Show rooms"
+              className="pit-ico pit-slim-open"
+              onClick={() => setRailOpen(true)}
+              type="button"
+            >
+              <IconShowLeft />
+            </button>
+          </div>
+          <div className="pit-rail-list">
+            {rooms.map((item) => (
+              <button
+                className={`pit-room ${item.slug === slug ? "is-on" : ""}`}
+                key={item.slug}
+                onClick={() => {
+                  router.push(`/rooms/${item.slug}`);
+                  setPane("play");
+                }}
+                type="button"
+              >
+                <strong>
+                  {item.name}
+                  <em className={`pit-kind is-${item.kind}`} title={item.kind === "basic" ? "No fee" : "Custom"} />
+                </strong>
+                <span>
+                  {item.buttonCount} · {formatUsdt(item.clickPrice)} · {formatUsdt(item.pot)}
+                  {item.closesAt ? ` · ${formatClock(item.closesAt - now)}` : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+        </aside>
+        <div className={`pit-main ${pane === "play" ? "is-open" : ""}`}>
     <div className="game-stage mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:py-8">
+      <p className="room-back">
+        <span>{room.name}</span>
+        <span>
+          {room.buttonCount} coins · {formatUsdt(room.clickPrice)} USDT · {room.roundSeconds}s
+          {liveLeft != null ? ` · table ${formatClock(liveLeft)}` : ""}
+        </span>
+      </p>
       {revealing && winnerColor ? (
         <div
           className="take-veil"
           style={
             {
               "--pad": winnerColor.hex,
+              "--ink": winnerColor.ink,
               "--glow": winnerColor.glow,
             } as CSSProperties
           }
@@ -176,7 +338,7 @@ export function GameClient() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-              {revealing ? "Winner lock" : `Round #${round.number} · live pot`}
+              {revealing ? "Winner lock" : `${room.name} · round #${round.number}`}
             </p>
             <p className={`font-display pot-value text-3xl text-white ${potPulse ? "is-pulse" : ""}`}>
               {formatUsdt(round.pot)}{" "}
@@ -264,8 +426,8 @@ export function GameClient() {
         </p>
       ) : null}
 
-      <div className="pad-grid grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {COLORS.map((color, index) => {
+      <div className="pad-grid">
+        {table.map((color, index) => {
           const clicks = round.totals[color.id];
           const yours = round.yourClicks[color.id];
           const share =
@@ -276,68 +438,109 @@ export function GameClient() {
             revealing && round.result?.winners.includes(color.id);
           const dimmed = revealing && !taken;
           return (
-            <button
-              key={color.id}
-              type="button"
-              disabled={!canClick}
-              onClick={(event) => void onClick(color.id, event)}
-              className={`color-pad ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
-              style={{
-                "--pad": color.hex,
-                "--ink": color.ink,
-                "--glow": color.glow,
-                animationDelay: `${index * 90}ms`,
-              } as CSSProperties}
-            >
-              <span className="pad-sheen" />
-              <span className="pad-orbit" />
-              <PadRune id={color.id} />
-              {bursts
-                .filter((burst) => burst.color === color.hex)
-                .map((burst) => (
-                  <span
-                    className="pad-burst"
-                    key={burst.id}
-                    style={{ left: burst.x, top: burst.y }}
-                  />
-                ))}
-              <div className="relative z-[1] flex items-start justify-between">
-                <span className="font-display text-3xl">{color.name}</span>
+            <div className="coin-slot" key={color.id}>
+              <button
+                type="button"
+                disabled={!canClick}
+                onClick={(event) => void onClick(color.id, event)}
+                className={`color-pad ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
+                style={{
+                  "--pad": color.hex,
+                  "--ink": color.ink,
+                  "--glow": color.glow,
+                  animationDelay: `${index * 90}ms`,
+                } as CSSProperties}
+              >
+                <span className="coin-reeds" />
+                <span className="coin-core" />
+                <span className="pad-sheen" />
+                <span className="pad-orbit" />
+                <PadRune id={color.id} />
+                {bursts
+                  .filter((burst) => burst.color === color.hex)
+                  .map((burst) => (
+                    <span
+                      className="pad-burst"
+                      key={burst.id}
+                      style={{ left: burst.x, top: burst.y }}
+                    />
+                  ))}
                 {leading && clicks > 0 ? (
                   <span className="lead-chip">Biggest</span>
                 ) : null}
-              </div>
-              <div className="relative z-[1] mt-6 flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-widest opacity-70">
-                    Clicks
-                  </p>
-                  <p className="count-pop font-display text-6xl leading-none">
-                    {clicks}
-                  </p>
+                <div className="coin-copy">
+                  <span className="coin-name font-display">{color.name}</span>
+                  <span className="count-pop coin-count font-display">{clicks}</span>
+                  <span className="coin-you">You {yours}</span>
                 </div>
-                <div className="text-right">
-                  <p className="text-[11px] uppercase tracking-widest opacity-70">
-                    You
-                  </p>
-                  <p className="font-display text-3xl leading-none">{yours}</p>
-                </div>
-              </div>
-              <div className="relative z-[1] mt-5 h-2 overflow-hidden rounded-full bg-black/25">
-                <div
-                  className="share-fill h-full"
-                  style={{ width: `${share}%` }}
-                />
-              </div>
-              <p className="relative z-[1] mt-3 text-sm opacity-80">
+              </button>
+              <p className="coin-meta">
                 {yours > 0
                   ? `If ${color.name} takes: ~${formatUsdt(estimated)} USDT`
-                  : `Click to join · ${formatUsdt(round.clickPrice)} USDT`}
+                  : `1 click · ${formatUsdt(round.clickPrice)} USDT`}
               </p>
-            </button>
+              <div className="coin-share">
+                <div className="share-fill" style={{ width: `${share}%`, background: color.hex }} />
+              </div>
+            </div>
           );
         })}
       </div>
+    </div>
+        <div className="pit-table-desktop">
+          <PlayerBoard buttonIds={round.buttonIds} seats={seats} />
+        </div>
+        </div>
+        <div className={`pit-chat ${pane === "chat" ? "is-open" : ""} ${newsOpen ? "" : "is-slim"}`}>
+          <RoomFeed
+            feed={feed}
+            onHide={() => setNewsOpen(false)}
+            onState={applyState}
+            slug={slug}
+            user={user}
+          />
+          <button
+            aria-label="Show news"
+            className="pit-ico pit-slim-open"
+            onClick={() => setNewsOpen(true)}
+            type="button"
+          >
+            <IconShowRight />
+          </button>
+        </div>
+        <div className={`pit-sheet ${pane === "table" ? "is-open" : ""}`}>
+          <PlayerBoard buttonIds={round.buttonIds} seats={seats} />
+        </div>
+      </div>
+      <nav className="pit-tabs">
+        <button aria-label="Rooms" className={pane === "rooms" ? "is-on" : ""} onClick={() => setPane("rooms")} type="button">
+          <IconUsers />
+        </button>
+        <button aria-label="Play" className={pane === "play" ? "is-on" : ""} onClick={() => setPane("play")} type="button">
+          <IconCoin />
+        </button>
+        <button aria-label="Table" className={pane === "table" ? "is-on" : ""} onClick={() => setPane("table")} type="button">
+          <IconTable />
+        </button>
+        <button aria-label="News" className={pane === "chat" ? "is-on" : ""} onClick={() => setPane("chat")} type="button">
+          <IconChat />
+        </button>
+      </nav>
+      {creating ? (
+        <div className="pit-modal" onClick={() => setCreating(false)}>
+          <div onClick={(event) => event.stopPropagation()}>
+            <CreateRoomForm
+              onCreated={(next) => {
+                setCreating(false);
+                router.push(`/rooms/${next}`);
+              }}
+            />
+            <button className="nav-link mt-3" onClick={() => setCreating(false)} type="button">
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -351,7 +554,7 @@ function ResultCard({
 }) {
   const yours = result.payouts.find((payout) => payout.playerId === playerId);
   const names = result.winners
-    .map((id) => COLORS.find((color) => color.id === id)?.name)
+    .map((id) => colorById(id).name)
     .join(" & ");
 
   if (result.kind === "empty") {

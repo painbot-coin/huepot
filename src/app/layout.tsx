@@ -30,8 +30,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${outfit.variable} ${cinzel.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <Atmosphere />
         <SiteHeader user={user} />
         {user && !user.emailVerified ? <VerifyBanner email={user.email} /> : null}

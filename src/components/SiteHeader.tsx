@@ -7,12 +7,16 @@ import type { PublicUser } from "@/lib/types";
 export function SiteHeader({ user }: { user: PublicUser | null }) {
   return (
     <header className="site-header">
+      <div className="site-header-inner">
       <Link className="brand" href="/">
         Huepot
       </Link>
       <nav className="site-nav">
         <Link className="nav-link" href="/">
-          Play
+          Rooms
+        </Link>
+        <Link className="nav-link" href="/rooms/new">
+          Create
         </Link>
         <Link className="nav-link" href="/how-it-works">
           How it works
@@ -43,6 +47,7 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
           </>
         )}
       </nav>
+      </div>
     </header>
   );
 }

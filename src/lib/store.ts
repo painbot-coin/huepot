@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
-import type { StoreData, User } from "./types";
+import type { Room, StoreData, User } from "./types";
+import { ensureRooms } from "./rooms";
 
 const STORE_PATH = path.join(process.cwd(), "data", "store.json");
 
@@ -9,6 +10,7 @@ const emptyStore = (): StoreData => ({
   sessions: {},
   oauthStates: {},
   notifications: [],
+  rooms: {},
   round: null,
   roundNumber: 0,
   txs: [],
@@ -34,15 +36,29 @@ function normalize(raw: Partial<StoreData> | null): StoreData {
   for (const [id, user] of Object.entries(raw.users ?? {})) {
     users[id] = normalizeUser(user);
   }
-  return {
+  const rooms: Record<string, Room> = {};
+  for (const [slug, room] of Object.entries(raw.rooms ?? {})) {
+    rooms[slug] = {
+      ...room,
+      liveMinutes: room.liveMinutes ?? null,
+      closesAt: room.closesAt ?? null,
+      events: room.events ?? [],
+      playerIds: room.playerIds ?? [],
+      roundNumber: room.roundNumber ?? 0,
+    };
+  }
+  const store: StoreData = {
     users,
     sessions: raw.sessions ?? {},
     oauthStates: raw.oauthStates ?? {},
     notifications: raw.notifications ?? [],
+    rooms,
     round: raw.round ?? null,
     roundNumber: raw.roundNumber ?? 0,
     txs: raw.txs ?? [],
   };
+  ensureRooms(store);
+  return store;
 }
 
 let queue: Promise<unknown> = Promise.resolve();

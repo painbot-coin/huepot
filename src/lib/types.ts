@@ -12,6 +12,8 @@ export type NoticeKind =
   | "payout"
   | "refund"
   | "system";
+export type RoomKind = "basic" | "custom";
+export type RoomEventKind = "chat" | "system" | "payout" | "refund" | "round" | "join";
 
 export type PlayerClicks = Record<ColorId, number>;
 
@@ -34,9 +36,37 @@ export type Round = {
   endsAt: number;
   revealUntil: number | null;
   clickPrice: number;
+  buttonIds: ColorId[];
   totals: Record<ColorId, number>;
   clicks: Record<string, PlayerClicks>;
   result: RoundResult | null;
+};
+
+export type RoomEvent = {
+  id: string;
+  kind: RoomEventKind;
+  userId: string | null;
+  username: string | null;
+  body: string;
+  createdAt: number;
+};
+
+export type Room = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: RoomKind;
+  ownerId: string | null;
+  buttonCount: number;
+  clickPrice: number;
+  roundSeconds: number;
+  createdAt: number;
+  liveMinutes: number | null;
+  closesAt: number | null;
+  roundNumber: number;
+  round: Round | null;
+  playerIds: string[];
+  events: RoomEvent[];
 };
 
 export type StoredWallet = {
@@ -96,6 +126,7 @@ export type StoreData = {
   sessions: Record<string, Session>;
   oauthStates: Record<string, OAuthState>;
   notifications: Notice[];
+  rooms: Record<string, Room>;
   round: Round | null;
   roundNumber: number;
   txs: Tx[];
@@ -135,6 +166,7 @@ export type PublicRound = {
   endsAt: number;
   revealUntil: number | null;
   clickPrice: number;
+  buttonIds: ColorId[];
   totals: Record<ColorId, number>;
   yourClicks: PlayerClicks;
   totalClicks: number;
@@ -142,8 +174,54 @@ export type PublicRound = {
   result: RoundResult | null;
 };
 
+export type PublicRoomCard = {
+  slug: string;
+  name: string;
+  kind: RoomKind;
+  ownerName: string | null;
+  buttonCount: number;
+  clickPrice: number;
+  roundSeconds: number;
+  status: RoundStatus;
+  pot: number;
+  players: number;
+  roundNumber: number;
+  liveMinutes: number | null;
+  closesAt: number | null;
+};
+
+export type PublicSeat = {
+  userId: string;
+  username: string;
+  you: boolean;
+  balance: number;
+  totalClicks: number;
+  spent: number;
+  clicks: Record<ColorId, number>;
+  estimated: number;
+};
+
+export type PublicRoom = PublicRoomCard & {
+  id: string;
+};
+
 export type GameState = {
   now: number;
   user: PublicUser | null;
   round: PublicRound;
+  room: PublicRoom;
+  feed: RoomEvent[];
+  rooms: PublicRoomCard[];
+  seats: PublicSeat[];
+};
+
+export type SearchHit = {
+  rooms: PublicRoomCard[];
+  users: { username: string; rooms: { slug: string; name: string }[] }[];
+};
+
+export type LobbyState = {
+  now: number;
+  user: PublicUser | null;
+  rooms: PublicRoomCard[];
 };

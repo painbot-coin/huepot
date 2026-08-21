@@ -1,51 +1,336 @@
-const MOTES = [
-  { x: 6, y: 78, d: 13, delay: 0 },
-  { x: 14, y: 22, d: 18, delay: 2 },
-  { x: 22, y: 64, d: 11, delay: 4 },
-  { x: 31, y: 12, d: 16, delay: 1 },
-  { x: 38, y: 86, d: 14, delay: 6 },
-  { x: 47, y: 40, d: 20, delay: 3 },
-  { x: 55, y: 70, d: 12, delay: 8 },
-  { x: 63, y: 18, d: 17, delay: 5 },
-  { x: 71, y: 54, d: 15, delay: 1.5 },
-  { x: 78, y: 8, d: 19, delay: 7 },
-  { x: 84, y: 82, d: 13, delay: 2.5 },
-  { x: 91, y: 36, d: 16, delay: 4.5 },
-  { x: 11, y: 48, d: 21, delay: 9 },
-  { x: 28, y: 90, d: 12, delay: 3.5 },
-  { x: 42, y: 28, d: 14, delay: 6.5 },
-  { x: 58, y: 94, d: 18, delay: 0.8 },
-  { x: 69, y: 33, d: 11, delay: 10 },
-  { x: 88, y: 61, d: 15, delay: 2.2 },
-  { x: 4, y: 8, d: 17, delay: 5.5 },
-  { x: 96, y: 14, d: 13, delay: 7.5 },
-  { x: 50, y: 6, d: 22, delay: 1.2 },
-  { x: 73, y: 76, d: 14, delay: 8.5 },
-];
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { FxDetail } from "@/lib/fx";
+
+const PALETTE = ["#ff6b8a", "#5eb8ff", "#e4ff6a", "#ffc45c", "#f6f3ec"];
+
+const TINT: Record<string, string> = {
+  "#ff355e": "#ffb0c0",
+  "#2ea8ff": "#9ad4ff",
+  "#d4ff2e": "#e8ff9a",
+  "#ffb020": "#ffd27a",
+};
+
+type Particle = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  r: number;
+  a: number;
+  color: string;
+  life: number;
+  kind: "dust" | "ember" | "spark" | "streak" | "coin";
+  spin: number;
+  spinV: number;
+};
+
+type TickerItem = { id: number; text: string; color: string };
+
+function rand(min: number, max: number) {
+  return min + Math.random() * (max - min);
+}
+
+function makeDust(w: number, h: number): Particle {
+  return {
+    x: Math.random() * w,
+    y: Math.random() * h,
+    vx: rand(-0.18, 0.18),
+    vy: rand(-0.42, -0.12),
+    r: rand(2.2, 3.8),
+    a: rand(0.7, 1),
+    color: PALETTE[Math.floor(Math.random() * PALETTE.length)]!,
+    life: rand(400, 900),
+    kind: "dust",
+    spin: 0,
+    spinV: 0,
+  };
+}
+
+function makeCoin(w: number, h: number): Particle {
+  return {
+    x: Math.random() * w,
+    y: Math.random() * h,
+    vx: rand(-0.28, 0.28),
+    vy: rand(-0.2, 0.12),
+    r: rand(9, 18),
+    a: rand(0.5, 0.85),
+    color: PALETTE[Math.floor(Math.random() * 4)]!,
+    life: rand(700, 1600),
+    kind: "coin",
+    spin: rand(0, Math.PI * 2),
+    spinV: rand(-0.018, 0.018),
+  };
+}
+
+function burst(w: number, h: number, color: string, count: number): Particle[] {
+  const cx = w * 0.5;
+  const cy = h * 0.42;
+  return Array.from({ length: count }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = rand(1.2, 6);
+    return {
+      x: cx,
+      y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - rand(0.4, 1.8),
+      r: rand(2.2, 4.2),
+      a: 1,
+      color,
+      life: rand(40, 90),
+      kind: "spark" as const,
+      spin: 0,
+      spinV: 0,
+    };
+  });
+}
 
 export function Atmosphere() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ticker, setTicker] = useState<TickerItem[]>([
+    { id: 0, text: "Color coins · same price on every face", color: "#ffd27a" },
+    { id: 1, text: "Crimson · Azure · Volt · Amber", color: "#ffb0c0" },
+    { id: 2, text: "Biggest color takes the pot", color: "#9ad4ff" },
+  ]);
+  const [mode, setMode] = useState<"idle" | "urgent" | "take">("idle");
+  const [wash, setWash] = useState("#ffb020");
+  const reduced = useRef(false);
+  const tickId = useRef(3);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reduced.current = media.matches;
+    const canvas = canvasRef.current;
+    if (!canvas || reduced.current) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let w = 0;
+    let h = 0;
+    let frame = 0;
+    const particles: Particle[] = [];
+    let running = true;
+
+    function resize() {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas!.width = w * dpr;
+      canvas!.height = h * dpr;
+      canvas!.style.width = `${w}px`;
+      canvas!.style.height = `${h}px`;
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function seed() {
+      particles.length = 0;
+      const dust = Math.min(56, Math.floor((w * h) / 22000));
+      for (let i = 0; i < dust; i += 1) particles.push(makeDust(w, h));
+      for (let i = 0; i < 16; i += 1) particles.push(makeCoin(w, h));
+    }
+
+    function spawnStreak() {
+      particles.push({
+        x: rand(0, w),
+        y: rand(-40, h * 0.4),
+        vx: rand(6, 11),
+        vy: rand(2.5, 5),
+        r: 2.2,
+        a: 1,
+        color: PALETTE[Math.floor(Math.random() * 4)]!,
+        life: rand(28, 48),
+        kind: "streak",
+        spin: 0,
+        spinV: 0,
+      });
+    }
+
+    function tossCoins(color: string, count: number, fromBottom = false) {
+      for (let i = 0; i < count; i += 1) {
+        particles.push({
+          x: fromBottom ? rand(w * 0.18, w * 0.82) : w * 0.5 + rand(-80, 80),
+          y: fromBottom ? h + 12 : h * 0.42,
+          vx: rand(-1.4, 1.4),
+          vy: fromBottom ? rand(-3.4, -1.6) : rand(-2.8, -0.6),
+          r: rand(8, 16),
+          a: 1,
+          color,
+          life: rand(70, 120),
+          kind: "coin",
+          spin: rand(0, Math.PI * 2),
+          spinV: rand(-0.08, 0.08),
+        });
+      }
+    }
+
+    function onFx(event: CustomEvent<FxDetail>) {
+      const detail = event.detail;
+      if (!detail) return;
+      const color = detail.color || "#ffb020";
+      const tint = TINT[color.toLowerCase()] || "#f3efe6";
+      if (detail.kind === "take") {
+        particles.push(...burst(w, h, color, 48));
+        tossCoins(color, 18);
+        setMode("take");
+        setWash(color);
+        window.setTimeout(() => setMode("idle"), 2800);
+      } else if (detail.kind === "click") {
+        particles.push(...burst(w, h, color, 10));
+        tossCoins(color, 4);
+      } else if (detail.kind === "pot") {
+        tossCoins("#ffb020", 10, true);
+      } else if (detail.kind === "urgent") {
+        setMode("urgent");
+      } else if (detail.kind === "round") {
+        setMode("idle");
+        spawnStreak();
+      }
+      if (detail.label) {
+        const id = tickId.current++;
+        setTicker((list) =>
+          [{ id, text: detail.label!, color: tint }, ...list].slice(0, 8),
+        );
+      }
+    }
+
+    resize();
+    seed();
+    window.addEventListener("resize", resize);
+    window.addEventListener("huepot:fx", onFx);
+
+    const flavor = [
+      { text: "Color coins in the pit", color: "#ffd27a" },
+      { text: "Azure tide rolling in", color: "#9ad4ff" },
+      { text: "Volt spark on the floor", color: "#e8ff9a" },
+      { text: "Amber heat in the pot", color: "#ffd27a" },
+      { text: "Same price on every coin", color: "#f3efe6" },
+    ];
+    const flavorTimer = window.setInterval(() => {
+      const pick = flavor[Math.floor(Math.random() * flavor.length)]!;
+      const id = tickId.current++;
+      setTicker((list) => [{ id, text: pick.text, color: pick.color }, ...list].slice(0, 8));
+      spawnStreak();
+    }, 7000);
+
+    let lastMeteor = 0;
+    function draw(now: number) {
+      if (!running || !ctx) return;
+      frame = requestAnimationFrame(draw);
+      ctx.clearRect(0, 0, w, h);
+
+      if (now - lastMeteor > 2800) {
+        spawnStreak();
+        lastMeteor = now;
+      }
+
+      for (let i = particles.length - 1; i >= 0; i -= 1) {
+        const p = particles[i]!;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 1;
+        p.spin += p.spinV;
+        if (p.kind === "spark" || p.kind === "ember") {
+          p.vy += 0.04;
+          p.a *= 0.97;
+        }
+        if (p.kind === "coin" && p.life < 80) {
+          p.a *= 0.98;
+        }
+        if (p.kind === "dust" || (p.kind === "coin" && p.life > 200)) {
+          if (p.y < -24) p.y = h + 16;
+          if (p.y > h + 24) p.y = -16;
+          if (p.x < -24) p.x = w + 16;
+          if (p.x > w + 24) p.x = -16;
+        }
+        if (p.kind === "coin" && p.life < 200) {
+          p.vy += 0.045;
+        }
+        if (p.life <= 0 || p.a < 0.03) {
+          if (p.kind === "dust") particles[i] = makeDust(w, h);
+          else if (p.kind === "coin" && p.life <= 0 && p.a > 0.4) particles[i] = makeCoin(w, h);
+          else particles.splice(i, 1);
+          continue;
+        }
+        ctx.shadowBlur = 0;
+        if (p.kind === "coin") {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0.35, p.a);
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.spin);
+          ctx.scale(1, 0.62);
+          ctx.beginPath();
+          ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+          ctx.lineWidth = Math.max(1.6, p.r * 0.18);
+          ctx.strokeStyle = "rgba(255, 220, 150, 0.95)";
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(0, 0, p.r * 0.58, 0, Math.PI * 2);
+          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+          ctx.stroke();
+          ctx.restore();
+          continue;
+        }
+        ctx.globalAlpha = p.kind === "dust" ? Math.max(0.55, p.a) : Math.max(0, p.a);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = p.kind === "streak" ? 10 : 6;
+        if (p.kind === "streak") {
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = 2.6;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - p.vx * 6, p.y - p.vy * 6);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    frame = requestAnimationFrame(draw);
+    return () => {
+      running = false;
+      cancelAnimationFrame(frame);
+      window.clearInterval(flavorTimer);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("huepot:fx", onFx);
+    };
+  }, []);
+
   return (
-    <div aria-hidden="true" className="fx-root">
+    <>
+    <div aria-hidden="true" className={`fx-root is-${mode}`}>
+      <div className="fx-felt" />
+      <div className="fx-table" />
       <div className="fx-aurora fx-aurora-a" />
       <div className="fx-aurora fx-aurora-b" />
       <div className="fx-aurora fx-aurora-c" />
-      <div className="fx-stars" />
-      <div className="fx-veil" />
-      <div className="fx-motes">
-        {MOTES.map((mote, index) => (
-          <span
-            className="fx-mote"
-            key={index}
-            style={{
-              left: `${mote.x}%`,
-              top: `${mote.y}%`,
-              animationDuration: `${mote.d}s`,
-              animationDelay: `${mote.delay}s`,
-            }}
-          />
-        ))}
-      </div>
+      <div className="fx-aurora fx-aurora-d" />
+      <div
+        className="fx-wash"
+        style={{ background: `radial-gradient(circle at 50% 18%, ${wash}44, transparent 46%)` }}
+      />
+      <canvas className="fx-canvas" ref={canvasRef} />
       <div className="fx-vignette" />
     </div>
+    <div aria-hidden="true" className="fx-ticker">
+      <div className="fx-ticker-track">
+        {[...ticker, ...ticker].map((item, index) => (
+          <span key={`${item.id}-${index}`} style={{ color: item.color }}>
+            {item.text}
+          </span>
+        ))}
+      </div>
+    </div>
+    </>
   );
 }
