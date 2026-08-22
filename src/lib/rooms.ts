@@ -15,7 +15,7 @@ import {
   MIN_ROUND_SECONDS,
   ROUND_SECONDS,
 } from "./config";
-import type { Room, RoomEvent, RoomEventKind, Round, StoreData } from "./types";
+import type { Room, RoomEventKind, Round, StoreData } from "./types";
 
 export type BasicRoomDef = {
   slug: string;
