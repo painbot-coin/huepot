@@ -74,6 +74,7 @@ export function GameClient({ slug }: { slug: string }) {
   const lastStatus = useRef("");
   const lastRound = useRef(0);
   const urgentSent = useRef(false);
+  const fogSent = useRef(false);
   const burstId = useRef(0);
 
   const applyState = useCallback((next: GameState) => {
@@ -99,10 +100,17 @@ export function GameClient({ slug }: { slug: string }) {
           color: winner.hex,
           label: `${winner.name} takes the pot`,
         });
+      } else {
+        emitFx({
+          kind: "round",
+          color: "#c9c4d8",
+          label: "The board is back",
+        });
       }
     }
     if (next.round.number !== lastRound.current && lastRound.current > 0) {
       urgentSent.current = false;
+      fogSent.current = false;
       emitFx({
         kind: "round",
         color: "#2ea8ff",
@@ -133,6 +141,7 @@ export function GameClient({ slug }: { slug: string }) {
     lastStatus.current = "";
     lastRound.current = 0;
     urgentSent.current = false;
+    fogSent.current = false;
     setState(null);
   }, [slug]);
 
@@ -184,13 +193,27 @@ export function GameClient({ slug }: { slug: string }) {
     }
   }, [remainingMs, state]);
 
+  const boardFog = Boolean(
+    state &&
+      state.round.status === "live" &&
+      (state.round.fog ||
+        ((state.room.fogSeconds ?? 0) > 0 &&
+          remainingMs <= (state.room.fogSeconds ?? 0) * 1000)),
+  );
+
+  useEffect(() => {
+    if (!boardFog || fogSent.current) return;
+    fogSent.current = true;
+    emitFx({ kind: "fog", color: "#c9c4d8", label: "Fog on the board" });
+  }, [boardFog]);
+
   const leader = useMemo(() => {
-    if (!state) return [];
+    if (!state || boardFog) return [];
     const ids = state.round.buttonIds;
     const max = Math.max(...ids.map((id) => state.round.totals[id]));
     if (max <= 0) return [];
     return ids.filter((id) => state.round.totals[id] === max);
-  }, [state]);
+  }, [boardFog, state]);
 
   async function onClick(colorId: ColorId, event: MouseEvent<HTMLButtonElement>) {
     if (!state || state.round.status !== "live" || !state.user) return;
@@ -246,6 +269,7 @@ export function GameClient({ slug }: { slug: string }) {
   const table = round.buttonIds.map((id) => colorById(id));
   const liveLeft = room.closesAt ? room.closesAt - now : null;
   const revealing = round.status === "revealing";
+  const fog = boardFog;
   const urgent = !revealing && remainingMs > 0 && remainingMs < 10_000;
   const canClick =
     Boolean(user?.emailVerified) &&
@@ -334,7 +358,7 @@ export function GameClient({ slug }: { slug: string }) {
         </div>
       ) : null}
 
-      <section className={`arena ${revealing ? "is-revealing" : ""} ${urgent ? "is-urgent" : ""}`}>
+      <section className={`arena ${revealing ? "is-revealing" : ""} ${urgent ? "is-urgent" : ""} ${fog ? "is-fog" : ""}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
@@ -347,7 +371,7 @@ export function GameClient({ slug }: { slug: string }) {
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-              {revealing ? "Next round" : "Time left"}
+              {revealing ? "Next round" : fog ? "Fog · time left" : "Time left"}
             </p>
             <p className={`font-display clock-value text-3xl tabular-nums text-white ${urgent ? "is-urgent" : ""}`}>
               {formatClock(remainingMs)}
@@ -379,6 +403,9 @@ export function GameClient({ slug }: { slug: string }) {
           </strong>{" "}
           per click. The color with the most clicks takes the other colors’
           money and splits it by click.
+          {room.fogSeconds
+            ? ` Last ${room.fogSeconds} seconds, public counts go dark.`
+            : ""}
         </p>
         {!user ? (
           <p className="text-sm text-zinc-300">
@@ -431,9 +458,11 @@ export function GameClient({ slug }: { slug: string }) {
           const clicks = round.totals[color.id];
           const yours = round.yourClicks[color.id];
           const share =
-            round.totalClicks > 0 ? (clicks / round.totalClicks) * 100 : 0;
-          const leading = leader.includes(color.id);
-          const estimated = estimateIfWins(round, color.id);
+            fog || round.totalClicks <= 0
+              ? 0
+              : (clicks / round.totalClicks) * 100;
+          const leading = !fog && leader.includes(color.id);
+          const estimated = fog ? 0 : estimateIfWins(round, color.id);
           const taken =
             revealing && round.result?.winners.includes(color.id);
           const dimmed = revealing && !taken;
@@ -443,7 +472,7 @@ export function GameClient({ slug }: { slug: string }) {
                 type="button"
                 disabled={!canClick}
                 onClick={(event) => void onClick(color.id, event)}
-                className={`color-pad ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
+                className={`color-pad ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${fog ? "is-fog" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
                 style={{
                   "--pad": color.hex,
                   "--ink": color.ink,
@@ -470,14 +499,18 @@ export function GameClient({ slug }: { slug: string }) {
                 ) : null}
                 <div className="coin-copy">
                   <span className="coin-name font-display">{color.name}</span>
-                  <span className="count-pop coin-count font-display">{clicks}</span>
+                  <span className="count-pop coin-count font-display">
+                    {fog ? "—" : clicks}
+                  </span>
                   <span className="coin-you">You {yours}</span>
                 </div>
               </button>
               <p className="coin-meta">
-                {yours > 0
-                  ? `If ${color.name} takes: ~${formatUsdt(estimated)} USDT`
-                  : `1 click · ${formatUsdt(round.clickPrice)} USDT`}
+                {fog
+                  ? "Board in fog"
+                  : yours > 0
+                    ? `If ${color.name} takes: ~${formatUsdt(estimated)} USDT`
+                    : `1 click · ${formatUsdt(round.clickPrice)} USDT`}
               </p>
               <div className="coin-share">
                 <div className="share-fill" style={{ width: `${share}%`, background: color.hex }} />
@@ -488,7 +521,7 @@ export function GameClient({ slug }: { slug: string }) {
       </div>
     </div>
         <div className="pit-table-desktop">
-          <PlayerBoard buttonIds={round.buttonIds} seats={seats} />
+          <PlayerBoard buttonIds={round.buttonIds} fog={fog} seats={seats} />
         </div>
         </div>
         <div className={`pit-chat ${pane === "chat" ? "is-open" : ""} ${newsOpen ? "" : "is-slim"}`}>
@@ -509,7 +542,7 @@ export function GameClient({ slug }: { slug: string }) {
           </button>
         </div>
         <div className={`pit-sheet ${pane === "table" ? "is-open" : ""}`}>
-          <PlayerBoard buttonIds={round.buttonIds} seats={seats} />
+          <PlayerBoard buttonIds={round.buttonIds} fog={fog} seats={seats} />
         </div>
       </div>
       <nav className="pit-tabs">

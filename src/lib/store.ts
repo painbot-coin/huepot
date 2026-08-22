@@ -42,6 +42,7 @@ function normalize(raw: Partial<StoreData> | null): StoreData {
       ...room,
       liveMinutes: room.liveMinutes ?? null,
       closesAt: room.closesAt ?? null,
+      fogSeconds: room.fogSeconds ?? null,
       events: room.events ?? [],
       playerIds: room.playerIds ?? [],
       roundNumber: room.roundNumber ?? 0,
