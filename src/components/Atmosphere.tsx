@@ -94,6 +94,7 @@ export function Atmosphere() {
     { id: 2, text: "Biggest color takes the pot", color: "#9ad4ff" },
   ]);
   const [mode, setMode] = useState<"idle" | "urgent" | "take">("idle");
+  const [foggy, setFoggy] = useState(false);
   const [wash, setWash] = useState("#ffb020");
   const reduced = useRef(false);
   const tickId = useRef(3);
@@ -112,6 +113,7 @@ export function Atmosphere() {
     let frame = 0;
     const particles: Particle[] = [];
     let running = true;
+    let foggyLoop = false;
 
     function resize() {
       w = window.innerWidth;
@@ -171,6 +173,8 @@ export function Atmosphere() {
       const color = detail.color || "#ffb020";
       const tint = TINT[color.toLowerCase()] || "#f3efe6";
       if (detail.kind === "take") {
+        foggyLoop = false;
+        setFoggy(false);
         particles.push(...burst(w, h, color, 48));
         tossCoins(color, 18);
         setMode("take");
@@ -183,7 +187,15 @@ export function Atmosphere() {
         tossCoins("#ffb020", 10, true);
       } else if (detail.kind === "urgent") {
         setMode("urgent");
+      } else if (detail.kind === "fog") {
+        foggyLoop = true;
+        setFoggy(true);
+        setWash("#c9c4d8");
+        const extra = Math.min(40, Math.floor((w * h) / 28000));
+        for (let i = 0; i < extra; i += 1) particles.push(makeDust(w, h));
       } else if (detail.kind === "round") {
+        foggyLoop = false;
+        setFoggy(false);
         setMode("idle");
         spawnStreak();
       }
@@ -206,6 +218,7 @@ export function Atmosphere() {
       { text: "Volt spark on the floor", color: "#e8ff9a" },
       { text: "Amber heat in the pot", color: "#ffd27a" },
       { text: "Same price on every coin", color: "#f3efe6" },
+      { text: "Fog Pit hides the board late", color: "#c9c4d8" },
     ];
     const flavorTimer = window.setInterval(() => {
       const pick = flavor[Math.floor(Math.random() * flavor.length)]!;
@@ -219,6 +232,13 @@ export function Atmosphere() {
       if (!running || !ctx) return;
       frame = requestAnimationFrame(draw);
       ctx.clearRect(0, 0, w, h);
+
+      if (foggyLoop) {
+        const dustCount = particles.filter((item) => item.kind === "dust").length;
+        if (dustCount < 96 && Math.random() < 0.35) {
+          particles.push(makeDust(w, h));
+        }
+      }
 
       if (now - lastMeteor > 2800) {
         spawnStreak();
@@ -308,7 +328,7 @@ export function Atmosphere() {
 
   return (
     <>
-    <div aria-hidden="true" className={`fx-root is-${mode}`}>
+    <div aria-hidden="true" className={`fx-root is-${mode} ${foggy ? "is-fog" : ""}`}>
       <div className="fx-felt" />
       <div className="fx-table" />
       <div className="fx-aurora fx-aurora-a" />
@@ -319,6 +339,7 @@ export function Atmosphere() {
         className="fx-wash"
         style={{ background: `radial-gradient(circle at 50% 18%, ${wash}44, transparent 46%)` }}
       />
+      <div className="fx-mist" />
       <canvas className="fx-canvas" ref={canvasRef} />
       <div className="fx-vignette" />
     </div>

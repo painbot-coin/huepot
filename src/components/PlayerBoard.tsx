@@ -15,9 +15,11 @@ import type { PublicSeat } from "@/lib/types";
 export function PlayerBoard({
   seats,
   buttonIds,
+  fog = false,
 }: {
   seats: PublicSeat[];
   buttonIds: ColorId[];
+  fog?: boolean;
 }) {
   return (
     <section className="player-board">
@@ -54,20 +56,29 @@ export function PlayerBoard({
             </tr>
           </thead>
           <tbody>
-            {seats.map((seat) => (
+            {seats.map((seat) => {
+              const veil = fog && !seat.you;
+              return (
               <tr className={seat.you ? "is-you" : ""} key={seat.userId}>
                 <td>
                   @{seat.username}
                   {seat.you ? " · you" : ""}
                 </td>
                 <td>{formatUsdt(seat.balance)}</td>
-                <td>{seat.totalClicks}</td>
+                <td>{veil ? "·" : seat.totalClicks}</td>
                 {buttonIds.map((id) => (
-                  <td key={id}>{seat.clicks[id] || 0}</td>
+                  <td key={id}>{veil ? "·" : seat.clicks[id] || 0}</td>
                 ))}
-                <td>{seat.estimated > 0 ? formatUsdt(seat.estimated) : "—"}</td>
+                <td>
+                  {veil
+                    ? "·"
+                    : seat.estimated > 0
+                      ? formatUsdt(seat.estimated)
+                      : "—"}
+                </td>
               </tr>
-            ))}
+              );
+            })}
             {seats.length === 0 ? (
               <tr>
                 <td colSpan={4 + buttonIds.length}>Nobody seated.</td>

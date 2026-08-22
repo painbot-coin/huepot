@@ -1,6 +1,7 @@
 export const CLICK_PRICE = 1;
 export const ROUND_SECONDS = 60;
 export const REVEAL_SECONDS = 8;
+export const FOG_SECONDS = 12;
 export const MIN_DEPOSIT = 10;
 export const MIN_WITHDRAW = 5;
 export const MIN_BUTTONS = 2;

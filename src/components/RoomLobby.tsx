@@ -7,8 +7,12 @@ import { formatUsdt } from "@/lib/money";
 import type { LobbyState, PublicRoomCard } from "@/lib/types";
 
 function blurbFor(room: PublicRoomCard) {
-  return BASIC_ROOMS.find((item) => item.slug === room.slug)?.blurb
+  const base = BASIC_ROOMS.find((item) => item.slug === room.slug)?.blurb
     ?? `Custom table · ${room.buttonCount} coins · ${room.roundSeconds}s rounds.`;
+  if (room.kind === "custom" && room.fogSeconds) {
+    return `${base} Last ${room.fogSeconds}s, the board goes dark.`;
+  }
+  return base;
 }
 
 export function RoomLobby() {
@@ -57,8 +61,8 @@ export function RoomLobby() {
         <h1 className="font-display">Pick a table. Chat the pit.</h1>
         <p>
           Basic rooms are free to open — no table fee. Make your own with coin
-          count, click price, and round time. Each room has its own feed for
-          chat, takes, and wager earnings.
+          count, click price, and round time. Fog Pit hides public counts in the
+          last 12 seconds so the last click is a guess, not a pile-on.
         </p>
         <Link className="chip-btn" href="/rooms/new">
           Create a room
@@ -100,7 +104,10 @@ function RoomCard({ room, blurb }: { room: PublicRoomCard; blurb: string }) {
   return (
     <Link className="room-card" href={`/rooms/${room.slug}`}>
       <div className="room-card-top">
-        <strong>{room.name}</strong>
+        <strong>
+          {room.name}
+          {room.fogSeconds ? <em className="fog-chip">Fog</em> : null}
+        </strong>
         <span>{room.kind === "basic" ? "No fee" : "Custom"}</span>
       </div>
       <p>{blurb}</p>

@@ -12,6 +12,7 @@ import {
   createCustomRoom,
   ensureRooms,
   findRoom,
+  isLiveFog,
   parseChat,
   postRoomEvent,
 } from "./rooms";
@@ -273,7 +274,8 @@ function tickRoom(store: StoreData, room: Room) {
   }
 }
 
-function toPublicRound(round: Round, playerId: string): PublicRound {
+function toPublicRound(room: Room, round: Round, playerId: string): PublicRound {
+  const fog = isLiveFog(room, round);
   const totalClicks = round.buttonIds.reduce(
     (sum, id) => sum + round.totals[id],
     0,
@@ -287,11 +289,12 @@ function toPublicRound(round: Round, playerId: string): PublicRound {
     revealUntil: round.revealUntil,
     clickPrice: round.clickPrice,
     buttonIds: [...round.buttonIds],
-    totals: { ...round.totals },
+    totals: fog ? emptyColorCounts() : { ...round.totals },
     yourClicks: playerClicksOn(round, playerId),
     totalClicks,
     pot: roundToCents(totalClicks * round.clickPrice),
     result: round.result,
+    fog,
   };
 }
 
@@ -309,6 +312,7 @@ function toPublicRoomCard(store: StoreData, room: Room): PublicRoomCard {
     buttonCount: room.buttonCount,
     clickPrice: room.clickPrice,
     roundSeconds: room.roundSeconds,
+    fogSeconds: room.fogSeconds ?? null,
     status: round?.status ?? "live",
     pot: roundToCents(totalClicks * room.clickPrice),
     players: room.playerIds.length,
@@ -334,6 +338,7 @@ function estimateSeat(round: Round, clicks: PlayerClicks, colorId: ColorId) {
 function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicSeat[] {
   const round = room.round;
   if (!round) return [];
+  const fog = isLiveFog(room, round);
   const ids = new Set([...room.playerIds, ...Object.keys(round.clicks)]);
   const seats: PublicSeat[] = [];
   for (const userId of ids) {
@@ -345,15 +350,17 @@ function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicS
       (sum, id) => sum + estimateSeat(round, clicks, id),
       0,
     );
+    const you = userId === viewerId;
+    const hide = fog && !you;
     seats.push({
       userId,
       username: user.username,
-      you: userId === viewerId,
+      you,
       balance: user.balance,
-      totalClicks,
-      spent: roundToCents(totalClicks * round.clickPrice),
-      clicks,
-      estimated: roundToCents(estimated),
+      totalClicks: hide ? 0 : totalClicks,
+      spent: hide ? 0 : roundToCents(totalClicks * round.clickPrice),
+      clicks: hide ? emptyClicks() : clicks,
+      estimated: hide ? 0 : roundToCents(estimated),
     });
   }
   seats.sort((a, b) => b.totalClicks - a.totalClicks || b.spent - a.spent || a.username.localeCompare(b.username));
@@ -425,7 +432,7 @@ export function getRoomState(
     now: nowMs(),
     user: publicUserFor(store, userId),
     room: toPublicRoom(store, room),
-    round: toPublicRound(round, userId ?? ""),
+    round: toPublicRound(room, round, userId ?? ""),
     feed: room.events.slice(-80),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
@@ -521,6 +528,8 @@ export function openCustomRoom(
     clickPrice?: number;
     roundSeconds?: number;
     liveMinutes?: number;
+    fog?: boolean;
+    fogSeconds?: number | null;
   },
 ) {
   const room = createCustomRoom(store, userId, input);
