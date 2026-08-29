@@ -1,5 +1,5 @@
-import { GameClient } from "@/components/GameClient";
+import { RoomLobby } from "@/components/RoomLobby";
 
 export default function Home() {
-  return <GameClient slug="classic" />;
+  return <RoomLobby />;
 }

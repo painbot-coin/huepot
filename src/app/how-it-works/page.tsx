@@ -9,8 +9,9 @@ export default function HowItWorksPage() {
       <ol>
         <li>Create an account with email or Google. Email signups need a verification link before you can invest, click, or chat.</li>
         <li>
-          Invest by sending crypto to your address on ETH (ERC-20), BNB Chain
-          (BEP-20), Tron (TRC-20), Polygon, Arbitrum, Solana, or Bitcoin.
+          Invest by sending USDT on BNB Chain (BEP-20) to your live deposit
+          address. Huepot watches that chain and credits your bank after enough
+          confirms. Other network addresses are saved for later.
         </li>
         <li>
           Join a basic room for free — Classic, Lightning, Duo, or High Table —
@@ -22,13 +23,14 @@ export default function HowItWorksPage() {
           When time is up, the color with the most clicks wins. Those clickers
           split the money from the other colors, by click. Winning clicks also
           come back. The room feed posts earnings, refunds, and table talk.
+          Each round publishes a hashed seed at open and reveals it at settle —
+          check any round on the fairness sheet.
         </li>
-        <li>If every color ties, clicks are refunded. Withdraw whenever you like.</li>
+        <li>If every color ties, clicks are refunded. Withdraw to a BNB Chain address; staff send USDT from the payout queue.</li>
       </ol>
       <p>
-        Demo deposits credit instantly so you can play without waiting on a
-        blockchain confirmation. Live chain watching can be wired to the same
-        addresses later.
+        Live play watches BNB Chain USDT and credits after confirmations. Set a
+        loss cap or cool-off from Account before you sit a long session.
       </p>
     </main>
   );

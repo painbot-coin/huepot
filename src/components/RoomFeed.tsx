@@ -40,18 +40,21 @@ export function RoomFeed({
   slug,
   feed,
   user,
+  muted,
   onState,
   onHide,
 }: {
   slug: string;
   feed: RoomEvent[];
   user: PublicUser | null;
+  muted?: boolean;
   onState: (state: GameState) => void;
   onHide?: () => void;
 }) {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reported, setReported] = useState<Record<string, boolean>>({});
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,6 +62,22 @@ export function RoomFeed({
     if (!node) return;
     node.scrollTop = node.scrollHeight;
   }, [feed.length, feed.at(-1)?.id]);
+
+  async function report(eventId: string) {
+    setError("");
+    try {
+      const response = await fetch(`/api/rooms/${slug}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not report");
+      setReported((current) => ({ ...current, [eventId]: true }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not report");
+    }
+  }
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -103,6 +122,16 @@ export function RoomFeed({
                   <time>{stamp(item.createdAt)}</time>
                 </header>
                 <p>{item.body}</p>
+                {user && item.userId && item.userId !== user.id && item.body !== "Removed." ? (
+                  <button
+                    className="mt-1 text-[10px] uppercase tracking-widest text-zinc-600"
+                    disabled={Boolean(reported[item.id])}
+                    onClick={() => void report(item.id)}
+                    type="button"
+                  >
+                    {reported[item.id] ? "Reported" : "Report"}
+                  </button>
+                ) : null}
               </div>
             </article>
           ) : (
@@ -119,7 +148,7 @@ export function RoomFeed({
         )}
         {feed.length === 0 ? <p className="room-feed-empty">Quiet table.</p> : null}
       </div>
-      {user?.emailVerified ? (
+      {user?.emailVerified && !muted ? (
         <form className="room-chat" onSubmit={(event) => void send(event)}>
           <input
             maxLength={240}
@@ -134,7 +163,11 @@ export function RoomFeed({
       ) : (
         <p className="room-chat-gate">
           {user ? (
-            <Link href="/verify-email">Verify to chat.</Link>
+            muted ? (
+              "The host muted you."
+            ) : (
+              <Link href="/verify-email">Verify to chat.</Link>
+            )
           ) : (
             <Link href="/signin">Sign in to chat.</Link>
           )}

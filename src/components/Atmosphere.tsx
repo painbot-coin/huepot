@@ -3,13 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import type { FxDetail } from "@/lib/fx";
 
-const PALETTE = ["#ff6b8a", "#5eb8ff", "#e4ff6a", "#ffc45c", "#f6f3ec"];
+const PALETTE = [
+  "#ff355e",
+  "#ff6a2a",
+  "#ffb020",
+  "#d4ff2e",
+  "#3dffb0",
+  "#7af0ff",
+  "#2ea8ff",
+  "#8b5cff",
+];
 
 const TINT: Record<string, string> = {
   "#ff355e": "#ffb0c0",
   "#2ea8ff": "#9ad4ff",
   "#d4ff2e": "#e8ff9a",
   "#ffb020": "#ffd27a",
+  "#8b5cff": "#d2c2ff",
+  "#3dffb0": "#b8ffe4",
+  "#ff6a2a": "#ffc4a8",
+  "#7af0ff": "#d7fbff",
 };
 
 type Particle = {
@@ -48,22 +61,6 @@ function makeDust(w: number, h: number): Particle {
   };
 }
 
-function makeCoin(w: number, h: number): Particle {
-  return {
-    x: Math.random() * w,
-    y: Math.random() * h,
-    vx: rand(-0.28, 0.28),
-    vy: rand(-0.2, 0.12),
-    r: rand(9, 18),
-    a: rand(0.5, 0.85),
-    color: PALETTE[Math.floor(Math.random() * 4)]!,
-    life: rand(700, 1600),
-    kind: "coin",
-    spin: rand(0, Math.PI * 2),
-    spinV: rand(-0.018, 0.018),
-  };
-}
-
 function burst(w: number, h: number, color: string, count: number): Particle[] {
   const cx = w * 0.5;
   const cy = h * 0.42;
@@ -89,8 +86,8 @@ function burst(w: number, h: number, color: string, count: number): Particle[] {
 export function Atmosphere() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ticker, setTicker] = useState<TickerItem[]>([
-    { id: 0, text: "Color coins · same price on every face", color: "#ffd27a" },
-    { id: 1, text: "Crimson · Azure · Volt · Amber", color: "#ffb0c0" },
+    { id: 0, text: "Rainbow coins · same price on every face", color: "#ffd27a" },
+    { id: 1, text: "Crimson · Azure · Volt · Amber · Violet · Mint", color: "#ffb0c0" },
     { id: 2, text: "Biggest color takes the pot", color: "#9ad4ff" },
   ]);
   const [mode, setMode] = useState<"idle" | "urgent" | "take">("idle");
@@ -101,6 +98,34 @@ export function Atmosphere() {
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     reduced.current = media.matches;
+
+    function onFx(event: CustomEvent<FxDetail>) {
+      const detail = event.detail;
+      if (!detail) return;
+      const color = detail.color || "#ffb020";
+      const tint = TINT[color.toLowerCase()] || "#f3efe6";
+      if (detail.kind === "take") {
+        setMode("take");
+        setWash(color);
+        window.setTimeout(() => setMode("idle"), 4200);
+      } else if (detail.kind === "urgent") {
+        setMode("urgent");
+      } else if (detail.kind === "round") {
+        setMode("idle");
+      }
+      if (detail.label) {
+        const id = tickId.current++;
+        setTicker((list) =>
+          [{ id, text: detail.label!, color: tint }, ...list].slice(0, 8),
+        );
+      }
+    }
+
+    window.addEventListener("huepot:fx", onFx);
+    return () => window.removeEventListener("huepot:fx", onFx);
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || reduced.current) return;
 
@@ -112,6 +137,12 @@ export function Atmosphere() {
     let frame = 0;
     const particles: Particle[] = [];
     let running = true;
+    const sparkImg = new Image();
+    const starImg = new Image();
+    const flareImg = new Image();
+    sparkImg.src = "/fx/spark.png";
+    starImg.src = "/fx/star.png";
+    flareImg.src = "/fx/flare.png";
 
     function resize() {
       w = window.innerWidth;
@@ -126,25 +157,8 @@ export function Atmosphere() {
 
     function seed() {
       particles.length = 0;
-      const dust = Math.min(56, Math.floor((w * h) / 22000));
+      const dust = Math.min(28, Math.floor((w * h) / 36000));
       for (let i = 0; i < dust; i += 1) particles.push(makeDust(w, h));
-      for (let i = 0; i < 16; i += 1) particles.push(makeCoin(w, h));
-    }
-
-    function spawnStreak() {
-      particles.push({
-        x: rand(0, w),
-        y: rand(-40, h * 0.4),
-        vx: rand(6, 11),
-        vy: rand(2.5, 5),
-        r: 2.2,
-        a: 1,
-        color: PALETTE[Math.floor(Math.random() * 4)]!,
-        life: rand(28, 48),
-        kind: "streak",
-        spin: 0,
-        spinV: 0,
-      });
     }
 
     function tossCoins(color: string, count: number, fromBottom = false) {
@@ -169,29 +183,14 @@ export function Atmosphere() {
       const detail = event.detail;
       if (!detail) return;
       const color = detail.color || "#ffb020";
-      const tint = TINT[color.toLowerCase()] || "#f3efe6";
       if (detail.kind === "take") {
-        particles.push(...burst(w, h, color, 48));
-        tossCoins(color, 18);
-        setMode("take");
-        setWash(color);
-        window.setTimeout(() => setMode("idle"), 2800);
+        particles.push(...burst(w, h, color, 36));
+        particles.push(...burst(w, h, "#ffd27a", 12));
+        tossCoins(color, 8);
       } else if (detail.kind === "click") {
-        particles.push(...burst(w, h, color, 10));
-        tossCoins(color, 4);
+        particles.push(...burst(w, h, color, 8));
       } else if (detail.kind === "pot") {
-        tossCoins("#ffb020", 10, true);
-      } else if (detail.kind === "urgent") {
-        setMode("urgent");
-      } else if (detail.kind === "round") {
-        setMode("idle");
-        spawnStreak();
-      }
-      if (detail.label) {
-        const id = tickId.current++;
-        setTicker((list) =>
-          [{ id, text: detail.label!, color: tint }, ...list].slice(0, 8),
-        );
+        tossCoins("#ffb020", 4, true);
       }
     }
 
@@ -201,29 +200,25 @@ export function Atmosphere() {
     window.addEventListener("huepot:fx", onFx);
 
     const flavor = [
-      { text: "Color coins in the pit", color: "#ffd27a" },
+      { text: "Rainbow coins in the pit", color: "#ffd27a" },
+      { text: "Crimson fire on the rim", color: "#ffb0c0" },
       { text: "Azure tide rolling in", color: "#9ad4ff" },
       { text: "Volt spark on the floor", color: "#e8ff9a" },
-      { text: "Amber heat in the pot", color: "#ffd27a" },
+      { text: "Mint glass in the felt", color: "#b8ffe4" },
+      { text: "Violet lanterns overhead", color: "#d2c2ff" },
+      { text: "Frost gleam on the rail", color: "#d7fbff" },
       { text: "Same price on every coin", color: "#f3efe6" },
     ];
     const flavorTimer = window.setInterval(() => {
       const pick = flavor[Math.floor(Math.random() * flavor.length)]!;
       const id = tickId.current++;
       setTicker((list) => [{ id, text: pick.text, color: pick.color }, ...list].slice(0, 8));
-      spawnStreak();
-    }, 7000);
+    }, 12000);
 
-    let lastMeteor = 0;
-    function draw(now: number) {
+    function draw() {
       if (!running || !ctx) return;
       frame = requestAnimationFrame(draw);
       ctx.clearRect(0, 0, w, h);
-
-      if (now - lastMeteor > 2800) {
-        spawnStreak();
-        lastMeteor = now;
-      }
 
       for (let i = particles.length - 1; i >= 0; i -= 1) {
         const p = particles[i]!;
@@ -249,11 +244,38 @@ export function Atmosphere() {
         }
         if (p.life <= 0 || p.a < 0.03) {
           if (p.kind === "dust") particles[i] = makeDust(w, h);
-          else if (p.kind === "coin" && p.life <= 0 && p.a > 0.4) particles[i] = makeCoin(w, h);
           else particles.splice(i, 1);
           continue;
         }
         ctx.shadowBlur = 0;
+        if (p.kind === "spark" && sparkImg.complete && sparkImg.naturalWidth) {
+          ctx.save();
+          ctx.globalCompositeOperation = "screen";
+          ctx.globalAlpha = Math.max(0, p.a);
+          const size = p.r * 6;
+          ctx.drawImage(sparkImg, p.x - size / 2, p.y - size / 2, size, size);
+          ctx.restore();
+          continue;
+        }
+        if (p.kind === "streak" && flareImg.complete && flareImg.naturalWidth) {
+          ctx.save();
+          ctx.globalCompositeOperation = "screen";
+          ctx.globalAlpha = Math.max(0, p.a * 0.85);
+          ctx.translate(p.x, p.y);
+          ctx.rotate(Math.atan2(p.vy, p.vx));
+          ctx.drawImage(flareImg, -18, -18, 36, 36);
+          ctx.restore();
+          continue;
+        }
+        if (p.kind === "dust" && starImg.complete && starImg.naturalWidth) {
+          ctx.save();
+          ctx.globalCompositeOperation = "screen";
+          ctx.globalAlpha = Math.max(0.25, p.a * 0.7);
+          const size = p.r * 3.4;
+          ctx.drawImage(starImg, p.x - size / 2, p.y - size / 2, size, size);
+          ctx.restore();
+          continue;
+        }
         if (p.kind === "coin") {
           ctx.save();
           ctx.globalAlpha = Math.max(0.35, p.a);
@@ -309,15 +331,21 @@ export function Atmosphere() {
   return (
     <>
     <div aria-hidden="true" className={`fx-root is-${mode}`}>
+      <div className="fx-prism" />
       <div className="fx-felt" />
-      <div className="fx-table" />
+      <div className="fx-stage">
+        <div className="fx-table" />
+      </div>
+      <div className="fx-gold-grain" />
+      <div className="fx-spark-field" />
       <div className="fx-aurora fx-aurora-a" />
       <div className="fx-aurora fx-aurora-b" />
       <div className="fx-aurora fx-aurora-c" />
       <div className="fx-aurora fx-aurora-d" />
+      <div className="fx-shine" />
       <div
         className="fx-wash"
-        style={{ background: `radial-gradient(circle at 50% 18%, ${wash}44, transparent 46%)` }}
+        style={{ background: `radial-gradient(circle at 50% 18%, ${wash}28, transparent 46%)` }}
       />
       <canvas className="fx-canvas" ref={canvasRef} />
       <div className="fx-vignette" />

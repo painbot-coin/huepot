@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+export function requestAgent(request: Request) {
+  return request.headers.get("user-agent") ?? "";
+}
+
 export function jsonError(error: unknown, fallback = "Request failed") {
   const message = error instanceof Error ? error.message : fallback;
   const status =

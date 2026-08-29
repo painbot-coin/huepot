@@ -13,7 +13,7 @@ export const NETWORKS = [
     standard: "BEP-20",
     asset: "USDT",
     family: "evm",
-    hint: "Send USDT on BNB Smart Chain (BEP-20).",
+    hint: "Live rail. Send USDT on BNB Smart Chain (BEP-20).",
   },
   {
     id: "tron",
@@ -53,7 +53,7 @@ export const NETWORKS = [
     standard: "BTC",
     asset: "BTC",
     family: "btc",
-    hint: "Send BTC. Credited as USDT play balance in demo.",
+    hint: "Send BTC. Live credit is BNB Chain USDT only.",
   },
 ] as const;
 

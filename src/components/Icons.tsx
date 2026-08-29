@@ -156,3 +156,65 @@ export function IconShowRight() {
     </svg>
   );
 }
+
+export function IconLink() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M10 13 a5 5 0 0 0 7.5.1 l1.4 -1.4 a5 5 0 0 0 -7.1 -7.1 L10.4 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M14 11 a5 5 0 0 0 -7.5 -.1 L5.1 12.3 a5 5 0 0 0 7.1 7.1 L13.6 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconClose() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M7 7 L17 17 M17 7 L7 17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconMute() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M5 10 v4 h3 l5 4 V6 L8 10 H5 z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M16.5 9.5 L20.5 14.5 M20.5 9.5 L16.5 14.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconSound() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M5 10 v4 h3 l5 4 V6 L8 10 H5 z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M16.2 9.2 a4.2 4.2 0 0 1 0 5.6 M18.6 7.2 a7 7 0 0 1 0 9.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconPause() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 8.8 v6.4 M14 8.8 v6.4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconPlay() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 8.6 L16.2 12 L10 15.4 Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconSlow() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="12" cy="13" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 13 L15.2 10.4 M8 6.2 h8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}

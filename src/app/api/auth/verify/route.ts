@@ -5,7 +5,7 @@ import {
   setSessionCookie,
   verifyEmailToken,
 } from "@/lib/auth";
-import { jsonError } from "@/lib/http";
+import { jsonError, requestAgent } from "@/lib/http";
 import { withStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const session = await withStore((store) => {
       const user = verifyEmailToken(store, body.token ?? "");
       if (cookie && store.sessions[cookie]) return null;
-      return createSession(store, user.id);
+      return createSession(store, user.id, requestAgent(request));
     });
     if (session) await setSessionCookie(session.token, session.maxAge);
     return NextResponse.json({ ok: true });

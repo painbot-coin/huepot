@@ -14,22 +14,30 @@ import {
 import { CreateRoomForm } from "@/components/CreateRoomForm";
 import {
   IconChat,
+  IconClose,
   IconCoin,
   IconHideLeft,
+  IconLink,
+  IconPause,
+  IconPlay,
   IconPlus,
   IconShowLeft,
   IconShowRight,
+  IconSlow,
   IconTable,
   IconUsers,
 } from "@/components/Icons";
 import { PadRune } from "@/components/PadRune";
+import { PitHint } from "@/components/PitHint";
 import { PlayerBoard } from "@/components/PlayerBoard";
 import { RoomFeed } from "@/components/RoomFeed";
 import { SearchDock } from "@/components/SearchDock";
+import { SoundToggle } from "@/components/SoundToggle";
 import { colorById, type ColorId } from "@/lib/colors";
 import { REVEAL_SECONDS } from "@/lib/config";
+import { shortHash } from "@/lib/fairness";
 import { emitFx } from "@/lib/fx";
-import { formatClock, formatUsdt } from "@/lib/money";
+import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
 import type { GameState, PublicRound } from "@/lib/types";
 
 type Burst = { id: number; x: number; y: number; color: string };
@@ -53,7 +61,9 @@ function estimateIfWins(round: PublicRound, colorId: ColorId) {
   if (colorClicks <= 0 || yourClicks <= 0) return 0;
   const losingClicks = round.totalClicks - colorClicks;
   const losingPot = losingClicks * round.clickPrice;
-  return yourClicks * round.clickPrice + (yourClicks / colorClicks) * losingPot;
+  const distributable =
+    losingPot - fromCents(rakeFromPot(toCents(losingPot), round.rakeBps ?? 0));
+  return yourClicks * round.clickPrice + (yourClicks / colorClicks) * distributable;
 }
 
 export function GameClient({ slug }: { slug: string }) {
@@ -62,6 +72,8 @@ export function GameClient({ slug }: { slug: string }) {
   const [railOpen, setRailOpen] = useState(true);
   const [newsOpen, setNewsOpen] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [roomName, setRoomName] = useState("");
   const [state, setState] = useState<GameState | null>(null);
   const [error, setError] = useState("");
   const [busyColor, setBusyColor] = useState<ColorId | null>(null);
@@ -97,7 +109,7 @@ export function GameClient({ slug }: { slug: string }) {
         emitFx({
           kind: "take",
           color: winner.hex,
-          label: `${winner.name} takes the pot`,
+          label: `${winner.name} takes · ${formatUsdt(next.round.pot)} USDT`,
         });
       }
     }
@@ -123,7 +135,7 @@ export function GameClient({ slug }: { slug: string }) {
       const message = err instanceof Error ? err.message : "Could not load game";
       setError(message);
       if (message.toLowerCase().includes("not open") && slug !== "classic") {
-        router.replace("/rooms/classic");
+        router.replace("/");
       }
     }
   }, [applyState, router, slug]);
@@ -156,17 +168,33 @@ export function GameClient({ slug }: { slug: string }) {
 
   useEffect(() => {
     void refresh();
+    const source = new EventSource(`/api/rooms/${slug}/live`);
+    source.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as GameState & { closed?: boolean };
+        if (data.closed) {
+          router.replace("/");
+          return;
+        }
+        if (data.room) applyState(data);
+        setError("");
+      } catch {
+        /* ignore bad frames */
+      }
+    };
+    source.onerror = () => undefined;
     const poll = window.setInterval(() => {
       void refresh();
-    }, 700);
+    }, 12_000);
     const tick = window.setInterval(() => {
       setNow(Date.now() - skew.current);
     }, 100);
     return () => {
+      source.close();
       window.clearInterval(poll);
       window.clearInterval(tick);
     };
-  }, [refresh]);
+  }, [applyState, refresh, router, slug]);
 
   const remainingMs = useMemo(() => {
     if (!state) return 0;
@@ -177,7 +205,7 @@ export function GameClient({ slug }: { slug: string }) {
   }, [now, state]);
 
   useEffect(() => {
-    if (!state || state.round.status !== "live") return;
+    if (!state || state.round.status !== "live" || state.room.paused) return;
     if (remainingMs > 0 && remainingMs < 10_000 && !urgentSent.current) {
       urgentSent.current = true;
       emitFx({ kind: "urgent", color: "#ff355e", label: "Final seconds" });
@@ -226,6 +254,20 @@ export function GameClient({ slug }: { slug: string }) {
     }
   }
 
+  async function hostAct(body: Record<string, unknown>) {
+    setError("");
+    try {
+      applyState(
+        await readApi(`/api/rooms/${slug}/host`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        }),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Host action failed");
+    }
+  }
+
   if (!state) {
     return (
       <div className="loader-stage">
@@ -246,9 +288,10 @@ export function GameClient({ slug }: { slug: string }) {
   const table = round.buttonIds.map((id) => colorById(id));
   const liveLeft = room.closesAt ? room.closesAt - now : null;
   const revealing = round.status === "revealing";
-  const urgent = !revealing && remainingMs > 0 && remainingMs < 10_000;
+  const urgent = !revealing && !room.paused && remainingMs > 0 && remainingMs < 10_000;
   const canClick =
     Boolean(user?.emailVerified) &&
+    !room.paused &&
     !revealing &&
     (user?.balance ?? 0) >= round.clickPrice;
   const winner = round.result?.winners[0];
@@ -256,11 +299,64 @@ export function GameClient({ slug }: { slug: string }) {
 
   return (
     <div className="pit-app">
+      <PitHint />
       <div className="pit-top">
         <SearchDock onPickRoom={(next) => router.push(`/rooms/${next}`)} />
         <button aria-label="Create room" className="pit-create" onClick={() => setCreating(true)} type="button">
           <IconPlus />
         </button>
+        <SoundToggle />
+        {room.host ? (
+          <>
+            <button
+              aria-label="Copy invite"
+              className="pit-ico"
+              onClick={() => {
+                void navigator.clipboard.writeText(window.location.href);
+              }}
+              type="button"
+            >
+              <IconLink />
+            </button>
+            <button
+              aria-label={room.paused ? "Resume table" : "Pause table"}
+              className="pit-ico"
+              onClick={() => {
+                void hostAct({ action: room.paused ? "resume" : "pause" });
+              }}
+              type="button"
+            >
+              {room.paused ? <IconPlay /> : <IconPause />}
+            </button>
+            <button
+              aria-label={room.slowMode ? "Normal chat" : "Slow chat"}
+              className={`pit-ico ${room.slowMode ? "is-on" : ""}`}
+              onClick={() => {
+                void hostAct({ action: "slow", slow: !room.slowMode });
+              }}
+              type="button"
+            >
+              <IconSlow />
+            </button>
+            <button
+              aria-label="Close table"
+              className="pit-ico"
+              onClick={() => {
+                void (async () => {
+                  const response = await fetch(`/api/rooms/${slug}/host`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "close" }),
+                  });
+                  if (response.ok) router.replace("/");
+                })();
+              }}
+              type="button"
+            >
+              <IconClose />
+            </button>
+          </>
+        ) : null}
       </div>
       <div className={`pit-grid ${railOpen ? "" : "is-rail-off"} ${newsOpen ? "" : "is-news-off"}`}>
         <aside className={`pit-rail ${pane === "rooms" ? "is-open" : ""} ${railOpen ? "" : "is-slim"}`}>
@@ -302,6 +398,7 @@ export function GameClient({ slug }: { slug: string }) {
                 </strong>
                 <span>
                   {item.buttonCount} · {formatUsdt(item.clickPrice)} · {formatUsdt(item.pot)}
+                  {item.paused ? " · paused" : ""}
                   {item.closesAt ? ` · ${formatClock(item.closesAt - now)}` : ""}
                 </span>
               </button>
@@ -309,12 +406,50 @@ export function GameClient({ slug }: { slug: string }) {
           </div>
         </aside>
         <div className={`pit-main ${pane === "play" ? "is-open" : ""}`}>
-    <div className="game-stage mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:py-8">
+    <div className="game-stage">
       <p className="room-back">
-        <span>{room.name}</span>
+        {room.host && renaming ? (
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void (async () => {
+                await hostAct({ action: "rename", name: roomName });
+                setRenaming(false);
+              })();
+            }}
+          >
+            <input
+              autoFocus
+              className="field"
+              maxLength={28}
+              onChange={(event) => setRoomName(event.target.value)}
+              value={roomName}
+            />
+            <button className="chip-btn" type="submit">
+              Save
+            </button>
+          </form>
+        ) : (
+          <span
+            className={room.host ? "cursor-pointer" : undefined}
+            onClick={() => {
+              if (!room.host) return;
+              setRoomName(room.name);
+              setRenaming(true);
+            }}
+            title={room.host ? "Rename table" : undefined}
+          >
+            {room.name}
+            {room.paused ? " · paused" : ""}
+          </span>
+        )}
         <span>
           {room.buttonCount} coins · {formatUsdt(room.clickPrice)} USDT · {room.roundSeconds}s
           {liveLeft != null ? ` · table ${formatClock(liveLeft)}` : ""}
+          {room.slowMode ? " · slow chat" : ""}
+          {" · "}
+          <Link href={`/fairness?slug=${slug}`}>Fairness</Link>
         </span>
       </p>
       {revealing && winnerColor ? (
@@ -328,9 +463,16 @@ export function GameClient({ slug }: { slug: string }) {
             } as CSSProperties
           }
         >
+          <span className="take-corona" />
+          {Array.from({ length: 10 }, (_, index) => (
+            <span className="take-spark" key={index} style={{ "--i": index } as CSSProperties} />
+          ))}
           <PadRune id={winnerColor.id} />
-          <p className="take-kicker">The pot is claimed</p>
+          <p className="take-kicker">Takes the pot</p>
           <p className="take-name">{winnerColor.name}</p>
+          {round.pot > 0 ? (
+            <p className="take-pot">{formatUsdt(round.pot)} USDT</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -347,11 +489,17 @@ export function GameClient({ slug }: { slug: string }) {
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-              {revealing ? "Next round" : "Time left"}
+              {room.paused ? "Paused" : revealing ? "Next round" : "Time left"}
             </p>
             <p className={`font-display clock-value text-3xl tabular-nums text-white ${urgent ? "is-urgent" : ""}`}>
-              {formatClock(remainingMs)}
+              {room.paused ? "Hold" : formatClock(remainingMs)}
             </p>
+            {round.seedCommit ? (
+              <p className="mt-1 font-mono text-[10px] text-zinc-500">
+                {revealing && round.serverSeed ? "Seed open" : "Commit"}{" "}
+                {shortHash(revealing && round.serverSeed ? round.serverSeed : round.seedCommit)}
+              </p>
+            ) : null}
           </div>
         </div>
         <div className={`timer-track ${urgent ? "is-urgent" : ""}`}>
@@ -402,7 +550,12 @@ export function GameClient({ slug }: { slug: string }) {
       </section>
 
       {revealing && round.result ? (
-        <ResultCard result={round.result} playerId={user?.id ?? ""} />
+        <ResultCard
+          playerId={user?.id ?? ""}
+          result={round.result}
+          round={round}
+          wash={winnerColor?.hex}
+        />
       ) : null}
 
       {error ? (
@@ -452,20 +605,35 @@ export function GameClient({ slug }: { slug: string }) {
                 } as CSSProperties}
               >
                 <span className="coin-reeds" />
+                <span className="pad-grain" />
                 <span className="coin-core" />
                 <span className="pad-sheen" />
+                <span className="pad-glint" />
                 <span className="pad-orbit" />
+                <span className="pad-rays" />
+                <span className="pad-twirl" />
                 <PadRune id={color.id} />
                 {bursts
                   .filter((burst) => burst.color === color.hex)
                   .map((burst) => (
-                    <span
-                      className="pad-burst"
-                      key={burst.id}
-                      style={{ left: burst.x, top: burst.y }}
-                    />
+                    <span key={burst.id}>
+                      <span
+                        className="pad-ripple"
+                        style={{ left: burst.x, top: burst.y }}
+                      />
+                      <span
+                        className="pad-burst"
+                        style={{ left: burst.x, top: burst.y }}
+                      />
+                      <span
+                        className="pad-spark"
+                        style={{ left: burst.x, top: burst.y }}
+                      />
+                    </span>
                   ))}
-                {leading && clicks > 0 ? (
+                {taken ? (
+                  <span className="lead-chip is-take">Takes</span>
+                ) : leading && clicks > 0 ? (
                   <span className="lead-chip">Biggest</span>
                 ) : null}
                 <div className="coin-copy">
@@ -488,12 +656,24 @@ export function GameClient({ slug }: { slug: string }) {
       </div>
     </div>
         <div className="pit-table-desktop">
-          <PlayerBoard buttonIds={round.buttonIds} seats={seats} />
+          <PlayerBoard
+            buttonIds={round.buttonIds}
+            host={room.host}
+            onMute={(userId) => {
+              void fetch(`/api/rooms/${slug}/host`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "mute", userId }),
+              });
+            }}
+            seats={seats}
+          />
         </div>
         </div>
         <div className={`pit-chat ${pane === "chat" ? "is-open" : ""} ${newsOpen ? "" : "is-slim"}`}>
           <RoomFeed
             feed={feed}
+            muted={room.muted}
             onHide={() => setNewsOpen(false)}
             onState={applyState}
             slug={slug}
@@ -509,7 +689,18 @@ export function GameClient({ slug }: { slug: string }) {
           </button>
         </div>
         <div className={`pit-sheet ${pane === "table" ? "is-open" : ""}`}>
-          <PlayerBoard buttonIds={round.buttonIds} seats={seats} />
+          <PlayerBoard
+            buttonIds={round.buttonIds}
+            host={room.host}
+            onMute={(userId) => {
+              void fetch(`/api/rooms/${slug}/host`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "mute", userId }),
+              });
+            }}
+            seats={seats}
+          />
         </div>
       </div>
       <nav className="pit-tabs">
@@ -545,44 +736,98 @@ export function GameClient({ slug }: { slug: string }) {
   );
 }
 
+function CountUsdt({ value }: { value: number }) {
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / 900);
+      setShown(value * (1 - (1 - t) ** 3));
+      if (t < 1) frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [value]);
+
+  return <>{formatUsdt(shown)}</>;
+}
+
 function ResultCard({
   result,
+  round,
   playerId,
+  wash,
 }: {
   result: NonNullable<PublicRound["result"]>;
+  round: PublicRound;
   playerId: string;
+  wash?: string;
 }) {
   const yours = result.payouts.find((payout) => payout.playerId === playerId);
   const names = result.winners
     .map((id) => colorById(id).name)
     .join(" & ");
+  const sheet = (
+    <p className="mt-2 text-xs text-zinc-500">
+      <Link className="underline" href={`/fairness/${round.id}`}>
+        Check this round
+      </Link>
+      {round.fairHash ? ` · ${shortHash(round.fairHash)}` : ""}
+    </p>
+  );
+  const cardStyle = wash
+    ? ({ "--pad": wash } as CSSProperties)
+    : undefined;
+
+  if (result.kind === "void") {
+    return (
+      <div className="result-card" style={cardStyle}>
+        Staff voided this round. Everyone who clicked got their USDT back.
+        {yours ? ` You received ${formatUsdt(yours.amount)} USDT.` : ""}
+        {sheet}
+      </div>
+    );
+  }
 
   if (result.kind === "empty") {
     return (
       <div className="result-card">
         No clicks that round. Pot stays empty.
+        {sheet}
       </div>
     );
   }
 
   if (result.kind === "push") {
     return (
-      <div className="result-card">
+      <div className="result-card" style={cardStyle}>
         All colors tied. Everyone who clicked got their USDT back.
         {yours ? ` You received ${formatUsdt(yours.amount)} USDT.` : ""}
+        {sheet}
       </div>
     );
   }
 
   return (
-    <div className="result-card">
+    <div className="result-card" style={cardStyle}>
       <strong>{names}</strong> had the most clicks and took the other colors’
-      money. {formatUsdt(result.payoutPerWinningClick)} USDT per winning click.
-      {yours
-        ? ` You received ${formatUsdt(yours.amount)} USDT.`
-        : playerId
-          ? " You were not on the winning color."
-          : ""}
+      money.
+      {result.rake
+        ? ` House took ${formatUsdt(result.rake)} USDT. `
+        : " "}
+      {formatUsdt(result.payoutPerWinningClick)} USDT per winning click.
+      {yours ? (
+        <span className="result-payout">
+          You take <CountUsdt value={yours.amount} /> USDT
+        </span>
+      ) : playerId ? (
+        " You were not on the winning color."
+      ) : (
+        ""
+      )}
+      {sheet}
     </div>
   );
 }

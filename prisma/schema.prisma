@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id
+  email           String    @unique
+  username        String    @unique
+  passwordHash    String    @default("")
+  googleId        String?   @unique
+  emailVerified   Boolean   @default(false)
+  verifyToken     String?
+  verifyExpires   BigInt?
+  verifySentAt    BigInt?
+  createdAt       BigInt
+  balance         Float     @default(0) // integer cents
+  withdrawAddress String    @default("")
+  limits          String    @default("{}")
+  auth            String    @default("{}")
+  wallets         Wallet[]
+  sessions        Session[]
+  notices         Notice[]
+  txs             Tx[]
+  ownedRooms      Room[]    @relation("RoomOwner")
+}
+
+model Wallet {
+  userId    String
+  network   String
+  address   String
+  secretEnc String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, network])
+}
+
+model Session {
+  token     String @id
+  userId    String
+  expiresAt BigInt
+  createdAt BigInt @default(0)
+  userAgent String @default("")
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OAuthState {
+  state     String @id
+  expiresAt BigInt
+}
+
+model Notice {
+  id        String  @id
+  userId    String
+  kind      String
+  title     String
+  body      String
+  href      String
+  read      Boolean @default(false)
+  createdAt BigInt
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tx {
+  id        String @id
+  playerId  String
+  type      String
+  amount    Float // integer cents
+  createdAt BigInt
+  note      String
+  user      User   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model Room {
+  id           String      @id
+  slug         String      @unique
+  name         String
+  kind         String
+  ownerId      String?
+  buttonCount  Int
+  clickPrice   Float // integer cents
+  roundSeconds Int
+  createdAt    BigInt
+  liveMinutes  Int?
+  closesAt     BigInt?
+  roundNumber  Int         @default(0)
+  mutedIds     String      @default("[]")
+  paused       Boolean     @default(false)
+  pausedAt     BigInt?
+  slowMode     Boolean     @default(false)
+  owner        User?       @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  seats        RoomSeat[]
+  events       RoomEvent[]
+  round        Round?
+}
+
+model RoomSeat {
+  roomId String
+  userId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+}
+
+model RoomEvent {
+  id        String @id
+  roomId    String
+  kind      String
+  userId    String?
+  username  String?
+  body      String
+  createdAt BigInt
+  room      Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model Round {
+  id          String  @id
+  roomId      String  @unique
+  number      Int
+  status      String
+  startedAt   BigInt
+  endsAt      BigInt
+  revealUntil BigInt?
+  clickPrice  Float // integer cents
+  buttonIds   String
+  totals      String
+  clicks      String
+  result      String?
+  fair        String      @default("{}")
+  room        Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model Meta {
+  id          String  @id @default("app")
+  roundNumber Int     @default(0)
+  legacyRound String?
+}
+
+model ChainScan {
+  id        String @id
+  lastBlock Int
+  updatedAt BigInt
+}
+
+model ChainDeposit {
+  id          String @id
+  txHash      String
+  logIndex    Int
+  userId      String
+  address     String
+  amount      Float // integer cents
+  blockNumber Int
+  createdAt   BigInt
+
+  @@unique([txHash, logIndex])
+}
+
+model Withdrawal {
+  id         String @id
+  userId     String
+  networkId  String
+  address    String
+  amount     Float // integer cents
+  status     String
+  createdAt  BigInt
+  resolvedAt BigInt?
+  note       String @default("")
+  txHash     String @default("")
+}
+
+model SettledRound {
+  id                     String @id
+  roomSlug               String
+  roomName               String
+  number                 Int
+  startedAt              BigInt
+  settledAt              BigInt
+  clickPrice             Float // integer cents when moneyCents=1
+  buttonIds              String
+  totals                 String
+  seedCommit             String
+  serverSeed             String
+  fairHash               String
+  kind                   String
+  winners                String
+  losingPot              Float
+  winningClicks          Int
+  payoutPerWinningClick  Float
+  paidCount              Int
+  moneyCents             Int    @default(0)
+  rake                   Int    @default(0)
+}

@@ -9,6 +9,7 @@ export function SignupForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [age, setAge] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function submit(event: FormEvent) {
@@ -19,7 +20,7 @@ export function SignupForm() {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, username, password }),
+        body: JSON.stringify({ email, username, password, ageConfirmed: age }),
       });
       const data = (await response.json()) as {
         error?: string;
@@ -43,7 +44,11 @@ export function SignupForm() {
         We’ll email a verification link, then open deposit wallets on ETH,
         BEP-20, TRC-20, and the other networks.
       </p>
-      <GoogleButton label="Continue with Google" />
+      <GoogleButton
+        disabled={!age}
+        href="/api/auth/google?age=1"
+        label="Continue with Google"
+      />
       <p className="auth-split">or with email</p>
       <label className="mt-2 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         Email
@@ -79,6 +84,22 @@ export function SignupForm() {
         type="password"
         value={password}
       />
+      <label className="mt-4 flex items-start gap-2 text-sm text-zinc-400">
+        <input
+          checked={age}
+          className="mt-1"
+          onChange={(event) => setAge(event.target.checked)}
+          required
+          type="checkbox"
+        />
+        <span>
+          I am 18 or older and agree to the{" "}
+          <Link className="text-zinc-200 underline" href="/terms">
+            terms
+          </Link>
+          .
+        </span>
+      </label>
       <button className="chip-btn mt-5 w-full justify-center" disabled={busy} type="submit">
         {busy ? "Creating…" : "Sign up"}
       </button>
@@ -89,6 +110,9 @@ export function SignupForm() {
           Sign in
         </Link>
       </p>
+      {!age ? (
+        <p className="mt-3 text-xs text-zinc-500">Tick 18+ to use Google signup.</p>
+      ) : null}
     </form>
   );
 }

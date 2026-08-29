@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Cinzel, Outfit } from "next/font/google";
+import { AgeBanner } from "@/components/AgeBanner";
 import { Atmosphere } from "@/components/Atmosphere";
+import { PlayBlockBanner } from "@/components/PlayBlockBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SoundBus } from "@/components/SoundBus";
 import { VerifyBanner } from "@/components/VerifyBanner";
 import { getHeaderUser } from "@/lib/auth";
 import "./globals.css";
@@ -34,8 +37,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <Atmosphere />
+        <SoundBus />
         <SiteHeader user={user} />
+        {user && !user.ageConfirmed ? <AgeBanner /> : null}
         {user && !user.emailVerified ? <VerifyBanner email={user.email} /> : null}
+        {user?.blocked && user.blockKind !== "age" ? <PlayBlockBanner user={user} /> : null}
         <div className="page-stage flex-1">{children}</div>
         <SiteFooter />
       </body>

@@ -6,6 +6,7 @@ export function SiteFooter() {
       <p>Huepot is a timed color-pot game. 18+ only. Play what you can afford.</p>
       <div className="footer-links">
         <Link href="/how-it-works">How it works</Link>
+        <Link href="/fairness">Fairness</Link>
         <Link href="/terms">Terms</Link>
         <Link href="/privacy">Privacy</Link>
         <Link href="/notifications">Notifications</Link>

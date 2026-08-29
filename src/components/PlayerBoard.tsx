@@ -5,6 +5,7 @@ import {
   IconCash,
   IconCoin,
   IconJoin,
+  IconMute,
   IconTable,
   IconUsers,
 } from "@/components/Icons";
@@ -15,9 +16,13 @@ import type { PublicSeat } from "@/lib/types";
 export function PlayerBoard({
   seats,
   buttonIds,
+  host,
+  onMute,
 }: {
   seats: PublicSeat[];
   buttonIds: ColorId[];
+  host?: boolean;
+  onMute?: (userId: string) => void;
 }) {
   return (
     <section className="player-board">
@@ -59,8 +64,18 @@ export function PlayerBoard({
                 <td>
                   @{seat.username}
                   {seat.you ? " · you" : ""}
+                  {host && !seat.you && onMute ? (
+                    <button
+                      aria-label={`Mute @${seat.username}`}
+                      className="pit-mute"
+                      onClick={() => onMute(seat.userId)}
+                      type="button"
+                    >
+                      <IconMute />
+                    </button>
+                  ) : null}
                 </td>
-                <td>{formatUsdt(seat.balance)}</td>
+                <td>{seat.you ? formatUsdt(seat.balance) : "—"}</td>
                 <td>{seat.totalClicks}</td>
                 {buttonIds.map((id) => (
                   <td key={id}>{seat.clicks[id] || 0}</td>

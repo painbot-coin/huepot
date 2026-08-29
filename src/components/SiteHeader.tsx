@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LogoutButton } from "@/components/LogoutButton";
 import { NotificationBell } from "@/components/NotificationBell";
+import { SitClock } from "@/components/SitClock";
+import { SoundToggle } from "@/components/SoundToggle";
 import { formatUsdt } from "@/lib/money";
 import type { PublicUser } from "@/lib/types";
 
@@ -21,6 +23,9 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
         <Link className="nav-link" href="/how-it-works">
           How it works
         </Link>
+        <Link className="nav-link" href="/fairness">
+          Fairness
+        </Link>
         {user ? (
           <>
             <Link className="nav-link" href="/invest">
@@ -33,6 +38,8 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
               @{user.username}
             </Link>
             <span className="nav-balance">{formatUsdt(user.balance)} USDT</span>
+            <SitClock />
+            <SoundToggle className="pit-ico header-sound" />
             <NotificationBell />
             <LogoutButton />
           </>
@@ -41,6 +48,7 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
             <Link className="nav-link" href="/signin">
               Sign in
             </Link>
+            <SoundToggle className="pit-ico header-sound" />
             <Link className="chip-btn" href="/signup">
               Sign up
             </Link>

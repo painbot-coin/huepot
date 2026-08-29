@@ -6,12 +6,13 @@ import { withStore } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!googleConfigured()) {
     return NextResponse.redirect(
       `${appUrl()}/signin?error=google_not_configured`,
     );
   }
-  const state = await withStore((store) => createOAuthState(store));
+  const ageConfirmed = new URL(request.url).searchParams.get("age") === "1";
+  const state = await withStore((store) => createOAuthState(store, ageConfirmed));
   return NextResponse.redirect(googleAuthUrl(state));
 }

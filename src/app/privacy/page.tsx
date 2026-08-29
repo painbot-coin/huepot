@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       </p>
       <p>
         To close an account, contact support from the email you signed up with.
-        Demo builds keep data in a local file on the server.
+        Account data lives in the Huepot database on the server.
       </p>
     </main>
   );

@@ -1,0 +1,18 @@
+Public-domain textures downloaded into Huepot (not hotlinked).
+
+felt.jpg
+  Wikimedia Commons — File:Baize closeup.jpg
+  Billiard baize weave.
+
+gold-wiki.jpg
+  Wikimedia Commons — File:Gold metallic finish clean smooth seamless metal surface sheet texture.jpg
+  Gold grain for rims and buttons.
+
+gold.jpg
+  Poly Haven — metal_plate albedo (CC0)
+  https://polyhaven.com/a/metal_plate
+
+spark.png, flare.png, burst.png, ripple.png, twirl.png, glint.png, star.png
+  Kenney Particle Pack (CC0)
+  https://kenney.nl/assets/particle-pack
+  GitHub mirror: Calinou/kenney-particle-pack

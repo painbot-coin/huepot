@@ -9,17 +9,20 @@ export default function TermsPage() {
       </p>
       <p>
         Play balances are custodial. Deposit addresses are generated for your
-        account. Demo mode credits and pays out without broadcasting live chain
-        transactions.
+        account. Live credit is BNB Chain USDT after confirms. Cash-out is
+        queued and sent on BNB Chain by the house.
       </p>
       <p>
-        Rounds are settled by click count at the server clock. The house does
-        not take a rake in this version. We may suspend accounts that abuse
-        the demo credit flow.
+        Rounds are settled by click count at the server clock. On a take, the
+        house keeps a published share of the losing pot (default 5%, set by
+        HOUSE_RAKE_BPS). Winning clicks return, then winners split what is
+        left. A full tie or a staff void refunds every click with no house
+        take. We may freeze accounts that abuse the table or the money rail.
       </p>
       <p>
-        This is software for a product prototype, not legal, tax, or financial
-        advice. Local gambling and money-transmission rules still apply to you.
+        You can set a daily loss cap, take a cool-off, or self-exclude from
+        Account. Those pauses cannot be shortened once they start. Staff may
+        freeze an account or void a live round, which refunds clicks.
       </p>
     </main>
   );

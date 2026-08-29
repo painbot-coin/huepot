@@ -1,4 +1,4 @@
-import { colorsForCount, type ColorId } from "./colors";
+import { colorsForCount, emptyColorCounts, type ColorId } from "./colors";
 import {
   CLICK_PRICE,
   MAX_BUTTONS,
@@ -14,6 +14,7 @@ import {
   MIN_ROUND_SECONDS,
   ROUND_SECONDS,
 } from "./config";
+import { fromCents, toCents } from "./money";
 import type { Room, RoomEvent, RoomEventKind, StoreData } from "./types";
 
 export type BasicRoomDef = {
@@ -93,6 +94,10 @@ function makeRoom(input: {
     roundNumber: 0,
     round: null,
     playerIds: [],
+    mutedIds: [],
+    paused: false,
+    pausedAt: null,
+    slowMode: false,
     events: [
       {
         id: crypto.randomUUID(),
@@ -100,8 +105,8 @@ function makeRoom(input: {
         userId: null,
         username: null,
         body: liveMinutes
-          ? `${input.name} is open for ${liveMinutes} minutes, then this table is deleted. ${input.buttonCount} coins · ${input.clickPrice} USDT · ${input.roundSeconds}s rounds.`
-          : `${input.name} is open. No table fee. ${input.buttonCount} coins · ${input.clickPrice} USDT · ${input.roundSeconds}s rounds.`,
+          ? `${input.name} is open for ${liveMinutes} minutes, then this table is deleted. ${input.buttonCount} coins · ${fromCents(input.clickPrice)} USDT · ${input.roundSeconds}s rounds.`
+          : `${input.name} is open. No table fee. ${input.buttonCount} coins · ${fromCents(input.clickPrice)} USDT · ${input.roundSeconds}s rounds.`,
         createdAt,
       },
     ],
@@ -119,7 +124,7 @@ export function ensureRooms(store: StoreData) {
         kind: "basic",
         ownerId: null,
         buttonCount: def.buttonCount,
-        clickPrice: def.clickPrice,
+        clickPrice: toCents(def.clickPrice),
         roundSeconds: def.roundSeconds,
         liveMinutes: null,
       });
@@ -128,10 +133,14 @@ export function ensureRooms(store: StoreData) {
     existing.kind = "basic";
     existing.name = def.name;
     existing.buttonCount = def.buttonCount;
-    existing.clickPrice = def.clickPrice;
+    existing.clickPrice = toCents(def.clickPrice);
     existing.roundSeconds = def.roundSeconds;
     existing.events ??= [];
     existing.playerIds ??= [];
+    existing.mutedIds ??= [];
+    existing.paused ??= false;
+    existing.pausedAt ??= null;
+    existing.slowMode ??= false;
     if (existing.kind === "basic") {
       existing.liveMinutes = null;
       existing.closesAt = null;
@@ -143,14 +152,7 @@ export function ensureRooms(store: StoreData) {
       existing.round.buttonIds =
         existing.round.buttonIds ?? buttonIdsForCount(existing.buttonCount);
       existing.round.totals = {
-        crimson: 0,
-        azure: 0,
-        volt: 0,
-        amber: 0,
-        violet: 0,
-        mint: 0,
-        ember: 0,
-        frost: 0,
+        ...emptyColorCounts(),
         ...existing.round.totals,
       };
     }
@@ -160,10 +162,17 @@ export function ensureRooms(store: StoreData) {
     store.rooms.classic.round = {
       ...store.round,
       buttonIds: store.round.buttonIds ?? buttonIdsForCount(4),
-      clickPrice: store.round.clickPrice || CLICK_PRICE,
+      clickPrice: store.round.clickPrice || toCents(CLICK_PRICE),
     };
     store.rooms.classic.roundNumber = store.roundNumber || store.round.number;
     store.round = null;
+  }
+
+  for (const room of Object.values(store.rooms)) {
+    room.mutedIds ??= [];
+    room.paused ??= false;
+    room.pausedAt ??= null;
+    room.slowMode ??= false;
   }
 }
 
@@ -226,11 +235,11 @@ export function parseRoomDraft(input: {
   ) {
     throw new Error(`Pick ${MIN_BUTTONS} to ${MAX_BUTTONS} coins.`);
   }
-  const clickPrice = Math.round(Number(input.clickPrice) * 100) / 100;
+  const clickPrice = toCents(Number(input.clickPrice));
   if (
     !Number.isFinite(clickPrice) ||
-    clickPrice < MIN_CLICK_PRICE ||
-    clickPrice > MAX_CLICK_PRICE
+    clickPrice < toCents(MIN_CLICK_PRICE) ||
+    clickPrice > toCents(MAX_CLICK_PRICE)
   ) {
     throw new Error(`Click price must be ${MIN_CLICK_PRICE}–${MAX_CLICK_PRICE} USDT.`);
   }
@@ -296,5 +305,7 @@ export function parseChat(body: unknown) {
   const text = typeof body === "string" ? body.trim() : "";
   if (!text) throw new Error("Write a message first.");
   if (text.length > MAX_CHAT) throw new Error(`Keep chat under ${MAX_CHAT} characters.`);
-  return text;
+  return text
+    .replace(/\bhttps?:\/\/\S+/gi, "…")
+    .replace(/\bwww\.\S+/gi, "…");
 }

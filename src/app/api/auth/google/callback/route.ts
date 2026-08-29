@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { loginWithGoogle, setSessionCookie, takeOAuthState } from "@/lib/auth";
 import { appUrl } from "@/lib/config";
 import { googleProfile } from "@/lib/google";
+import { requestAgent } from "@/lib/http";
 import { withStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -18,10 +19,18 @@ export async function GET(request: Request) {
   try {
     const profile = await googleProfile(code);
     const session = await withStore((store) => {
-      takeOAuthState(store, state);
-      return loginWithGoogle(store, profile);
+      const oauth = takeOAuthState(store, state);
+      return loginWithGoogle(store, profile, oauth.ageConfirmed, requestAgent(request));
     });
     await setSessionCookie(session.token, session.maxAge);
+    if (session.hadOtherSessions && session.email) {
+      const { sendMail, securityEmailHtml } = await import("@/lib/mail");
+      void sendMail(
+        session.email,
+        "New Huepot sign-in",
+        securityEmailHtml(session.username, "signin", requestAgent(request).slice(0, 120)),
+      );
+    }
     return NextResponse.redirect(`${appUrl()}/`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Google sign-in failed";

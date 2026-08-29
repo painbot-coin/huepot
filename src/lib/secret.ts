@@ -1,9 +1,15 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 
 function key() {
-  const secret =
-    process.env.WALLET_SECRET || "huepot-dev-wallet-secret-change-me";
-  return createHash("sha256").update(secret).digest();
+  const secret = process.env.WALLET_SECRET;
+  if (!secret || secret === "huepot-dev-wallet-secret-change-me") {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Set WALLET_SECRET before running Huepot in production.");
+    }
+  }
+  return createHash("sha256")
+    .update(secret || "huepot-dev-wallet-secret-change-me")
+    .digest();
 }
 
 export function encryptSecret(plain: string) {

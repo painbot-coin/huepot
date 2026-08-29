@@ -1,19 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { IconPlus } from "@/components/Icons";
+import { SearchDock } from "@/components/SearchDock";
 import { BASIC_ROOMS } from "@/lib/rooms";
-import { formatUsdt } from "@/lib/money";
+import { formatClock, formatUsdt } from "@/lib/money";
 import type { LobbyState, PublicRoomCard } from "@/lib/types";
 
 function blurbFor(room: PublicRoomCard) {
-  return BASIC_ROOMS.find((item) => item.slug === room.slug)?.blurb
-    ?? `Custom table · ${room.buttonCount} coins · ${room.roundSeconds}s rounds.`;
+  return (
+    BASIC_ROOMS.find((item) => item.slug === room.slug)?.blurb ??
+    `${room.buttonCount} coins · ${room.roundSeconds}s`
+  );
 }
 
 export function RoomLobby() {
+  const router = useRouter();
   const [state, setState] = useState<LobbyState | null>(null);
   const [error, setError] = useState("");
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let alive = true;
@@ -31,10 +38,12 @@ export function RoomLobby() {
       }
     }
     void load();
-    const id = window.setInterval(() => void load(), 2500);
+    const poll = window.setInterval(() => void load(), 2500);
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
     return () => {
       alive = false;
-      window.clearInterval(id);
+      window.clearInterval(poll);
+      window.clearInterval(tick);
     };
   }, []);
 
@@ -53,41 +62,37 @@ export function RoomLobby() {
   return (
     <div className="lobby-stage">
       <header className="lobby-hero">
-        <p className="lobby-kicker">Huepot rooms</p>
-        <h1 className="font-display">Pick a table. Chat the pit.</h1>
-        <p>
-          Basic rooms are free to open — no table fee. Make your own with coin
-          count, click price, and round time. Each room has its own feed for
-          chat, takes, and wager earnings.
-        </p>
-        <Link className="chip-btn" href="/rooms/new">
-          Create a room
-        </Link>
+        <p className="lobby-kicker">Sit. Pick a color. Watch the pot.</p>
+        <h1 className="font-display">Huepot tables</h1>
+        <p>One click is one stake. Biggest color takes the rest.</p>
+        <div className="lobby-hero-tools">
+          <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
+          <Link aria-label="Create room" className="pit-create" href="/rooms/new">
+            <IconPlus />
+          </Link>
+        </div>
       </header>
       {error ? <p className="error-toast">{error}</p> : null}
 
       <section>
-        <h2 className="lobby-label">Basic rooms</h2>
+        <h2 className="lobby-label">House</h2>
         <div className="lobby-grid">
           {basic.map((room) => (
-            <RoomCard key={room.slug} room={room} blurb={blurbFor(room)} />
+            <RoomCard key={room.slug} now={now} room={room} blurb={blurbFor(room)} />
           ))}
         </div>
       </section>
 
       <section>
         <div className="lobby-row">
-          <h2 className="lobby-label">Custom rooms</h2>
-          <Link className="nav-link" href="/rooms/new">
-            New table
-          </Link>
+          <h2 className="lobby-label">Open tables</h2>
         </div>
         {custom.length === 0 ? (
-          <p className="lobby-empty">No custom tables yet. Open one — no create fee.</p>
+          <p className="lobby-empty">No custom tables yet.</p>
         ) : (
           <div className="lobby-grid">
             {custom.map((room) => (
-              <RoomCard key={room.slug} room={room} blurb={blurbFor(room)} />
+              <RoomCard key={room.slug} now={now} room={room} blurb={blurbFor(room)} />
             ))}
           </div>
         )}
@@ -96,12 +101,20 @@ export function RoomLobby() {
   );
 }
 
-function RoomCard({ room, blurb }: { room: PublicRoomCard; blurb: string }) {
+function RoomCard({
+  room,
+  blurb,
+  now,
+}: {
+  room: PublicRoomCard;
+  blurb: string;
+  now: number;
+}) {
   return (
     <Link className="room-card" href={`/rooms/${room.slug}`}>
       <div className="room-card-top">
         <strong>{room.name}</strong>
-        <span>{room.kind === "basic" ? "No fee" : "Custom"}</span>
+        <em className={`pit-kind is-${room.kind}`} title={room.kind === "basic" ? "House" : "Custom"} />
       </div>
       <p>{blurb}</p>
       <dl>
@@ -123,7 +136,8 @@ function RoomCard({ room, blurb }: { room: PublicRoomCard; blurb: string }) {
         </div>
       </dl>
       <p className="room-card-foot">
-        Round #{room.roundNumber || 1} · {room.players} seated · {room.status}
+        #{room.roundNumber || 1} · {room.players} · {room.paused ? "paused" : room.status}
+        {room.closesAt ? ` · ${formatClock(room.closesAt - now)}` : ""}
       </p>
     </Link>
   );

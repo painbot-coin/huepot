@@ -1,5 +1,5 @@
-import nodemailer from "nodemailer";
 import { appUrl, mailConfigured } from "./config";
+import { formatCents } from "./money";
 
 export type MailResult = { sent: boolean; error?: string };
 
@@ -19,6 +19,7 @@ export async function sendMail(
   const port = Number(process.env.SMTP_PORT || 465);
 
   try {
+    const nodemailer = (await import("nodemailer")).default;
     const transporter = nodemailer.createTransport({
       host,
       port,
@@ -50,6 +51,76 @@ export function verifyEmailHtml(username: string, token: string) {
   `;
 }
 
+export function resetEmailHtml(username: string, token: string) {
+  const url = `${appUrl()}/reset-password?token=${token}`;
+  return `
+    <div style="font-family:Georgia,serif;background:#07070c;color:#f4f1ea;padding:32px">
+      <h1 style="margin:0 0 12px">Huepot</h1>
+      <p>Hi ${username}, use this link to pick a new password. It expires in one hour.</p>
+      <p>
+        <a href="${url}" style="display:inline-block;background:#f4f1ea;color:#111;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:700">
+          Reset password
+        </a>
+      </p>
+      <p style="color:#9a9aa4;font-size:13px">Or paste this link:<br>${url}</p>
+    </div>
+  `;
+}
+
+export function resetUrl(token: string) {
+  return `${appUrl()}/reset-password?token=${token}`;
+}
+
 export function verifyUrl(token: string) {
   return `${appUrl()}/verify-email?token=${token}`;
+}
+
+export function securityEmailHtml(
+  username: string,
+  kind: "signin" | "password" | "email",
+  detail: string,
+) {
+  const line =
+    kind === "signin"
+      ? "a new sign-in was opened on your account."
+      : kind === "email"
+        ? "the email on this account was changed."
+        : "your password was changed.";
+  return `
+    <div style="font-family:Georgia,serif;background:#07070c;color:#f4f1ea;padding:32px">
+      <h1 style="margin:0 0 12px">Huepot</h1>
+      <p>Hi ${username}, ${line}</p>
+      <p style="color:#9a9aa4;font-size:13px">${detail}</p>
+      <p>If this was not you, reset the password and sign out other devices from Account.</p>
+    </div>
+  `;
+}
+
+export function payoutEmailHtml(
+  username: string,
+  cents: number,
+  action: "paid" | "rejected",
+  txHash: string,
+) {
+  const amount = formatCents(cents);
+  const explorer = txHash ? `https://bscscan.com/tx/${txHash}` : "";
+  if (action === "rejected") {
+    return `
+    <div style="font-family:Georgia,serif;background:#07070c;color:#f4f1ea;padding:32px">
+      <h1 style="margin:0 0 12px">Huepot</h1>
+      <p>Hi ${username}, ${amount} USDT was put back in your bank. The cash-out did not go out.</p>
+    </div>
+  `;
+  }
+  return `
+    <div style="font-family:Georgia,serif;background:#07070c;color:#f4f1ea;padding:32px">
+      <h1 style="margin:0 0 12px">Huepot</h1>
+      <p>Hi ${username}, ${amount} USDT left on BNB Chain.</p>
+      ${
+        explorer
+          ? `<p><a href="${explorer}" style="color:#d4af77">View on BscScan</a></p>`
+          : ""
+      }
+    </div>
+  `;
 }

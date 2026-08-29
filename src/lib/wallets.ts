@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { getBytes, sha256, SigningKey, Wallet } from "ethers";
 import nacl from "tweetnacl";
 import { encodeBase58 } from "./base58";
+import { LIVE_CHAIN_ID } from "./config";
 import { NETWORKS, type NetworkId } from "./networks";
 import { encryptSecret } from "./secret";
 import type { StoredWallet, User } from "./types";
@@ -83,5 +84,6 @@ export function publicWallets(user: User) {
     family: network.family,
     hint: network.hint,
     address: user.wallets[network.id]!.address,
+    live: network.id === LIVE_CHAIN_ID,
   }));
 }

@@ -77,6 +77,12 @@ export function SigninForm() {
       </button>
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
       <p className="mt-5 text-sm text-zinc-500">
+        Forgot the password?{" "}
+        <Link className="text-zinc-200 underline" href="/forgot-password">
+          Reset it
+        </Link>
+      </p>
+      <p className="mt-3 text-sm text-zinc-500">
         New here?{" "}
         <Link className="text-zinc-200 underline" href="/signup">
           Create an account

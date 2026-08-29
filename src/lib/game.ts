@@ -3,8 +3,8 @@ import {
   emptyColorCounts,
   type ColorId,
 } from "./colors";
-import { REVEAL_SECONDS } from "./config";
-import { toPublicUser } from "./auth";
+import { MAX_ROOM_NAME, REVEAL_SECONDS } from "./config";
+import { toPublicUser } from "./public-user";
 import { notify } from "./notifications";
 import {
   BASIC_ROOMS,
@@ -15,6 +15,16 @@ import {
   parseChat,
   postRoomEvent,
 } from "./rooms";
+import { ensureRoundSeed } from "./fairness";
+import { queueSettledRound } from "./fairness-db";
+import { assertCanPlay } from "./limits";
+import { HOUSE_USER_ID, ensureHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
+import {
+  floorPayoutPerClick,
+  formatCents,
+  fromCents,
+  splitCentsByClicks,
+} from "./money";
 import { ensureUserWallets } from "./wallets";
 import type {
   GameState,
@@ -42,7 +52,7 @@ function emptyClicks(): PlayerClicks {
 
 function newRound(room: Room, number: number, at: number): Round {
   const buttonIds = buttonIdsForCount(room.buttonCount);
-  return {
+  const round: Round = {
     id: crypto.randomUUID(),
     number,
     status: "live",
@@ -54,7 +64,12 @@ function newRound(room: Room, number: number, at: number): Round {
     totals: emptyColorCounts(),
     clicks: {},
     result: null,
+    seedCommit: "",
+    serverSeed: "",
+    fairHash: "",
   };
+  ensureRoundSeed(round);
+  return round;
 }
 
 function addTx(
@@ -79,8 +94,18 @@ function playerClicksOn(round: Round, playerId: string): PlayerClicks {
   return { ...emptyClicks(), ...round.clicks[playerId] };
 }
 
-function roundToCents(value: number) {
-  return Math.round(value * 100) / 100;
+function publicMoney(result: RoundResult | null): RoundResult | null {
+  if (!result) return null;
+  return {
+    ...result,
+    losingPot: fromCents(result.losingPot),
+    payoutPerWinningClick: fromCents(result.payoutPerWinningClick),
+    rake: fromCents(result.rake ?? 0),
+    payouts: result.payouts.map((item) => ({
+      ...item,
+      amount: fromCents(item.amount),
+    })),
+  };
 }
 
 function roomHref(room: Room) {
@@ -109,12 +134,14 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
       losingPot: 0,
       winningClicks: 0,
       payoutPerWinningClick: 0,
+      rake: 0,
       payouts: [],
     };
     postRoomEvent(room, {
       kind: "round",
       body: `Round #${round.number} had no clicks. The table stays empty.`,
     });
+    queueSettledRound(room, round, at);
     return;
   }
 
@@ -135,19 +162,19 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
       if (clickCount <= 0) continue;
       const amount = clickCount * round.clickPrice;
       const user = store.users[playerId];
-      if (user) user.balance = roundToCents(user.balance + amount);
+      if (user) user.balance += amount;
       addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} push`);
       notify(store, playerId, {
         kind: "refund",
         title: `${room.name} · round #${round.number} push`,
-        body: `Colors tied. ${amount.toFixed(2)} USDT was returned.`,
+        body: `Colors tied. ${formatCents(amount)} USDT was returned.`,
         href,
       });
       postRoomEvent(room, {
         kind: "refund",
         userId: playerId,
         username: user?.username ?? null,
-        body: `${user?.username ?? "A player"} got ${amount.toFixed(2)} USDT back on the tie.`,
+        body: `${user?.username ?? "A player"} got ${formatCents(amount)} USDT back on the tie.`,
       });
       refunds.push({ playerId, amount, winningClicks: clickCount });
     }
@@ -161,28 +188,50 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
       losingPot: 0,
       winningClicks: totalClicks,
       payoutPerWinningClick: round.clickPrice,
+      rake: 0,
       payouts: refunds,
     };
     postRoomEvent(room, {
       kind: "round",
       body: `Round #${round.number} tied. All clicks were refunded.`,
     });
+    queueSettledRound(room, round, at);
     return;
   }
 
   const winningClicks = winners.reduce((sum, id) => sum + totals[id], 0);
   const losingClicks = losingColors.reduce((sum, id) => sum + totals[id], 0);
   const losingPot = losingClicks * round.clickPrice;
-  const payoutPerWinningClick = round.clickPrice + losingPot / winningClicks;
+  const rake = rakeFromPot(losingPot, rakeBps());
+  const distributable = losingPot - rake;
+  const payoutPerWinningClick = floorPayoutPerClick(
+    round.clickPrice,
+    distributable,
+    winningClicks,
+  );
   const names = winners.map((id) => colorById(id).name).join(" & ");
+  const potShares = splitCentsByClicks(
+    distributable,
+    Object.entries(round.clicks).map(([playerId, clicks]) => ({
+      id: playerId,
+      clicks: winners.reduce((sum, id) => sum + (clicks[id] ?? 0), 0),
+    })),
+    winningClicks,
+  );
+
+  if (rake > 0) {
+    const house = ensureHouseUser(store);
+    house.balance += rake;
+    addTx(store, house.id, "rake", rake, `${room.name} round #${round.number} house take`);
+  }
 
   const payouts: RoundResult["payouts"] = [];
   for (const [playerId, clicks] of Object.entries(round.clicks)) {
     const winClicks = winners.reduce((sum, id) => sum + (clicks[id] ?? 0), 0);
     if (winClicks <= 0) continue;
-    const amount = roundToCents(winClicks * payoutPerWinningClick);
+    const amount = winClicks * round.clickPrice + (potShares.get(playerId) ?? 0);
     const user = store.users[playerId];
-    if (user) user.balance = roundToCents(user.balance + amount);
+    if (user) user.balance += amount;
     addTx(
       store,
       playerId,
@@ -193,14 +242,14 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
     notify(store, playerId, {
       kind: "payout",
       title: `${room.name} · wager earned`,
-      body: `${names} took the pot. You received ${amount.toFixed(2)} USDT.`,
+      body: `${names} took the pot. You received ${formatCents(amount)} USDT.`,
       href,
     });
     postRoomEvent(room, {
       kind: "payout",
       userId: playerId,
       username: user?.username ?? null,
-      body: `${user?.username ?? "A player"} earned ${amount.toFixed(2)} USDT on ${names}.`,
+      body: `${user?.username ?? "A player"} earned ${formatCents(amount)} USDT on ${names}.`,
     });
     payouts.push({ playerId, amount, winningClicks: winClicks });
   }
@@ -232,16 +281,33 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
     totals: { ...totals },
     losingPot,
     winningClicks,
-    payoutPerWinningClick: roundToCents(payoutPerWinningClick),
+    payoutPerWinningClick,
+    rake,
     payouts,
   };
   postRoomEvent(room, {
     kind: "round",
-    body: `Round #${round.number}: ${names} took ${roundToCents(losingPot + winningClicks * round.clickPrice).toFixed(2)} USDT.`,
+    body:
+      rake > 0
+        ? `Round #${round.number}: ${names} took ${formatCents(distributable + winningClicks * round.clickPrice)} USDT. House ${rakePercentLabel()} was ${formatCents(rake)} USDT.`
+        : `Round #${round.number}: ${names} took ${formatCents(losingPot + winningClicks * round.clickPrice)} USDT.`,
   });
+  queueSettledRound(room, round, at);
+}
+
+function pauseShift(room: Room, at = nowMs()) {
+  if (!room.paused || !room.pausedAt) return 0;
+  return Math.max(0, at - room.pausedAt);
+}
+
+function requireHost(room: Room, userId: string) {
+  if (room.kind !== "custom" || room.ownerId !== userId) {
+    throw new Error("Only the host can do that.");
+  }
 }
 
 function tickRoom(store: StoreData, room: Room) {
+  if (room.paused) return;
   const at = nowMs();
   if (!room.round) {
     room.roundNumber += 1;
@@ -254,6 +320,7 @@ function tickRoom(store: StoreData, room: Room) {
   }
 
   const round = room.round;
+  ensureRoundSeed(round);
   if (round.status === "live" && at >= round.endsAt) {
     settleRound(store, room, round, at);
     return;
@@ -273,25 +340,47 @@ function tickRoom(store: StoreData, room: Room) {
   }
 }
 
-function toPublicRound(round: Round, playerId: string): PublicRound {
+export function roomDueForTick(room: Room | undefined, at = Date.now()) {
+  if (!room) return true;
+  if (room.paused) return false;
+  if (!room.round) return true;
+  if (!room.round.seedCommit) return true;
+  if (room.round.status === "live" && at >= room.round.endsAt) return true;
+  if (
+    room.round.status === "revealing" &&
+    room.round.revealUntil != null &&
+    at >= room.round.revealUntil
+  ) {
+    return true;
+  }
+  if (room.kind === "custom" && room.closesAt && at >= room.closesAt) return true;
+  return false;
+}
+
+function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound {
   const totalClicks = round.buttonIds.reduce(
     (sum, id) => sum + round.totals[id],
     0,
   );
+  const shift = room ? pauseShift(room) : 0;
   return {
     id: round.id,
     number: round.number,
     status: round.status,
-    startedAt: round.startedAt,
-    endsAt: round.endsAt,
-    revealUntil: round.revealUntil,
-    clickPrice: round.clickPrice,
+    startedAt: round.startedAt + shift,
+    endsAt: round.endsAt + shift,
+    revealUntil: round.revealUntil != null ? round.revealUntil + shift : null,
+    clickPrice: fromCents(round.clickPrice),
     buttonIds: [...round.buttonIds],
     totals: { ...round.totals },
     yourClicks: playerClicksOn(round, playerId),
     totalClicks,
-    pot: roundToCents(totalClicks * round.clickPrice),
-    result: round.result,
+    pot: fromCents(totalClicks * round.clickPrice),
+    result: publicMoney(round.result),
+    seedCommit: round.seedCommit,
+    serverSeed: round.status === "revealing" ? round.serverSeed : null,
+    fairHash: round.status === "revealing" ? round.fairHash || null : null,
+    rakeBps: rakeBps(),
   };
 }
 
@@ -307,19 +396,26 @@ function toPublicRoomCard(store: StoreData, room: Room): PublicRoomCard {
     kind: room.kind,
     ownerName: owner?.username ?? null,
     buttonCount: room.buttonCount,
-    clickPrice: room.clickPrice,
+    clickPrice: fromCents(room.clickPrice),
     roundSeconds: room.roundSeconds,
     status: round?.status ?? "live",
-    pot: roundToCents(totalClicks * room.clickPrice),
+    pot: fromCents(totalClicks * room.clickPrice),
     players: room.playerIds.length,
     roundNumber: room.roundNumber,
     liveMinutes: room.liveMinutes ?? null,
-    closesAt: room.closesAt ?? null,
+    closesAt: room.closesAt ? room.closesAt + pauseShift(room) : null,
+    paused: Boolean(room.paused),
   };
 }
 
-function toPublicRoom(store: StoreData, room: Room): PublicRoom {
-  return { ...toPublicRoomCard(store, room), id: room.id };
+function toPublicRoom(store: StoreData, room: Room, userId: string | null): PublicRoom {
+  return {
+    ...toPublicRoomCard(store, room),
+    id: room.id,
+    host: Boolean(userId && room.ownerId === userId),
+    muted: Boolean(userId && (room.mutedIds ?? []).includes(userId)),
+    slowMode: Boolean(room.slowMode),
+  };
 }
 
 function estimateSeat(round: Round, clicks: PlayerClicks, colorId: ColorId) {
@@ -328,7 +424,8 @@ function estimateSeat(round: Round, clicks: PlayerClicks, colorId: ColorId) {
   if (colorClicks <= 0 || yours <= 0) return 0;
   const losingClicks = round.buttonIds.reduce((sum, id) => sum + round.totals[id], 0) - colorClicks;
   const losingPot = losingClicks * round.clickPrice;
-  return yours * round.clickPrice + (yours / colorClicks) * losingPot;
+  const distributable = losingPot - rakeFromPot(losingPot, rakeBps());
+  return yours * round.clickPrice + (yours / colorClicks) * distributable;
 }
 
 function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicSeat[] {
@@ -338,7 +435,7 @@ function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicS
   const seats: PublicSeat[] = [];
   for (const userId of ids) {
     const user = store.users[userId];
-    if (!user) continue;
+    if (!user || user.id === HOUSE_USER_ID) continue;
     const clicks = playerClicksOn(round, userId);
     const totalClicks = round.buttonIds.reduce((sum, id) => sum + (clicks[id] ?? 0), 0);
     const estimated = round.buttonIds.reduce(
@@ -349,11 +446,11 @@ function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicS
       userId,
       username: user.username,
       you: userId === viewerId,
-      balance: user.balance,
+      balance: userId === viewerId ? fromCents(user.balance) : 0,
       totalClicks,
-      spent: roundToCents(totalClicks * round.clickPrice),
+      spent: fromCents(totalClicks * round.clickPrice),
       clicks,
-      estimated: roundToCents(estimated),
+      estimated: fromCents(Math.round(estimated)),
     });
   }
   seats.sort((a, b) => b.totalClicks - a.totalClicks || b.spent - a.spent || a.username.localeCompare(b.username));
@@ -373,6 +470,7 @@ function listRoomCards(store: StoreData): PublicRoomCard[] {
 function pruneExpiredRooms(store: StoreData) {
   const at = nowMs();
   for (const [slug, room] of Object.entries(store.rooms)) {
+    if (room.paused) continue;
     if (room.kind !== "custom" || !room.closesAt || at < room.closesAt) continue;
     if (room.round?.status === "live") {
       settleRound(store, room, room.round, at);
@@ -393,11 +491,12 @@ function publicUserFor(store: StoreData, userId: string | null) {
   if (!userId || !store.users[userId]) return null;
   const user = store.users[userId];
   ensureUserWallets(user);
-  const txs = store.txs.filter((tx) => tx.playerId === userId).slice(0, 30);
+  const txs = store.txs.filter((tx) => tx.playerId === userId).slice(0, 100);
   return toPublicUser(user, txs, store);
 }
 
 export function getLobbyState(store: StoreData, userId: string | null): LobbyState {
+  ensureHouseUser(store);
   ensureRooms(store);
   for (const room of Object.values(store.rooms)) tickRoom(store, room);
   pruneExpiredRooms(store);
@@ -414,8 +513,8 @@ export function getRoomState(
   slug: string,
   userId: string | null,
 ): GameState {
+  ensureHouseUser(store);
   ensureRooms(store);
-  for (const room of Object.values(store.rooms)) tickRoom(store, room);
   pruneExpiredRooms(store);
   ensureRooms(store);
   const room = findRoom(store, slug);
@@ -424,8 +523,30 @@ export function getRoomState(
   return {
     now: nowMs(),
     user: publicUserFor(store, userId),
-    room: toPublicRoom(store, room),
-    round: toPublicRound(round, userId ?? ""),
+    round: toPublicRound(round, userId ?? "", room),
+    room: toPublicRoom(store, room, userId),
+    feed: room.events.slice(-80),
+    rooms: listRoomCards(store),
+    seats: toSeats(store, room, userId),
+  };
+}
+
+export function snapshotRoomState(
+  store: StoreData,
+  slug: string,
+  userId: string | null,
+): GameState {
+  const room = findRoom(store, slug);
+  if (!room.round) {
+    const error = new Error("That room is not open.");
+    (error as Error & { status?: number }).status = 404;
+    throw error;
+  }
+  return {
+    now: nowMs(),
+    user: publicUserFor(store, userId),
+    round: toPublicRound(room.round, userId ?? "", room),
+    room: toPublicRoom(store, room, userId),
     feed: room.events.slice(-80),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
@@ -447,9 +568,14 @@ export function clickColor(
   const round = room.round!;
   const user = store.users[userId];
   if (!user) throw new Error("Sign in to continue.");
+  if (user.id === HOUSE_USER_ID) throw new Error("The house bank cannot play.");
+  assertCanPlay(store, user, round.clickPrice);
 
   if (!round.buttonIds.includes(colorId)) {
     throw new Error("That coin is not on this table.");
+  }
+  if (room.paused) {
+    throw new Error("The host paused this table.");
   }
   if (round.status !== "live") {
     throw new Error("Round is locked while the winner is shown.");
@@ -461,9 +587,10 @@ export function clickColor(
   if (user.balance < round.clickPrice) {
     throw new Error("Not enough balance. Invest first.");
   }
+  assertCanPlay(store, user, round.clickPrice);
 
   const firstSit = !room.playerIds.includes(userId);
-  user.balance = roundToCents(user.balance - round.clickPrice);
+  user.balance -= round.clickPrice;
   round.totals[colorId] += 1;
   const current = playerClicksOn(round, userId);
   current[colorId] += 1;
@@ -497,9 +624,13 @@ export function postRoomChat(
   tickRoom(store, room);
   const user = store.users[userId];
   if (!user) throw new Error("Sign in to chat.");
+  if ((room.mutedIds ?? []).includes(userId)) {
+    throw new Error("The host muted you in this room.");
+  }
   const text = parseChat(raw);
+  const gap = room.slowMode ? 4000 : 900;
   const recent = room.events.filter(
-    (item) => item.kind === "chat" && item.userId === userId && nowMs() - item.createdAt < 900,
+    (item) => item.kind === "chat" && item.userId === userId && nowMs() - item.createdAt < gap,
   );
   if (recent.length) throw new Error("Wait a moment before sending again.");
   if (!room.playerIds.includes(userId)) room.playerIds.push(userId);
@@ -523,9 +654,149 @@ export function openCustomRoom(
     liveMinutes?: number;
   },
 ) {
+  const user = store.users[userId];
+  if (!user) throw new Error("Sign in to continue.");
+  assertCanPlay(store, user);
   const room = createCustomRoom(store, userId, input);
   tickRoom(store, room);
   return getRoomState(store, room.slug, userId);
+}
+
+export function staffKillRound(store: StoreData, slug: string) {
+  const room = findRoom(store, slug);
+  const round = room.round;
+  if (!round || round.status !== "live") {
+    throw new Error("No live round to void.");
+  }
+  const at = nowMs();
+  const buttons = roomButtons(round);
+  const refunds: RoundResult["payouts"] = [];
+  for (const [playerId, clicks] of Object.entries(round.clicks)) {
+    const clickCount = buttons.reduce((sum, color) => sum + (clicks[color.id] ?? 0), 0);
+    if (clickCount <= 0) continue;
+    const amount = clickCount * round.clickPrice;
+    const user = store.users[playerId];
+    if (user) user.balance += amount;
+    addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} voided`);
+    notify(store, playerId, {
+      kind: "refund",
+      title: `${room.name} · round voided`,
+      body: `Staff ended the round. ${formatCents(amount)} USDT came back.`,
+      href: roomHref(room),
+    });
+    refunds.push({ playerId, amount, winningClicks: clickCount });
+  }
+  const totalClicks = buttons.reduce((sum, color) => sum + round.totals[color.id], 0);
+  round.status = "revealing";
+  round.revealUntil = at + REVEAL_SECONDS * 1000;
+  round.result = {
+    roundId: round.id,
+    kind: "void",
+    winners: [],
+    totals: { ...round.totals },
+    losingPot: 0,
+    winningClicks: totalClicks,
+    payoutPerWinningClick: round.clickPrice,
+    rake: 0,
+    payouts: refunds,
+  };
+  postRoomEvent(room, {
+    kind: "round",
+    body: `Round #${round.number} was voided by staff. Clicks were refunded.`,
+  });
+  queueSettledRound(room, round, at);
+  return getRoomState(store, slug, null);
+}
+
+export function hostRenameRoom(store: StoreData, slug: string, userId: string, raw: string) {
+  const room = findRoom(store, slug);
+  requireHost(room, userId);
+  const name = raw.trim().replace(/\s+/g, " ").slice(0, MAX_ROOM_NAME);
+  if (name.length < 2) throw new Error("Give the table a short name.");
+  if (name === room.name) return getRoomState(store, slug, userId);
+  room.name = name;
+  postRoomEvent(room, {
+    kind: "system",
+    body: `This table is now ${name}.`,
+  });
+  return getRoomState(store, slug, userId);
+}
+
+export function hostSetPaused(store: StoreData, slug: string, userId: string, paused: boolean) {
+  const room = findRoom(store, slug);
+  requireHost(room, userId);
+  const at = nowMs();
+  if (paused === Boolean(room.paused)) return getRoomState(store, slug, userId);
+  if (paused) {
+    room.paused = true;
+    room.pausedAt = at;
+    postRoomEvent(room, { kind: "system", body: "The host paused the table." });
+  } else {
+    const shift = pauseShift(room, at);
+    if (room.round) {
+      room.round.startedAt += shift;
+      room.round.endsAt += shift;
+      if (room.round.revealUntil != null) room.round.revealUntil += shift;
+    }
+    if (room.closesAt) room.closesAt += shift;
+    room.paused = false;
+    room.pausedAt = null;
+    postRoomEvent(room, { kind: "system", body: "The host opened the table again." });
+  }
+  return getRoomState(store, slug, userId);
+}
+
+export function hostSetSlowMode(store: StoreData, slug: string, userId: string, slow: boolean) {
+  const room = findRoom(store, slug);
+  requireHost(room, userId);
+  room.slowMode = Boolean(slow);
+  postRoomEvent(room, {
+    kind: "system",
+    body: room.slowMode ? "Slow chat is on." : "Slow chat is off.",
+  });
+  return getRoomState(store, slug, userId);
+}
+
+export function hostCloseRoom(store: StoreData, slug: string, userId: string) {
+  const room = findRoom(store, slug);
+  requireHost(room, userId);
+  if (room.round?.status === "live") {
+    settleRound(store, room, room.round, nowMs());
+  }
+  for (const playerId of room.playerIds) {
+    notify(store, playerId, {
+      kind: "system",
+      title: `${room.name} closed`,
+      body: "The host closed this table.",
+      href: "/",
+    });
+  }
+  delete store.rooms[slug];
+  return { closed: true as const, slug };
+}
+
+export function hostMutePlayer(
+  store: StoreData,
+  slug: string,
+  hostId: string,
+  targetId: string,
+) {
+  const room = findRoom(store, slug);
+  if (room.kind !== "custom" || room.ownerId !== hostId) {
+    throw new Error("Only the host can mute players.");
+  }
+  if (targetId === hostId) throw new Error("You cannot mute yourself.");
+  const target = store.users[targetId];
+  if (!target) throw new Error("That player is not here.");
+  room.mutedIds ??= [];
+  if (!room.mutedIds.includes(targetId)) room.mutedIds.push(targetId);
+  postRoomEvent(room, {
+    kind: "system",
+    userId: targetId,
+    username: target.username,
+    body: `${target.username} was muted by the host.`,
+  });
+  return getRoomState(store, slug, hostId);
 }
 
 export function searchPit(store: StoreData, query: string): SearchHit {
@@ -540,6 +811,7 @@ export function searchPit(store: StoreData, query: string): SearchHit {
       (room.ownerName ?? "").toLowerCase().includes(q),
   );
   const users = Object.values(store.users)
+    .filter((user) => user.id !== HOUSE_USER_ID)
     .filter((user) => user.username.toLowerCase().includes(q))
     .slice(0, 12)
     .map((user) => ({

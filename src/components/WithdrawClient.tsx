@@ -12,6 +12,7 @@ export function WithdrawClient() {
   const [address, setAddress] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [live, setLive] = useState(false);
 
   async function load() {
     const response = await fetch("/api/state");
@@ -21,15 +22,23 @@ export function WithdrawClient() {
       window.location.href = "/signin";
       return;
     }
-    setNetworkId((current) => current || data.user!.wallets[0]?.id || "");
+    const liveId = data.user.wallets.find((item) => item.live)?.id;
+    setNetworkId((current) => current || liveId || data.user!.wallets[0]?.id || "");
     setAddress(data.user.withdrawAddress || "");
   }
 
   useEffect(() => {
     void load();
+    void fetch("/api/auth/providers")
+      .then((response) => response.json() as Promise<{ liveWithdrawals?: boolean }>)
+      .then((data) => setLive(Boolean(data.liveWithdrawals)))
+      .catch(() => undefined);
   }, []);
 
-  const wallet = state?.user?.wallets.find((item) => item.id === networkId);
+  const wallets = live
+    ? state?.user?.wallets.filter((item) => item.live) ?? []
+    : state?.user?.wallets ?? [];
+  const wallet = wallets.find((item) => item.id === networkId) ?? wallets[0];
 
   async function send() {
     setBusy(true);
@@ -41,7 +50,7 @@ export function WithdrawClient() {
         body: JSON.stringify({
           amount: Number(amount),
           address,
-          networkId,
+          networkId: wallet?.id ?? networkId,
         }),
       });
       const data = (await response.json()) as GameState & { error?: string };
@@ -61,14 +70,15 @@ export function WithdrawClient() {
     );
   }
 
-  const withdraws = state.user.txs.filter((tx) => tx.type === "withdraw");
+  const withdraws = state.user.txs.filter((tx) => tx.type === "withdraw" || tx.type === "refund");
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
       <h1 className="font-display text-4xl text-white">Withdraw</h1>
       <p className="mt-2 text-zinc-400">
-        Cash out play USDT to a wallet you own on the network you pick. Demo
-        mode deducts the balance immediately.
+          {live
+          ? "Cash out USDT on BNB Chain. Staff send it from the house wallet; you get a notice when it leaves."
+          : "Live cash-out is BNB Chain USDT only."}
       </p>
 
       <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -85,9 +95,9 @@ export function WithdrawClient() {
         <select
           className="field"
           onChange={(event) => setNetworkId(event.target.value)}
-          value={networkId}
+          value={wallet?.id ?? networkId}
         >
-          {state.user.wallets.map((item) => (
+          {wallets.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name} · {item.standard} {item.asset}
             </option>
@@ -131,7 +141,7 @@ export function WithdrawClient() {
           onClick={() => void send()}
           type="button"
         >
-          {busy ? "Sending…" : "Withdraw (demo)"}
+          {busy ? "Sending…" : "Queue withdraw"}
         </button>
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
       </section>
@@ -143,7 +153,10 @@ export function WithdrawClient() {
             key={tx.id}
           >
             <span>{tx.note}</span>
-            <span className="text-zinc-200">-{formatUsdt(tx.amount)}</span>
+            <span className="text-zinc-200">
+              {tx.type === "refund" ? "+" : "-"}
+              {formatUsdt(tx.amount)}
+            </span>
           </li>
         ))}
       </ul>
