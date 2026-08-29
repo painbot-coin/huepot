@@ -569,6 +569,14 @@ export function GameClient({ slug }: { slug: string }) {
             </Link>{" "}
             to click colors.
           </p>
+        ) : user.balance < round.clickPrice ? (
+          <p className="text-sm text-zinc-300">
+            Bank is below this table’s click price.{" "}
+            <Link className="underline" href="/invest">
+              Invest USDT
+            </Link>{" "}
+            to sit.
+          </p>
         ) : null}
       </section>
 
@@ -577,6 +585,7 @@ export function GameClient({ slug }: { slug: string }) {
           playerId={user?.id ?? ""}
           result={round.result}
           round={round}
+          sharePath={`/rooms/${slug}`}
           wash={winnerColor?.hex}
         />
       ) : null}
@@ -785,15 +794,40 @@ function CountUsdt({ value }: { value: number }) {
   return <>{formatUsdt(shown)}</>;
 }
 
+function ShareTable({ path }: { path: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <p className="mt-3 text-sm text-zinc-300">
+      <button
+        className="underline decoration-white/25 underline-offset-4"
+        onClick={() => {
+          void navigator.clipboard.writeText(`${window.location.origin}${path}`);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1600);
+        }}
+        type="button"
+      >
+        {copied ? "Link copied" : "Copy table link"}
+      </button>
+      {" · "}
+      <Link className="underline decoration-white/25 underline-offset-4" href="/rooms/new">
+        Open a Fog table
+      </Link>
+    </p>
+  );
+}
+
 function ResultCard({
   result,
   round,
   playerId,
+  sharePath,
   wash,
 }: {
   result: NonNullable<PublicRound["result"]>;
   round: PublicRound;
   playerId: string;
+  sharePath: string;
   wash?: string;
 }) {
   const yours = result.payouts.find((payout) => payout.playerId === playerId);
@@ -859,6 +893,7 @@ function ResultCard({
         ""
       )}
       {sheet}
+      <ShareTable path={sharePath} />
     </div>
   );
 }

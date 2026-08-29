@@ -1,9 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MIN_WITHDRAW } from "@/lib/config";
+import {
+  MAX_DAILY_WITHDRAW,
+  MAX_WITHDRAW,
+  MIN_WITHDRAW,
+} from "@/lib/config";
 import { formatUsdt } from "@/lib/money";
-import type { GameState } from "@/lib/types";
+import type { GameState, Withdrawal } from "@/lib/types";
+
+const EXPLORER = "https://bscscan.com";
+
+function statusLabel(status: Withdrawal["status"]) {
+  if (status === "queued") return "Queued — staff will send";
+  if (status === "paid") return "Sent";
+  return "Rejected — bank refunded";
+}
 
 export function WithdrawClient() {
   const [state, setState] = useState<GameState | null>(null);
@@ -13,6 +25,7 @@ export function WithdrawClient() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [live, setLive] = useState(false);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
 
   async function load() {
     const response = await fetch("/api/state");
@@ -27,8 +40,19 @@ export function WithdrawClient() {
     setAddress(data.user.withdrawAddress || "");
   }
 
+  async function loadQueue() {
+    try {
+      const response = await fetch("/api/withdraw");
+      const data = (await response.json()) as { withdrawals?: Withdrawal[] };
+      if (response.ok && Array.isArray(data.withdrawals)) setWithdrawals(data.withdrawals);
+    } catch {
+      /* keep last */
+    }
+  }
+
   useEffect(() => {
     void load();
+    void loadQueue();
     void fetch("/api/auth/providers")
       .then((response) => response.json() as Promise<{ liveWithdrawals?: boolean }>)
       .then((data) => setLive(Boolean(data.liveWithdrawals)))
@@ -57,6 +81,7 @@ export function WithdrawClient() {
       if (!response.ok) throw new Error(data.error || "Withdraw failed");
       setState(data);
       setAmount("");
+      void loadQueue();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Withdraw failed");
     } finally {
@@ -70,15 +95,13 @@ export function WithdrawClient() {
     );
   }
 
-  const withdraws = state.user.txs.filter((tx) => tx.type === "withdraw" || tx.type === "refund");
-
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
       <h1 className="font-display text-4xl text-white">Withdraw</h1>
       <p className="mt-2 text-zinc-400">
-          {live
-          ? "Cash out USDT on BNB Chain. Staff send it from the house wallet; you get a notice when it leaves."
-          : "Live cash-out is BNB Chain USDT only."}
+        Cash out USDT on BNB Chain. Minimum {MIN_WITHDRAW} USDT, max {MAX_WITHDRAW}{" "}
+        USDT per send, {MAX_DAILY_WITHDRAW} USDT per day. Staff send from the house
+        wallet; queued means it has not left yet.
       </p>
 
       <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -110,15 +133,7 @@ export function WithdrawClient() {
         <input
           className="field font-mono"
           onChange={(event) => setAddress(event.target.value)}
-          placeholder={
-            wallet?.family === "tron"
-              ? "T…"
-              : wallet?.family === "sol"
-                ? "Solana address"
-                : wallet?.family === "btc"
-                  ? "bc1… or 1…"
-                  : "0x…"
-          }
+          placeholder="0x…"
           value={address}
         />
 
@@ -128,6 +143,7 @@ export function WithdrawClient() {
         <input
           className="field"
           min={MIN_WITHDRAW}
+          max={MAX_WITHDRAW}
           onChange={(event) => setAmount(event.target.value)}
           placeholder={String(MIN_WITHDRAW)}
           step="1"
@@ -147,18 +163,36 @@ export function WithdrawClient() {
       </section>
 
       <ul className="mt-8 space-y-2">
-        {withdraws.map((tx) => (
-          <li
-            className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400"
-            key={tx.id}
-          >
-            <span>{tx.note}</span>
-            <span className="text-zinc-200">
-              {tx.type === "refund" ? "+" : "-"}
-              {formatUsdt(tx.amount)}
-            </span>
+        {withdrawals.length === 0 ? (
+          <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-500">
+            No cash-outs yet. Queued sends show here until staff pay them.
           </li>
-        ))}
+        ) : (
+          withdrawals.map((item) => (
+            <li
+              className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400"
+              key={item.id}
+            >
+              <span>
+                {statusLabel(item.status)}
+                {item.txHash ? (
+                  <>
+                    {" · "}
+                    <a
+                      className="underline decoration-white/20 underline-offset-4"
+                      href={`${EXPLORER}/tx/${item.txHash}`}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      BscScan
+                    </a>
+                  </>
+                ) : null}
+              </span>
+              <span className="text-zinc-200">{formatUsdt(item.amount)} USDT</span>
+            </li>
+          ))
+        )}
       </ul>
     </main>
   );

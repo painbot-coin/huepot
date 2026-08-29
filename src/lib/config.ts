@@ -21,6 +21,7 @@ export const MIN_LIVE_MINUTES = 10;
 export const MAX_LIVE_MINUTES = 1440;
 export const LIVE_MINUTE_OPTIONS = [10, 30, 60, 180, 360, 720, 1440] as const;
 export const FOG_SECONDS = 12;
+export const SUPPORT_EMAIL = "support@huepot.net";
 
 export function appUrl() {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");

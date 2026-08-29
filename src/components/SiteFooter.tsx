@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SUPPORT_EMAIL } from "@/lib/config";
 import { APP_VERSION } from "@/lib/version";
 
 export function SiteFooter() {
@@ -15,6 +16,7 @@ export function SiteFooter() {
         <Link href="/privacy">Privacy</Link>
         <Link href="/notifications">Notifications</Link>
         <Link href="/account">Account</Link>
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
       </div>
     </footer>
   );

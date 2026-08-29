@@ -1,3 +1,5 @@
+import { SUPPORT_EMAIL } from "@/lib/config";
+
 export default function PrivacyPage() {
   return (
     <main className="prose-page">
@@ -13,7 +15,9 @@ export default function PrivacyPage() {
         be settled.
       </p>
       <p>
-        To close an account, contact support from the email you signed up with.
+        To close an account, email{" "}
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> from the
+        Google address you signed in with.
         Account data lives in the Huepot database on the server.
       </p>
     </main>

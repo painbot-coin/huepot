@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { IconPlus } from "@/components/Icons";
+import { PublicPayouts } from "@/components/PublicPayouts";
 import { SearchDock } from "@/components/SearchDock";
 import { BASIC_ROOMS } from "@/lib/rooms";
 import { formatClock, formatUsdt } from "@/lib/money";
@@ -79,6 +80,7 @@ export function RoomLobby() {
           </Link>
         </div>
       </header>
+      <PublicPayouts />
       {error ? <p className="error-toast">{error}</p> : null}
 
       <section>

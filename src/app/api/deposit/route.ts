@@ -4,12 +4,33 @@ import {
   getSessionToken,
   requireUser,
   requireVerified,
+  userFromToken,
 } from "@/lib/auth";
+import { pendingDepositsForUser } from "@/lib/chain";
 import { getGameState } from "@/lib/game";
 import { jsonError } from "@/lib/http";
-import { withStore } from "@/lib/store";
+import { withStore, withStoreRead } from "@/lib/store";
 
 export const runtime = "nodejs";
+
+export async function GET() {
+  try {
+    const token = await getSessionToken();
+    const userId = await withStoreRead((store) => {
+      const user = userFromToken(store, token);
+      if (!user) {
+        const error = new Error("Sign in to continue.");
+        (error as Error & { status?: number }).status = 401;
+        throw error;
+      }
+      return user.id;
+    });
+    const pending = await pendingDepositsForUser(userId);
+    return NextResponse.json({ pending });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
 
 export async function POST(request: Request) {
   try {

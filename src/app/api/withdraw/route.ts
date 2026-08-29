@@ -5,7 +5,7 @@ import {
   requireVerified,
   withdrawFromNetwork,
 } from "@/lib/auth";
-import { dailyWithdrawTotal, insertWithdrawal } from "@/lib/chain";
+import { dailyWithdrawTotal, insertWithdrawal, listWithdrawalsForUser } from "@/lib/chain";
 import {
   LIVE_CHAIN_ID,
   MAX_DAILY_WITHDRAW,
@@ -17,6 +17,21 @@ import { toCents } from "@/lib/money";
 import { withStore, withStoreRead } from "@/lib/store";
 
 export const runtime = "nodejs";
+
+export async function GET() {
+  try {
+    const token = await getSessionToken();
+    const userId = await withStoreRead((store) => {
+      const user = requireUser(store, token);
+      requireVerified(user);
+      return user.id;
+    });
+    const withdrawals = await listWithdrawalsForUser(userId);
+    return NextResponse.json({ withdrawals });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
 
 export async function POST(request: Request) {
   try {

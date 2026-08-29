@@ -384,6 +384,87 @@ export async function deleteWithdrawal(id: string) {
   await prisma.$executeRawUnsafe(`DELETE FROM Withdrawal WHERE id = '${esc(id)}'`);
 }
 
+export type PendingDeposit = {
+  txHash: string;
+  amount: number;
+  confirmations: number;
+  needed: number;
+  blockNumber: number;
+};
+
+export type PublicPayout = {
+  amount: number;
+  at: number;
+};
+
+export async function pendingDepositsForUser(userId: string): Promise<PendingDeposit[]> {
+  if (!chainWatchEnabled()) return [];
+  await ensureChainTables();
+  const wallet = await prisma.wallet.findFirst({
+    where: { userId, network: LIVE_CHAIN_ID },
+    select: { address: true },
+  });
+  if (!wallet?.address) return [];
+  const needed = chainConfirms();
+  let head = lastBlock;
+  try {
+    if (!head) head = await getProvider().getBlockNumber();
+  } catch {
+    return [];
+  }
+  const from = Math.max(0, head - needed - 2);
+  const address = wallet.address.toLowerCase();
+  let logs: Log[] = [];
+  try {
+    logs = await getTransferLogs(from, head, [address]);
+  } catch {
+    return [];
+  }
+  const creditedRows = await prisma
+    .$queryRawUnsafe<{ txHash: string }[]>(
+      `SELECT txHash FROM ChainDeposit WHERE userId = '${esc(userId)}'`,
+    )
+    .catch(() => [] as { txHash: string }[]);
+  const credited = new Set(creditedRows.map((row) => row.txHash.toLowerCase()));
+  const seen = new Set<string>();
+  const pending: PendingDeposit[] = [];
+  for (const log of logs) {
+    const toTopic = log.topics[2];
+    if (!toTopic) continue;
+    const toAddress = `0x${toTopic.slice(26)}`.toLowerCase();
+    if (toAddress !== address) continue;
+    const hash = log.transactionHash.toLowerCase();
+    if (credited.has(hash) || seen.has(hash)) continue;
+    const confirmations = Math.max(0, head - log.blockNumber);
+    if (confirmations >= needed) continue;
+    const raw = Number(formatUnits(log.data, LIVE_USDT_DECIMALS));
+    if (!Number.isFinite(raw) || raw <= 0) continue;
+    seen.add(hash);
+    pending.push({
+      txHash: hash,
+      amount: raw,
+      confirmations,
+      needed,
+      blockNumber: log.blockNumber,
+    });
+  }
+  pending.sort((a, b) => b.blockNumber - a.blockNumber);
+  return pending.slice(0, 8);
+}
+
+export async function listPublicPayouts(limit = 8): Promise<PublicPayout[]> {
+  const rows = await listWithdrawals("paid");
+  return rows.slice(0, limit).map((row) => ({
+    amount: row.amount,
+    at: row.resolvedAt ?? row.createdAt,
+  }));
+}
+
+export async function listWithdrawalsForUser(userId: string) {
+  const rows = await listWithdrawals();
+  return rows.filter((row) => row.userId === userId);
+}
+
 export async function listWithdrawals(status?: WithdrawalStatus) {
   await ensureChainTables();
   const rows = await prisma.$queryRawUnsafe<

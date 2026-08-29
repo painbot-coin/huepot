@@ -1884,6 +1884,36 @@ select.field {
   color: #ffd27a;
 }
 
+.payout-strip {
+  margin: 1rem 0 0;
+}
+
+.payout-strip ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.payout-strip li {
+  display: flex;
+  gap: 0.55rem;
+  align-items: baseline;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  background: #16131f;
+  font-size: 0.82rem;
+  color: #c9c9d4;
+}
+
+.payout-strip strong {
+  color: #f3efe6;
+  font-weight: 600;
+}
+
 .lobby-hero-tools {
   display: flex;
   gap: 0.5rem;

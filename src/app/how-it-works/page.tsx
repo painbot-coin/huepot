@@ -9,9 +9,10 @@ export default function HowItWorksPage() {
       <ol>
         <li>Sign in with Google. Tick 18+ on the sign-in page, then you can invest, click, and chat.</li>
         <li>
-          Invest by sending USDT on BNB Chain (BEP-20) to your live deposit
-          address. Huepot watches that chain and credits your bank after enough
-          confirms. Other network addresses are saved for later.
+          Invest at least 10 USDT on BNB Chain (BEP-20) only. Huepot watches
+          that chain and credits your bank after enough confirms. Send on any
+          other network and the money is gone. Extra addresses on Invest are
+          not watched.
         </li>
         <li>
           Join a basic room for free — Classic, Lightning, Duo, High Table, or
