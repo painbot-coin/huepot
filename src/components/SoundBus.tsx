@@ -20,6 +20,10 @@ export function SoundBus() {
         return;
       }
       if (detail.kind === "take" || detail.kind === "round") stopUrgent();
+      if (detail.kind === "fog") {
+        playFx("fog", detail.color);
+        return;
+      }
       playFx(detail.kind, detail.color);
     }
 

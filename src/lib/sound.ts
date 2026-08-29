@@ -1,6 +1,6 @@
 const MUTE_KEY = "huepot_mute";
 
-export type SoundKind = "click" | "pot" | "take" | "urgent" | "round";
+export type SoundKind = "click" | "pot" | "take" | "urgent" | "round" | "fog";
 
 let ctx: AudioContext | null = null;
 let muted = false;
@@ -131,6 +131,11 @@ export function playFx(kind: SoundKind, color?: string) {
   if (kind === "urgent") {
     tone(196, 0.1, "triangle", 0.045);
     tone(147, 0.14, "sine", 0.035, 0.06);
+    return;
+  }
+  if (kind === "fog") {
+    tone(196, 0.18, "sine", 0.03);
+    tone(147, 0.28, "triangle", 0.025, 0.08);
     return;
   }
   tone(698, 0.1, "sine", 0.045);
