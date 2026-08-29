@@ -7,11 +7,13 @@ import {
   productMode,
   withdrawSendEnabled,
 } from "@/lib/config";
+import { APP_VERSION } from "@/lib/version";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   return NextResponse.json({
+    version: APP_VERSION,
     google: googleConfigured(),
     product: productMode(),
     demoMoney: demoMoneyEnabled(),

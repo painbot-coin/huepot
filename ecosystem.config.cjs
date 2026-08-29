@@ -10,6 +10,8 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "3000",
+        PRODUCT_MODE: "1",
+        APP_VERSION: "1.0.0",
       },
     },
   ],

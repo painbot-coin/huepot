@@ -1,9 +1,13 @@
 import Link from "next/link";
+import { APP_VERSION } from "@/lib/version";
 
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <p>Huepot is a timed color-pot game. 18+ only. Play what you can afford.</p>
+      <p>
+        Huepot v{APP_VERSION} is a timed color-pot game. 18+ only. Play what you
+        can afford.
+      </p>
       <div className="footer-links">
         <Link href="/how-it-works">How it works</Link>
         <Link href="/fairness">Fairness</Link>
