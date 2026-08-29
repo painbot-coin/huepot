@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
+  FOG_SECONDS,
   LIVE_MINUTE_OPTIONS,
   MAX_BUTTONS,
   MAX_CLICK_PRICE,
@@ -24,6 +25,7 @@ export function CreateRoomForm({
   const [clickPrice, setClickPrice] = useState(1);
   const [roundSeconds, setRoundSeconds] = useState(60);
   const [liveMinutes, setLiveMinutes] = useState(60);
+  const [fog, setFog] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -35,7 +37,7 @@ export function CreateRoomForm({
       const response = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, buttonCount, clickPrice, roundSeconds, liveMinutes }),
+        body: JSON.stringify({ name, buttonCount, clickPrice, roundSeconds, liveMinutes, fog }),
       });
       const data = (await response.json()) as GameState & { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not create room");
@@ -115,6 +117,17 @@ export function CreateRoomForm({
             </option>
           ))}
         </select>
+      </label>
+      <label className="fog-check">
+        <input
+          checked={fog}
+          onChange={(event) => setFog(event.target.checked)}
+          type="checkbox"
+        />
+        <span>
+          Fog in the last {FOG_SECONDS} seconds
+          <small>Public counts, leader marks, and estimates go dark. Your own clicks stay visible.</small>
+        </span>
       </label>
       {error ? <p className="error-toast mt-4">{error}</p> : null}
       <button className="chip-btn mt-6" disabled={busy} type="submit">

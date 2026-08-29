@@ -91,6 +91,7 @@ export function Atmosphere() {
     { id: 2, text: "Biggest color takes the pot", color: "#9ad4ff" },
   ]);
   const [mode, setMode] = useState<"idle" | "urgent" | "take">("idle");
+  const [foggy, setFoggy] = useState(false);
   const [wash, setWash] = useState("#ffb020");
   const reduced = useRef(false);
   const tickId = useRef(3);
@@ -105,12 +106,17 @@ export function Atmosphere() {
       const color = detail.color || "#ffb020";
       const tint = TINT[color.toLowerCase()] || "#f3efe6";
       if (detail.kind === "take") {
+        setFoggy(false);
         setMode("take");
         setWash(color);
         window.setTimeout(() => setMode("idle"), 4200);
       } else if (detail.kind === "urgent") {
         setMode("urgent");
+      } else if (detail.kind === "fog") {
+        setFoggy(true);
+        setWash("#c9c4d8");
       } else if (detail.kind === "round") {
+        setFoggy(false);
         setMode("idle");
       }
       if (detail.label) {
@@ -208,6 +214,7 @@ export function Atmosphere() {
       { text: "Violet lanterns overhead", color: "#d2c2ff" },
       { text: "Frost gleam on the rail", color: "#d7fbff" },
       { text: "Same price on every coin", color: "#f3efe6" },
+      { text: "Fog Pit hides the board late", color: "#c9c4d8" },
     ];
     const flavorTimer = window.setInterval(() => {
       const pick = flavor[Math.floor(Math.random() * flavor.length)]!;
@@ -330,7 +337,7 @@ export function Atmosphere() {
 
   return (
     <>
-    <div aria-hidden="true" className={`fx-root is-${mode}`}>
+    <div aria-hidden="true" className={`fx-root is-${mode} ${foggy ? "is-fog" : ""}`}>
       <div className="fx-prism" />
       <div className="fx-felt" />
       <div className="fx-stage">
@@ -347,6 +354,7 @@ export function Atmosphere() {
         className="fx-wash"
         style={{ background: `radial-gradient(circle at 50% 18%, ${wash}28, transparent 46%)` }}
       />
+      <div className="fx-mist" />
       <canvas className="fx-canvas" ref={canvasRef} />
       <div className="fx-vignette" />
     </div>

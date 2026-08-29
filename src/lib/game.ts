@@ -12,6 +12,7 @@ import {
   createCustomRoom,
   ensureRooms,
   findRoom,
+  isLiveFog,
   parseChat,
   postRoomEvent,
 } from "./rooms";
@@ -363,6 +364,7 @@ function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound
     0,
   );
   const shift = room ? pauseShift(room) : 0;
+  const fog = Boolean(room && isLiveFog(room, round, nowMs() - shift));
   return {
     id: round.id,
     number: round.number,
@@ -372,7 +374,7 @@ function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound
     revealUntil: round.revealUntil != null ? round.revealUntil + shift : null,
     clickPrice: fromCents(round.clickPrice),
     buttonIds: [...round.buttonIds],
-    totals: { ...round.totals },
+    totals: fog ? emptyColorCounts() : { ...round.totals },
     yourClicks: playerClicksOn(round, playerId),
     totalClicks,
     pot: fromCents(totalClicks * round.clickPrice),
@@ -381,6 +383,7 @@ function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound
     serverSeed: round.status === "revealing" ? round.serverSeed : null,
     fairHash: round.status === "revealing" ? round.fairHash || null : null,
     rakeBps: rakeBps(),
+    fog,
   };
 }
 
@@ -398,6 +401,7 @@ function toPublicRoomCard(store: StoreData, room: Room): PublicRoomCard {
     buttonCount: room.buttonCount,
     clickPrice: fromCents(room.clickPrice),
     roundSeconds: room.roundSeconds,
+    fogSeconds: room.fogSeconds ?? null,
     status: round?.status ?? "live",
     pot: fromCents(totalClicks * room.clickPrice),
     players: room.playerIds.length,
@@ -431,6 +435,7 @@ function estimateSeat(round: Round, clicks: PlayerClicks, colorId: ColorId) {
 function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicSeat[] {
   const round = room.round;
   if (!round) return [];
+  const fog = isLiveFog(room, round, nowMs() - pauseShift(room));
   const ids = new Set([...room.playerIds, ...Object.keys(round.clicks)]);
   const seats: PublicSeat[] = [];
   for (const userId of ids) {
@@ -442,15 +447,17 @@ function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicS
       (sum, id) => sum + estimateSeat(round, clicks, id),
       0,
     );
+    const you = userId === viewerId;
+    const hide = fog && !you;
     seats.push({
       userId,
       username: user.username,
-      you: userId === viewerId,
-      balance: userId === viewerId ? fromCents(user.balance) : 0,
-      totalClicks,
-      spent: fromCents(totalClicks * round.clickPrice),
-      clicks,
-      estimated: fromCents(Math.round(estimated)),
+      you,
+      balance: you ? fromCents(user.balance) : 0,
+      totalClicks: hide ? 0 : totalClicks,
+      spent: hide ? 0 : fromCents(totalClicks * round.clickPrice),
+      clicks: hide ? emptyClicks() : clicks,
+      estimated: hide ? 0 : fromCents(Math.round(estimated)),
     });
   }
   seats.sort((a, b) => b.totalClicks - a.totalClicks || b.spent - a.spent || a.username.localeCompare(b.username));
@@ -652,6 +659,8 @@ export function openCustomRoom(
     clickPrice?: number;
     roundSeconds?: number;
     liveMinutes?: number;
+    fog?: boolean;
+    fogSeconds?: number | null;
   },
 ) {
   const user = store.users[userId];

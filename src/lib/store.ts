@@ -176,6 +176,7 @@ function roomFromRow(row: {
     buttonCount: row.buttonCount,
     clickPrice: row.clickPrice,
     roundSeconds: row.roundSeconds,
+    fogSeconds: null,
     createdAt: ms(row.createdAt),
     liveMinutes: row.liveMinutes,
     closesAt: msOpt(row.closesAt),
@@ -216,6 +217,17 @@ async function loadRoomFlags() {
     );
   } catch {
     return new Map<string, { paused: boolean; pausedAt: number | null; slowMode: boolean }>();
+  }
+}
+
+async function loadFogSeconds() {
+  try {
+    const rows = await prisma.$queryRawUnsafe<{ id: string; fogSeconds: number | null }[]>(
+      "SELECT id, fogSeconds FROM Room",
+    );
+    return new Map(rows.map((row) => [row.id, row.fogSeconds ?? null]));
+  } catch {
+    return new Map<string, number | null>();
   }
 }
 
@@ -490,6 +502,11 @@ async function readStore(): Promise<StoreData> {
     room.pausedAt = extra.pausedAt;
     room.slowMode = extra.slowMode;
   }
+  const fogMap = await loadFogSeconds();
+  for (const room of Object.values(store.rooms)) {
+    if (fogMap.has(room.id)) room.fogSeconds = fogMap.get(room.id) ?? null;
+    else room.fogSeconds ??= null;
+  }
   const fair = await loadRoundFair();
   for (const room of Object.values(store.rooms)) {
     if (!room.round) continue;
@@ -719,6 +736,13 @@ async function persistStore(prev: StoreData, next: StoreData) {
           await tx.$executeRawUnsafe(
             `UPDATE Room SET paused = ${sqlInt(room.paused)}, pausedAt = ${sqlInt(room.pausedAt)}, slowMode = ${sqlInt(room.slowMode)} WHERE id = '${room.id.replace(/'/g, "''")}'`,
           );
+        }
+        if (!before || before.fogSeconds !== room.fogSeconds) {
+          await tx
+            .$executeRawUnsafe(
+              `UPDATE Room SET fogSeconds = ${sqlInt(room.fogSeconds)} WHERE id = '${room.id.replace(/'/g, "''")}'`,
+            )
+            .catch(() => undefined);
         }
 
         if (!same(before?.round, room.round)) {

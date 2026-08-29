@@ -28,6 +28,8 @@ export async function POST(request: Request) {
       clickPrice?: number;
       roundSeconds?: number;
       liveMinutes?: number;
+      fog?: boolean;
+      fogSeconds?: number | null;
     };
     const state = await withStore((store) => {
       const user = requireUser(store, token);

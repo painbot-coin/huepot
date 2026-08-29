@@ -14,9 +14,11 @@ export default function HowItWorksPage() {
           confirms. Other network addresses are saved for later.
         </li>
         <li>
-          Join a basic room for free — Classic, Lightning, Duo, or High Table —
-          or create a custom room with 2–8 coins, click price, round length, and a live timer.
-          When that live time ends, the custom table is deleted. No create fee.
+          Join a basic room for free — Classic, Lightning, Duo, High Table, or
+          Fog Pit — or create a custom room with 2–8 coins, click price, round
+          length, and a live timer. Fog Pit (and custom tables with fog on) hide
+          public click counts in the last 12 seconds. When that live time ends,
+          the custom table is deleted. No create fee.
         </li>
         <li>During a live round, click any coin. Each click spends that room’s price from your play balance.</li>
         <li>

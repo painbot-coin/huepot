@@ -168,6 +168,27 @@ body,
   transform-style: preserve-3d;
 }
 
+.fx-mist {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 40%, rgba(210, 214, 230, 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(180, 186, 210, 0.08), rgba(11, 9, 18, 0.2));
+  transition: opacity 400ms ease;
+}
+
+.fx-root.is-fog .fx-mist {
+  opacity: 1;
+}
+
+.fx-root.is-fog .fx-aurora-b,
+.fx-root.is-fog .fx-aurora-c {
+  opacity: 0.55;
+  filter: blur(8px);
+}
+
 .fx-shine {
   position: absolute;
   inset: -12%;
@@ -427,6 +448,15 @@ body,
 
 .arena.is-revealing {
   animation: arena-lock 1.2s ease;
+}
+
+.arena.is-fog {
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 196, 216, 0.28),
+    0 0 48px rgba(180, 186, 210, 0.12);
+  background:
+    radial-gradient(ellipse 80% 90% at 50% 0%, rgba(210, 214, 230, 0.12), transparent 55%),
+    #16131f;
 }
 
 .timer-track {
@@ -804,6 +834,15 @@ body,
 .color-pad.is-spark .pad-twirl {
   opacity: 0.85;
   animation: twirl-pop 0.65s ease-out;
+}
+
+.color-pad.is-fog {
+  filter: saturate(0.82) brightness(0.9);
+}
+
+.color-pad.is-fog .coin-count {
+  letter-spacing: 0.08em;
+  opacity: 0.72;
 }
 
 .color-pad.is-leading {
@@ -1898,6 +1937,42 @@ select.field {
 .room-card-top strong {
   font-family: var(--font-cinzel), serif;
   font-size: 1.25rem;
+}
+
+.fog-chip {
+  display: inline-block;
+  margin-left: 0.45rem;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c9c4d8;
+  border: 1px solid rgba(201, 196, 216, 0.45);
+}
+
+.fog-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  color: #d8d8e2;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.fog-check input {
+  margin-top: 0.2rem;
+  accent-color: #c9c4d8;
+}
+
+.fog-check small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #c9c9d4;
+  font-size: 0.78rem;
 }
 
 .room-card-top span {

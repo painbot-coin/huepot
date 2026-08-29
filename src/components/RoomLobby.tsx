@@ -10,10 +10,13 @@ import { formatClock, formatUsdt } from "@/lib/money";
 import type { LobbyState, PublicRoomCard } from "@/lib/types";
 
 function blurbFor(room: PublicRoomCard) {
-  return (
+  const base =
     BASIC_ROOMS.find((item) => item.slug === room.slug)?.blurb ??
-    `${room.buttonCount} coins · ${room.roundSeconds}s`
-  );
+    `${room.buttonCount} coins · ${room.roundSeconds}s`;
+  if (room.kind === "custom" && room.fogSeconds) {
+    return `${base} Last ${room.fogSeconds}s, the board goes dark.`;
+  }
+  return base;
 }
 
 export function RoomLobby() {
@@ -64,7 +67,11 @@ export function RoomLobby() {
       <header className="lobby-hero">
         <p className="lobby-kicker">Sit. Pick a color. Watch the pot.</p>
         <h1 className="font-display">Huepot tables</h1>
-        <p>One click is one stake. Biggest color takes the rest.</p>
+        <p>
+          One click is one stake. Biggest color takes the rest. Fog Pit hides
+          public counts in the last 12 seconds so the last click is a guess, not
+          a pile-on.
+        </p>
         <div className="lobby-hero-tools">
           <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
           <Link aria-label="Create room" className="pit-create" href="/rooms/new">
@@ -113,7 +120,10 @@ function RoomCard({
   return (
     <Link className="room-card" href={`/rooms/${room.slug}`}>
       <div className="room-card-top">
-        <strong>{room.name}</strong>
+        <strong>
+          {room.name}
+          {room.fogSeconds ? <em className="fog-chip">Fog</em> : null}
+        </strong>
         <em className={`pit-kind is-${room.kind}`} title={room.kind === "basic" ? "House" : "Custom"} />
       </div>
       <p>{blurb}</p>

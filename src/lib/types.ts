@@ -65,6 +65,7 @@ export type Room = {
   buttonCount: number;
   clickPrice: number;
   roundSeconds: number;
+  fogSeconds: number | null;
   createdAt: number;
   liveMinutes: number | null;
   closesAt: number | null;
@@ -233,6 +234,7 @@ export type PublicRound = {
   serverSeed: string | null;
   fairHash: string | null;
   rakeBps: number;
+  fog: boolean;
 };
 
 export type PublicRoomCard = {
@@ -243,6 +245,7 @@ export type PublicRoomCard = {
   buttonCount: number;
   clickPrice: number;
   roundSeconds: number;
+  fogSeconds: number | null;
   status: RoundStatus;
   pot: number;
   players: number;

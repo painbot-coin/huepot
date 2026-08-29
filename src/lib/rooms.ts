@@ -1,6 +1,7 @@
 import { colorsForCount, emptyColorCounts, type ColorId } from "./colors";
 import {
   CLICK_PRICE,
+  FOG_SECONDS,
   MAX_BUTTONS,
   MAX_CHAT,
   MAX_CLICK_PRICE,
@@ -15,7 +16,7 @@ import {
   ROUND_SECONDS,
 } from "./config";
 import { fromCents, toCents } from "./money";
-import type { Room, RoomEvent, RoomEventKind, StoreData } from "./types";
+import type { Room, RoomEvent, RoomEventKind, Round, StoreData } from "./types";
 
 export type BasicRoomDef = {
   slug: string;
@@ -23,6 +24,7 @@ export type BasicRoomDef = {
   buttonCount: number;
   clickPrice: number;
   roundSeconds: number;
+  fogSeconds?: number | null;
   blurb: string;
 };
 
@@ -59,7 +61,27 @@ export const BASIC_ROOMS: BasicRoomDef[] = [
     roundSeconds: 60,
     blurb: "5 USDT a click. Same rules, heavier pot.",
   },
+  {
+    slug: "fog",
+    name: "Fog Pit",
+    buttonCount: 4,
+    clickPrice: CLICK_PRICE,
+    roundSeconds: ROUND_SECONDS,
+    fogSeconds: FOG_SECONDS,
+    blurb: "Classic rules. Last 12 seconds, the board goes dark.",
+  },
 ];
+
+export function isLiveFog(
+  room: Pick<Room, "fogSeconds">,
+  round: Pick<Round, "status" | "endsAt">,
+  at = Date.now(),
+) {
+  const secs = room.fogSeconds;
+  if (!secs || secs <= 0) return false;
+  if (round.status !== "live") return false;
+  return at >= round.endsAt - secs * 1000;
+}
 
 export function buttonIdsForCount(count: number): ColorId[] {
   return colorsForCount(count).map((color) => color.id);
@@ -74,11 +96,16 @@ function makeRoom(input: {
   clickPrice: number;
   roundSeconds: number;
   liveMinutes: number | null;
+  fogSeconds?: number | null;
 }): Room {
   const createdAt = Date.now();
   const liveMinutes = input.kind === "custom" ? input.liveMinutes : null;
   const closesAt =
     liveMinutes != null ? createdAt + liveMinutes * 60 * 1000 : null;
+  const fogSeconds = input.fogSeconds && input.fogSeconds > 0 ? input.fogSeconds : null;
+  const fogNote = fogSeconds
+    ? ` Last ${fogSeconds} seconds, the board goes dark.`
+    : "";
   return {
     id: input.slug,
     slug: input.slug,
@@ -88,6 +115,7 @@ function makeRoom(input: {
     buttonCount: input.buttonCount,
     clickPrice: input.clickPrice,
     roundSeconds: input.roundSeconds,
+    fogSeconds,
     createdAt,
     liveMinutes,
     closesAt,
@@ -105,8 +133,8 @@ function makeRoom(input: {
         userId: null,
         username: null,
         body: liveMinutes
-          ? `${input.name} is open for ${liveMinutes} minutes, then this table is deleted. ${input.buttonCount} coins · ${fromCents(input.clickPrice)} USDT · ${input.roundSeconds}s rounds.`
-          : `${input.name} is open. No table fee. ${input.buttonCount} coins · ${fromCents(input.clickPrice)} USDT · ${input.roundSeconds}s rounds.`,
+          ? `${input.name} is open for ${liveMinutes} minutes, then this table is deleted. ${input.buttonCount} coins · ${fromCents(input.clickPrice)} USDT · ${input.roundSeconds}s rounds.${fogNote}`
+          : `${input.name} is open. No table fee. ${input.buttonCount} coins · ${fromCents(input.clickPrice)} USDT · ${input.roundSeconds}s rounds.${fogNote}`,
         createdAt,
       },
     ],
@@ -127,6 +155,7 @@ export function ensureRooms(store: StoreData) {
         clickPrice: toCents(def.clickPrice),
         roundSeconds: def.roundSeconds,
         liveMinutes: null,
+        fogSeconds: def.fogSeconds ?? null,
       });
       continue;
     }
@@ -135,6 +164,7 @@ export function ensureRooms(store: StoreData) {
     existing.buttonCount = def.buttonCount;
     existing.clickPrice = toCents(def.clickPrice);
     existing.roundSeconds = def.roundSeconds;
+    existing.fogSeconds = def.fogSeconds ?? null;
     existing.events ??= [];
     existing.playerIds ??= [];
     existing.mutedIds ??= [];
@@ -173,6 +203,7 @@ export function ensureRooms(store: StoreData) {
     room.paused ??= false;
     room.pausedAt ??= null;
     room.slowMode ??= false;
+    room.fogSeconds ??= null;
   }
 }
 
@@ -222,6 +253,8 @@ export function parseRoomDraft(input: {
   clickPrice?: number;
   roundSeconds?: number;
   liveMinutes?: number;
+  fog?: boolean;
+  fogSeconds?: number | null;
 }) {
   const name = (input.name ?? "").trim().replace(/\s+/g, " ");
   if (name.length < 3 || name.length > MAX_ROOM_NAME) {
@@ -259,7 +292,15 @@ export function parseRoomDraft(input: {
   ) {
     throw new Error(`Table live time must be ${MIN_LIVE_MINUTES}–${MAX_LIVE_MINUTES} minutes.`);
   }
-  return { name, buttonCount, clickPrice, roundSeconds, liveMinutes };
+  const wantsFog = Boolean(input.fog) || Number(input.fogSeconds) > 0;
+  return {
+    name,
+    buttonCount,
+    clickPrice,
+    roundSeconds,
+    liveMinutes,
+    fogSeconds: wantsFog ? FOG_SECONDS : null,
+  };
 }
 
 export function createCustomRoom(
@@ -271,6 +312,8 @@ export function createCustomRoom(
     clickPrice?: number;
     roundSeconds?: number;
     liveMinutes?: number;
+    fog?: boolean;
+    fogSeconds?: number | null;
   },
 ) {
   ensureRooms(store);
@@ -289,6 +332,7 @@ export function createCustomRoom(
     clickPrice: draft.clickPrice,
     roundSeconds: draft.roundSeconds,
     liveMinutes: draft.liveMinutes,
+    fogSeconds: draft.fogSeconds,
   });
   store.rooms[slug] = room;
   const owner = store.users[ownerId];

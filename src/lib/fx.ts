@@ -1,4 +1,4 @@
-export type FxKind = "click" | "pot" | "take" | "urgent" | "round";
+export type FxKind = "click" | "pot" | "take" | "urgent" | "round" | "fog";
 
 export type FxDetail = {
   kind: FxKind;

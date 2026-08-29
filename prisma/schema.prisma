@@ -84,6 +84,7 @@ model Room {
   buttonCount  Int
   clickPrice   Float // integer cents
   roundSeconds Int
+  fogSeconds   Int?
   createdAt    BigInt
   liveMinutes  Int?
   closesAt     BigInt?
