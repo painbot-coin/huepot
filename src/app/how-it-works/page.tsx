@@ -7,7 +7,7 @@ export default function HowItWorksPage() {
         click price, round clock, and a live feed for chat plus wager statements.
       </p>
       <ol>
-        <li>Create an account with email or Google. Email signups need a verification link before you can invest, click, or chat.</li>
+        <li>Sign in with Google. Tick 18+ on the sign-in page, then you can invest, click, and chat.</li>
         <li>
           Invest by sending USDT on BNB Chain (BEP-20) to your live deposit
           address. Huepot watches that chain and credits your bank after enough

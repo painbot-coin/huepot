@@ -166,7 +166,7 @@ export function RoomFeed({
             muted ? (
               "The host muted you."
             ) : (
-              <Link href="/verify-email">Verify to chat.</Link>
+              <Link href="/signin">Sign in with Google to chat.</Link>
             )
           ) : (
             <Link href="/signin">Sign in to chat.</Link>

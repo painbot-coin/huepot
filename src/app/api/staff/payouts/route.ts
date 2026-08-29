@@ -5,7 +5,7 @@ import {
   resolveWithdrawal,
   sendQueuedWithdrawal,
 } from "@/lib/chain";
-import { mailConfigured, withdrawSendEnabled } from "@/lib/config";
+import { withdrawSendEnabled } from "@/lib/config";
 import { jsonError } from "@/lib/http";
 import { NextResponse } from "next/server";
 
@@ -19,7 +19,6 @@ export async function GET(request: Request) {
       withdrawals,
       canSend: withdrawSendEnabled(),
       treasury: await houseWalletStatus(),
-      mail: mailConfigured(),
     });
   } catch (error) {
     return jsonError(error);

@@ -47,10 +47,6 @@ export function googleConfigured() {
   );
 }
 
-export function mailConfigured() {
-  return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
-}
-
 export function chainRpcUrl() {
   if (process.env.BSC_RPC_URL) return process.env.BSC_RPC_URL;
   if (process.env.CHAIN_WATCH === "1" || productMode()) {

@@ -531,18 +531,14 @@ export function GameClient({ slug }: { slug: string }) {
         {!user ? (
           <p className="text-sm text-zinc-300">
             <Link className="underline" href="/signin">
-              Sign in
-            </Link>{" "}
-            or{" "}
-            <Link className="underline" href="/signup">
-              create an account
+              Sign in with Google
             </Link>{" "}
             to click. You can watch the round live either way.
           </p>
         ) : !user.emailVerified ? (
           <p className="text-sm text-zinc-300">
-            <Link className="underline" href="/verify-email">
-              Verify your email
+            <Link className="underline" href="/signin">
+              Sign in with Google
             </Link>{" "}
             to click colors.
           </p>
@@ -566,9 +562,9 @@ export function GameClient({ slug }: { slug: string }) {
               Open invest
             </Link>
           ) : null}
-          {error.toLowerCase().includes("verify") ? (
-            <Link className="underline" href="/verify-email">
-              Verify email
+          {error.toLowerCase().includes("google") || error.toLowerCase().includes("verify") ? (
+            <Link className="underline" href="/signin">
+              Sign in
             </Link>
           ) : null}
           {error.toLowerCase().includes("sign in") ? (

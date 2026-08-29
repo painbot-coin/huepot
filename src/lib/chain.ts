@@ -552,14 +552,7 @@ async function announcePayout(
   const cents = Math.round(Number(amount));
   const { withStore } = await import("@/lib/store");
   const { notify } = await import("@/lib/notifications");
-  let email = "";
-  let username = "player";
   await withStore((store) => {
-    const user = store.users[userId];
-    if (user) {
-      email = user.email;
-      username = user.username;
-    }
     const row = store.txs.find((item) => item.id === payoutId);
     if (row && action === "paid") {
       row.note = txHash
@@ -578,13 +571,6 @@ async function announcePayout(
       href: "/withdraw",
     });
   });
-  if (!email) return;
-  const { sendMail, payoutEmailHtml } = await import("@/lib/mail");
-  await sendMail(
-    email,
-    action === "paid" ? "Huepot cash-out sent" : "Huepot cash-out returned",
-    payoutEmailHtml(username, cents, action, txHash),
-  );
 }
 
 function esc(value: string) {

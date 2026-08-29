@@ -23,14 +23,6 @@ export async function GET(request: Request) {
       return loginWithGoogle(store, profile, oauth.ageConfirmed, requestAgent(request));
     });
     await setSessionCookie(session.token, session.maxAge);
-    if (session.hadOtherSessions && session.email) {
-      const { sendMail, securityEmailHtml } = await import("@/lib/mail");
-      void sendMail(
-        session.email,
-        "New Huepot sign-in",
-        securityEmailHtml(session.username, "signin", requestAgent(request).slice(0, 120)),
-      );
-    }
     return NextResponse.redirect(`${appUrl()}/`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Google sign-in failed";

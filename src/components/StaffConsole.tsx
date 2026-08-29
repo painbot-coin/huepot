@@ -40,7 +40,6 @@ export function StaffConsole() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [canSend, setCanSend] = useState(false);
-  const [mail, setMail] = useState<boolean | null>(null);
   const [treasury, setTreasury] = useState<Treasury | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [users, setUsers] = useState<StaffUserRow[]>([]);
@@ -69,7 +68,6 @@ export function StaffConsole() {
         reports?: ReportRow[];
         house?: { balance: number; percent: string };
         canSend?: boolean;
-        mail?: boolean;
         treasury?: Treasury;
       };
       if (!response.ok) throw new Error(data.error || "Could not load staff");
@@ -80,7 +78,6 @@ export function StaffConsole() {
       if (data.reports) setReports(data.reports);
       if (data.house) setHouse(data.house);
       if (typeof data.canSend === "boolean") setCanSend(data.canSend);
-      if (typeof data.mail === "boolean") setMail(data.mail);
       if (data.treasury) setTreasury(data.treasury);
       setTab(next);
     } catch (err) {
@@ -160,12 +157,6 @@ export function StaffConsole() {
             : " · fund this address on BNB Chain with BEP-20 USDT and a little BNB"}
         </p>
       ) : null}
-      {mail === false ? (
-        <p className="mt-2 text-sm text-zinc-500">
-          SMTP is off. Verify, reset, and security mail will not send until SMTP_USER and SMTP_PASS are set.
-        </p>
-      ) : null}
-
       <div className="mt-6 flex flex-wrap gap-2">
         {(["payouts", "players", "tables", "ledger", "reports"] as Tab[]).map((item) => (
           <button

@@ -3,7 +3,7 @@ export default function TermsPage() {
     <main className="prose-page">
       <h1 className="font-display text-4xl text-white">Terms</h1>
       <p>
-        Huepot is an 18+ color-pot game. By creating an account you confirm you
+        Huepot is an 18+ color-pot game. By signing in with Google you confirm you
         are of legal age where you live and that online betting is allowed for
         you.
       </p>

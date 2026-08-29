@@ -16,12 +16,11 @@ import {
   emptyLimits,
   userLimits,
 } from "./limits";
-import { HOUSE_EMAIL, HOUSE_USERNAME } from "./house";
-import { sendMail, verifyEmailHtml, verifyUrl, resetEmailHtml, resetUrl } from "./mail";
+import { HOUSE_USERNAME } from "./house";
 import { formatCents, toCents } from "./money";
 import { isNetworkId, networkById, validateAddress } from "./networks";
 import { notify } from "./notifications";
-import { hashPassword, newSessionToken, verifyPassword } from "./password";
+import { newSessionToken } from "./password";
 import { toPublicUser } from "./public-user";
 import { withStore, withStoreRead } from "./store";
 import type { PublicUser, StoreData, User } from "./types";
@@ -31,7 +30,6 @@ export { toPublicUser };
 
 export const SESSION_COOKIE = "huepot_session";
 const SESSION_MS = 1000 * 60 * 60 * 24 * 30;
-const VERIFY_MS = 1000 * 60 * 60 * 24;
 
 function nowMs() {
   return Date.now();
@@ -82,34 +80,6 @@ export function uniqueUsername(store: StoreData, seed: string) {
   return candidate;
 }
 
-export function issueVerifyToken(user: User) {
-  const token = randomBytes(24).toString("hex");
-  user.verifyToken = token;
-  user.verifyExpires = nowMs() + VERIFY_MS;
-  user.verifySentAt = nowMs();
-  return token;
-}
-
-export async function sendResetMail(user: { email: string; username: string; resetToken: string | null }) {
-  if (!user.resetToken) return { sent: false, error: "Missing token.", resetUrl: "" };
-  const mail = await sendMail(
-    user.email,
-    "Reset your Huepot password",
-    resetEmailHtml(user.username, user.resetToken),
-  );
-  return { ...mail, resetUrl: resetUrl(user.resetToken) };
-}
-
-export async function sendVerifyMail(user: User) {
-  const token = user.verifyToken || issueVerifyToken(user);
-  const mail = await sendMail(
-    user.email,
-    "Verify your Huepot email",
-    verifyEmailHtml(user.username, token),
-  );
-  return { ...mail, verifyUrl: verifyUrl(token) };
-}
-
 function newUser(
   partial: Omit<
     User,
@@ -149,82 +119,6 @@ function newUser(
   return user;
 }
 
-export function signup(
-  store: StoreData,
-  input: { email: string; username: string; password: string; ageConfirmed?: boolean },
-  userAgent = "",
-) {
-  if (!input.ageConfirmed) {
-    throw new Error("Confirm you are 18 or older.");
-  }
-  const email = normalizeEmail(input.email);
-  const username = normalizeUsername(input.username);
-  const password = input.password;
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Enter a valid email address.");
-  }
-  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-    throw new Error("Username must be 3–20 letters, numbers, or _.");
-  }
-  if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters.");
-  }
-  if (username.toLowerCase() === HOUSE_USERNAME || email === HOUSE_EMAIL) {
-    throw new Error("That email or username is already in use.");
-  }
-  if (findUserByLogin(store, email) || findUserByLogin(store, username)) {
-    throw new Error("That email or username is already in use.");
-  }
-
-  const user = newUser({
-    id: crypto.randomUUID(),
-    email,
-    username,
-    passwordHash: hashPassword(password),
-    googleId: null,
-    emailVerified: false,
-    verifyToken: null,
-    verifyExpires: null,
-    verifySentAt: null,
-    ageConfirmedAt: nowMs(),
-  });
-  issueVerifyToken(user);
-  store.users[user.id] = user;
-  notify(store, user.id, {
-    kind: "welcome",
-    title: "Welcome to Huepot",
-    body: "Your wallets are ready. Verify your email to invest and play.",
-    href: "/verify-email",
-  });
-  notify(store, user.id, {
-    kind: "verify",
-    title: "Verify your email",
-    body: `We sent a link to ${user.email}.`,
-    href: "/verify-email",
-  });
-  return { session: createSession(store, user.id, userAgent), user };
-}
-
-export function signin(
-  store: StoreData,
-  input: { login: string; password: string },
-  userAgent = "",
-) {
-  const user = findUserByLogin(store, input.login);
-  if (!user) {
-    throw new Error("Wrong email/username or password.");
-  }
-  if (!user.passwordHash) {
-    throw new Error("This account uses Google. Continue with Google.");
-  }
-  if (!verifyPassword(input.password, user.passwordHash)) {
-    throw new Error("Wrong email/username or password.");
-  }
-  ensureUserWallets(user);
-  return createSession(store, user.id, userAgent);
-}
-
 export function loginWithGoogle(
   store: StoreData,
   profile: { googleId: string; email: string; emailVerified: boolean; name: string },
@@ -259,7 +153,7 @@ export function loginWithGoogle(
   } else {
     const firstGoogle = !user.googleId;
     user.googleId = profile.googleId;
-    if (profile.emailVerified) user.emailVerified = true;
+    user.emailVerified = true;
     if (ageConfirmed && !user.ageConfirmedAt) user.ageConfirmedAt = nowMs();
     user.verifyToken = null;
     user.verifyExpires = null;
@@ -275,44 +169,6 @@ export function loginWithGoogle(
   }
 
   return createSession(store, user.id, userAgent);
-}
-
-export function verifyEmailToken(store: StoreData, token: string) {
-  const cleaned = token.trim();
-  if (!cleaned) throw new Error("Missing verification token.");
-  const user = Object.values(store.users).find(
-    (item) => item.verifyToken === cleaned,
-  );
-  if (!user || !user.verifyExpires || user.verifyExpires < nowMs()) {
-    throw new Error("That verification link is invalid or expired.");
-  }
-  user.emailVerified = true;
-  user.verifyToken = null;
-  user.verifyExpires = null;
-  notify(store, user.id, {
-    kind: "verified",
-    title: "Email verified",
-    body: "You can invest, click, and withdraw now.",
-    href: "/invest",
-  });
-  return user;
-}
-
-export function prepareResend(store: StoreData, user: User) {
-  if (user.emailVerified) {
-    throw new Error("Email is already verified.");
-  }
-  if (user.verifySentAt && nowMs() - user.verifySentAt < 60_000) {
-    throw new Error("Wait a minute before requesting another email.");
-  }
-  issueVerifyToken(user);
-  notify(store, user.id, {
-    kind: "verify",
-    title: "Verification email sent",
-    body: `Check ${user.email}.`,
-    href: "/verify-email",
-  });
-  return user;
 }
 
 export function createSession(store: StoreData, userId: string, userAgent = "") {
@@ -362,53 +218,6 @@ export function confirmAge(user: User) {
   if (!user.ageConfirmedAt) user.ageConfirmedAt = nowMs();
 }
 
-const RESET_MS = 1000 * 60 * 60;
-
-export function requestPasswordReset(store: StoreData, email: string) {
-  const user = findUserByLogin(store, email);
-  if (!user || !user.passwordHash) return null;
-  if (user.resetSentAt && nowMs() - user.resetSentAt < 60_000) return user;
-  user.resetToken = randomBytes(24).toString("hex");
-  user.resetExpires = nowMs() + RESET_MS;
-  user.resetSentAt = nowMs();
-  return user;
-}
-
-export function resetPassword(store: StoreData, token: string, password: string) {
-  const cleaned = token.trim();
-  if (!cleaned) throw new Error("Missing reset token.");
-  if (password.length < 8) throw new Error("Password must be at least 8 characters.");
-  const user = Object.values(store.users).find((item) => item.resetToken === cleaned);
-  if (!user || !user.resetExpires || user.resetExpires < nowMs()) {
-    throw new Error("That reset link is invalid or expired.");
-  }
-  user.passwordHash = hashPassword(password);
-  user.resetToken = null;
-  user.resetExpires = null;
-  for (const [tokenKey, session] of Object.entries(store.sessions)) {
-    if (session.userId === user.id) delete store.sessions[tokenKey];
-  }
-  notify(store, user.id, {
-    kind: "system",
-    title: "Password changed",
-    body: "Your password was reset. Other devices were signed out.",
-    href: "/signin",
-  });
-  return user;
-}
-
-export function changePassword(user: User, current: string, next: string) {
-  if (!user.passwordHash) {
-    throw new Error("This account uses Google. Add a password reset from email signup, or keep using Google.");
-  }
-  if (!verifyPassword(current, user.passwordHash)) {
-    throw new Error("Current password is wrong.");
-  }
-  if (next.length < 8) throw new Error("Password must be at least 8 characters.");
-  if (current === next) throw new Error("Pick a new password.");
-  user.passwordHash = hashPassword(next);
-}
-
 export function changeUsername(store: StoreData, user: User, raw: string) {
   const username = normalizeUsername(raw);
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
@@ -425,38 +234,6 @@ export function changeUsername(store: StoreData, user: User, raw: string) {
     throw new Error("That email or username is already in use.");
   }
   user.username = username;
-}
-
-export function changeEmail(store: StoreData, user: User, raw: string, currentPassword: string) {
-  const email = normalizeEmail(raw);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Enter a valid email address.");
-  }
-  if (email === user.email) throw new Error("That is already your email.");
-  if (email === HOUSE_EMAIL) {
-    throw new Error("That email or username is already in use.");
-  }
-  const taken = findUserByLogin(store, email);
-  if (taken && taken.id !== user.id) {
-    throw new Error("That email or username is already in use.");
-  }
-  if (user.passwordHash) {
-    if (!currentPassword) throw new Error("Enter your current password.");
-    if (!verifyPassword(currentPassword, user.passwordHash)) {
-      throw new Error("Current password is wrong.");
-    }
-  }
-  const previous = user.email;
-  user.email = email;
-  user.emailVerified = false;
-  issueVerifyToken(user);
-  notify(store, user.id, {
-    kind: "verify",
-    title: "Verify your new email",
-    body: `Confirm ${email} before you invest or click.`,
-    href: "/verify-email",
-  });
-  return previous;
 }
 
 export function listPublicSessions(store: StoreData, userId: string, currentToken: string) {
@@ -546,7 +323,7 @@ export function requireUser(store: StoreData, token: string | undefined) {
 
 export function requireVerified(user: User) {
   if (!user.emailVerified) {
-    const error = new Error("Verify your email to continue.");
+    const error = new Error("Sign in with Google to continue.");
     (error as Error & { status: number }).status = 403;
     throw error;
   }

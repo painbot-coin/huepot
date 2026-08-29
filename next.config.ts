@@ -5,7 +5,7 @@ const chainNode = path.join(process.cwd(), "src/lib/chain.ts");
 const chainEdge = path.join(process.cwd(), "src/lib/chain.edge.ts");
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client", "prisma", "nodemailer"],
+  serverExternalPackages: ["@prisma/client", "prisma"],
   webpack: (config, { nextRuntime }) => {
     if (nextRuntime !== "nodejs") {
       config.resolve = config.resolve ?? {};

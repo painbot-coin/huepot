@@ -45,12 +45,9 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
           </>
         ) : (
           <>
-            <Link className="nav-link" href="/signin">
-              Sign in
-            </Link>
             <SoundToggle className="pit-ico header-sound" />
-            <Link className="chip-btn" href="/signup">
-              Sign up
+            <Link className="chip-btn" href="/signin">
+              Sign in
             </Link>
           </>
         )}

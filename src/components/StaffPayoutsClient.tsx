@@ -10,7 +10,6 @@ export function StaffPayoutsClient() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [canSend, setCanSend] = useState(false);
-  const [mail, setMail] = useState<boolean | null>(null);
   const [treasury, setTreasury] = useState<{
     address: string;
     usdt: number;
@@ -29,13 +28,11 @@ export function StaffPayoutsClient() {
         withdrawals?: Withdrawal[];
         error?: string;
         canSend?: boolean;
-        mail?: boolean;
         treasury?: { address: string; usdt: number; bnb: number; ready: boolean };
       };
       if (!response.ok) throw new Error(data.error || "Could not load payouts");
       setRows(data.withdrawals ?? []);
       setCanSend(Boolean(data.canSend));
-      if (typeof data.mail === "boolean") setMail(data.mail);
       if (data.treasury) setTreasury(data.treasury);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load payouts");
@@ -103,10 +100,6 @@ export function StaffPayoutsClient() {
           {treasury.ready ? " · funded" : " · empty until you send BEP-20 USDT and BNB"}
         </p>
       ) : null}
-      {mail === false ? (
-        <p className="mt-2 text-sm text-zinc-500">SMTP is off. Player mail will not send.</p>
-      ) : null}
-
       <ul className="mt-8 space-y-2">
         {rows.map((row) => (
           <li

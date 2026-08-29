@@ -18,12 +18,13 @@ export default async function NewRoomPage() {
         </div>
       ) : !user.emailVerified ? (
         <div className="auth-card">
-          <h1 className="font-display text-3xl">Verify to open a table</h1>
+          <h1 className="font-display text-3xl">Sign in with Google</h1>
           <p className="mt-2 text-zinc-400">
-            Confirm your email, then you can set coins, price, and round time.
+            Custom rooms need a Google account before you set coins, price, and
+            round time.
           </p>
-          <Link className="chip-btn mt-6 inline-flex" href="/verify-email">
-            Verify email
+          <Link className="chip-btn mt-6 inline-flex" href="/signin">
+            Sign in
           </Link>
         </div>
       ) : (

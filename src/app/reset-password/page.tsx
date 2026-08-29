@@ -1,9 +1,5 @@
-import { ResetForm } from "@/components/ResetForm";
+import { redirect } from "next/navigation";
 
-export default function ResetPage() {
-  return (
-    <main className="mx-auto w-full max-w-md px-4 py-12">
-      <ResetForm />
-    </main>
-  );
+export default function ResetPasswordPage() {
+  redirect("/signin");
 }

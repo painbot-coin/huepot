@@ -6,7 +6,6 @@ import { PlayBlockBanner } from "@/components/PlayBlockBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SoundBus } from "@/components/SoundBus";
-import { VerifyBanner } from "@/components/VerifyBanner";
 import { getHeaderUser } from "@/lib/auth";
 import "./globals.css";
 
@@ -40,7 +39,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <SoundBus />
         <SiteHeader user={user} />
         {user && !user.ageConfirmed ? <AgeBanner /> : null}
-        {user && !user.emailVerified ? <VerifyBanner email={user.email} /> : null}
         {user?.blocked && user.blockKind !== "age" ? <PlayBlockBanner user={user} /> : null}
         <div className="page-stage flex-1">{children}</div>
         <SiteFooter />

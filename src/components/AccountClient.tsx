@@ -65,17 +65,11 @@ export function AccountClient() {
       </section>
 
       <p className="mt-6 text-sm text-zinc-500">
-        {user.emailVerified ? "Verified" : "Not verified"}
-        {user.hasGoogle ? " · Google" : ""} · since{" "}
+        {user.email} · Google · since{" "}
         {new Date(user.createdAt).toLocaleDateString()}
       </p>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        {!user.emailVerified ? (
-          <Link className="chip-btn" href="/verify-email">
-            Verify email
-          </Link>
-        ) : null}
         <Link className="chip-btn" href="/invest">
           Invest
         </Link>
@@ -145,16 +139,12 @@ function ProfileCard({
   onUser: (user: PublicUser) => void;
 }) {
   const [username, setUsername] = useState(user.username);
-  const [email, setEmail] = useState(user.email);
-  const [current, setCurrent] = useState("");
   const [error, setError] = useState("");
-  const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function save(body: Record<string, string>) {
     setBusy(true);
     setError("");
-    setNote("");
     try {
       const response = await fetch("/api/account/security", {
         method: "POST",
@@ -164,10 +154,6 @@ function ProfileCard({
       const data = (await response.json()) as { user?: PublicUser; error?: string };
       if (!response.ok || !data.user) throw new Error(data.error || "Could not save");
       onUser({ ...user, ...data.user, txs: user.txs });
-      setCurrent("");
-      if (body.action === "email") {
-        setNote("Confirm the new email. A link was sent if mail is on.");
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save");
     } finally {
@@ -179,7 +165,7 @@ function ProfileCard({
     <section className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-5">
       <h2 className="font-display text-2xl text-white">Profile</h2>
       <p className="mt-1 text-sm text-zinc-500">
-        Name shows on the table. A new email must be verified before you click or invest.
+        Name shows on the table. Email comes from Google and stays with that account.
       </p>
       <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         Username
@@ -203,34 +189,7 @@ function ProfileCard({
       <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         Email
       </label>
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">
-        <input
-          autoComplete="email"
-          className="field sm:col-span-2"
-          onChange={(event) => setEmail(event.target.value)}
-          type="email"
-          value={email}
-        />
-        {user.hasPassword ? (
-          <input
-            autoComplete="current-password"
-            className="field"
-            onChange={(event) => setCurrent(event.target.value)}
-            placeholder="Current password"
-            type="password"
-            value={current}
-          />
-        ) : null}
-        <button
-          className="chip-btn"
-          disabled={busy || email === user.email}
-          onClick={() => void save({ action: "email", email, current })}
-          type="button"
-        >
-          Save email
-        </button>
-      </div>
-      {note ? <p className="mt-3 text-sm text-amber-200/80">{note}</p> : null}
+      <p className="mt-2 break-all text-sm text-zinc-300">{user.email}</p>
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
     </section>
   );
@@ -443,9 +402,7 @@ function LimitsCard({
   );
 }
 
-function SecurityCard({ user }: { user: PublicUser }) {
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
+function SecurityCard({ user: _user }: { user: PublicUser }) {
   const [sessions, setSessions] = useState<PublicSession[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -472,10 +429,6 @@ function SecurityCard({ user }: { user: PublicUser }) {
       const data = (await response.json()) as { sessions?: PublicSession[]; error?: string };
       if (!response.ok) throw new Error(data.error || "Could not save");
       if (data.sessions) setSessions(data.sessions);
-      if (body.action === "password") {
-        setCurrent("");
-        setNext("");
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save");
     } finally {
@@ -487,39 +440,8 @@ function SecurityCard({ user }: { user: PublicUser }) {
     <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-5">
       <h2 className="font-display text-2xl text-white">Sign-in</h2>
       <p className="mt-1 text-sm text-zinc-500">
-        Change your password and kick other devices. Reset also lives on the sign-in page.
+        This account signs in with Google. Kick other devices here.
       </p>
-      {user.hasPassword ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <input
-            autoComplete="current-password"
-            className="field"
-            onChange={(event) => setCurrent(event.target.value)}
-            placeholder="Current password"
-            type="password"
-            value={current}
-          />
-          <input
-            autoComplete="new-password"
-            className="field"
-            minLength={8}
-            onChange={(event) => setNext(event.target.value)}
-            placeholder="New password"
-            type="password"
-            value={next}
-          />
-          <button
-            className="chip-btn sm:col-span-2"
-            disabled={busy || !current || next.length < 8}
-            onClick={() => void post({ action: "password", current, next })}
-            type="button"
-          >
-            Save password
-          </button>
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-zinc-400">This account signs in with Google.</p>
-      )}
       <div className="mt-6 flex items-center justify-between gap-3">
         <h3 className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">Devices</h3>
         <button

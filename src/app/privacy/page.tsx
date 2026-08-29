@@ -3,7 +3,7 @@ export default function PrivacyPage() {
     <main className="prose-page">
       <h1 className="font-display text-4xl text-white">Privacy</h1>
       <p>
-        We store your email, username, password hash or Google account id, play
+        We store your email, username, Google account id, play
         balance, deposit addresses, and in-app notifications. Wallet private keys
         are encrypted on the server and are never shown in the browser.
       </p>

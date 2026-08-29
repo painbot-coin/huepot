@@ -14,7 +14,7 @@ import { staffKillRound } from "@/lib/game";
 import { ensureHouseUser, rakeBps, rakePercentLabel } from "@/lib/house";
 import { jsonError } from "@/lib/http";
 import { fromCents } from "@/lib/money";
-import { mailConfigured, withdrawSendEnabled } from "@/lib/config";
+import { withdrawSendEnabled } from "@/lib/config";
 import {
   searchStaffUsers,
   staffAdjustBalance,
@@ -46,7 +46,6 @@ export async function GET(request: Request) {
         withdrawals: await listWithdrawals(),
         house,
         treasury: await houseWalletStatus(),
-        mail: mailConfigured(),
         canSend: withdrawSendEnabled(),
       });
     }
