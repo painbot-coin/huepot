@@ -11,8 +11,8 @@ export default function HowItWorksPage() {
         <li>
           Invest at least 10 USDT on BNB Chain (BEP-20) only. Huepot watches
           that chain and credits your bank after enough confirms. Send on any
-          other network and the money is gone. Extra addresses on Invest are
-          not watched.
+          other network and the money is gone. New accounts get one BNB Chain
+          address. Extra leftover addresses on Invest are not watched.
         </li>
         <li>
           Join a basic room for free — Classic, Lightning, Duo, High Table, or
@@ -29,7 +29,12 @@ export default function HowItWorksPage() {
           Each round publishes a hashed seed at open and reveals it at settle —
           check any round on the fairness sheet.
         </li>
-        <li>If every color ties, clicks are refunded. Withdraw to a BNB Chain address; staff send USDT from the payout queue.</li>
+        <li>
+          If every color ties, clicks are refunded. Withdraw to a BNB Chain
+          address; staff send USDT from the payout queue. Share your Account
+          invite link: a new Google player from that link can earn you a slice
+          of house rake only, capped per day.
+        </li>
       </ol>
       <p>
         Live play watches BNB Chain USDT and credits after confirmations. Set a

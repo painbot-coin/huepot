@@ -20,7 +20,13 @@ export async function GET(request: Request) {
     const profile = await googleProfile(code);
     const session = await withStore((store) => {
       const oauth = takeOAuthState(store, state);
-      return loginWithGoogle(store, profile, oauth.ageConfirmed, requestAgent(request));
+      return loginWithGoogle(
+        store,
+        profile,
+        oauth.ageConfirmed,
+        requestAgent(request),
+        oauth.inviteCode,
+      );
     });
     await setSessionCookie(session.token, session.maxAge);
     return NextResponse.redirect(`${appUrl()}/`);

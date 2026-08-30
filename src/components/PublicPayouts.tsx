@@ -40,19 +40,21 @@ export function PublicPayouts() {
     };
   }, []);
 
-  if (payouts.length === 0) return null;
-
   return (
     <section className="payout-strip" aria-label="Recent cash-outs">
       <p className="lobby-label">Paid out</p>
-      <ul>
-        {payouts.map((item, index) => (
-          <li key={`${item.at}-${index}`}>
-            <strong>{formatUsdt(item.amount)} USDT</strong>
-            <span>{ageLabel(item.at, now)}</span>
-          </li>
-        ))}
-      </ul>
+      {payouts.length === 0 ? (
+        <p className="text-sm text-zinc-500">Cash-outs land here.</p>
+      ) : (
+        <ul>
+          {payouts.map((item, index) => (
+            <li key={`${item.at}-${index}`}>
+              <strong>{formatUsdt(item.amount)} USDT</strong>
+              <span>{ageLabel(item.at, now)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

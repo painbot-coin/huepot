@@ -21,6 +21,7 @@ import { formatCents, toCents } from "./money";
 import { isNetworkId, networkById, validateAddress } from "./networks";
 import { notify } from "./notifications";
 import { newSessionToken } from "./password";
+import { applyInviteOnSignup, ensureInviteCode } from "./referrals";
 import { toPublicUser } from "./public-user";
 import { withStore, withStoreRead } from "./store";
 import type { PublicUser, StoreData, User } from "./types";
@@ -92,6 +93,11 @@ function newUser(
     | "resetToken"
     | "resetExpires"
     | "resetSentAt"
+    | "inviteCode"
+    | "invitedBy"
+    | "headline"
+    | "about"
+    | "location"
   > &
     Partial<User>,
 ): User {
@@ -114,6 +120,11 @@ function newUser(
     resetToken: null,
     resetExpires: null,
     resetSentAt: null,
+    inviteCode: "",
+    invitedBy: null,
+    headline: "",
+    about: "",
+    location: "",
   };
   ensureUserWallets(user);
   return user;
@@ -124,6 +135,7 @@ export function loginWithGoogle(
   profile: { googleId: string; email: string; emailVerified: boolean; name: string },
   ageConfirmed = false,
   userAgent = "",
+  inviteCode = "",
 ) {
   let user =
     findUserByGoogleId(store, profile.googleId) ||
@@ -144,10 +156,12 @@ export function loginWithGoogle(
       ageConfirmedAt: ageConfirmed ? nowMs() : null,
     });
     store.users[user.id] = user;
+    ensureInviteCode(store, user);
+    applyInviteOnSignup(store, user, inviteCode);
     notify(store, user.id, {
       kind: "welcome",
       title: "Welcome to Huepot",
-      body: "Signed in with Google. Your wallets are ready.",
+      body: "Signed in with Google. Your BNB Chain address is ready on Invest.",
       href: "/invest",
     });
   } else {
@@ -158,6 +172,7 @@ export function loginWithGoogle(
     user.verifyToken = null;
     user.verifyExpires = null;
     ensureUserWallets(user);
+    ensureInviteCode(store, user);
     if (firstGoogle) {
       notify(store, user.id, {
         kind: "system",
@@ -195,14 +210,23 @@ export function createSession(store: StoreData, userId: string, userAgent = "") 
   };
 }
 
-export function createOAuthState(store: StoreData, ageConfirmed = false) {
+export function createOAuthState(
+  store: StoreData,
+  ageConfirmed = false,
+  inviteCode = "",
+) {
   pruneSessions(store);
-  const state = `${ageConfirmed ? "1" : "0"}${randomBytes(16).toString("hex")}`;
+  const code = normalizeInviteCodeForState(inviteCode);
+  const state = `${ageConfirmed ? "1" : "0"}.${code}.${randomBytes(16).toString("hex")}`;
   store.oauthStates[state] = {
     state,
     expiresAt: nowMs() + 1000 * 60 * 10,
   };
   return state;
+}
+
+function normalizeInviteCodeForState(raw: string) {
+  return raw.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
 }
 
 export function takeOAuthState(store: StoreData, state: string) {
@@ -211,7 +235,11 @@ export function takeOAuthState(store: StoreData, state: string) {
   if (!item || item.expiresAt < nowMs()) {
     throw new Error("Google sign-in expired. Try again.");
   }
-  return { ageConfirmed: state.startsWith("1") };
+  const parts = state.split(".");
+  return {
+    ageConfirmed: state.startsWith("1"),
+    inviteCode: parts.length >= 3 ? parts[1] ?? "" : "",
+  };
 }
 
 export function confirmAge(user: User) {
@@ -318,6 +346,7 @@ export function requireUser(store: StoreData, token: string | undefined) {
     throw error;
   }
   ensureUserWallets(user);
+  ensureInviteCode(store, user);
   return user;
 }
 

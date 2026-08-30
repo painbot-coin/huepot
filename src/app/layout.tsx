@@ -3,6 +3,8 @@ import { Cinzel, Outfit } from "next/font/google";
 import { AgeBanner } from "@/components/AgeBanner";
 import { Atmosphere } from "@/components/Atmosphere";
 import { PlayBlockBanner } from "@/components/PlayBlockBanner";
+import { RefCookie } from "@/components/RefCookie";
+import { MessageDock } from "@/components/MessageDock";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SoundBus } from "@/components/SoundBus";
@@ -37,7 +39,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <Atmosphere />
         <SoundBus />
+        <RefCookie />
         <SiteHeader user={user} />
+        {user ? <MessageDock /> : null}
         {user && !user.ageConfirmed ? <AgeBanner /> : null}
         {user?.blocked && user.blockKind !== "age" ? <PlayBlockBanner user={user} /> : null}
         <div className="page-stage flex-1">{children}</div>

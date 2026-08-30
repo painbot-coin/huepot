@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LogoutButton } from "@/components/LogoutButton";
+import { MessageLaunch } from "@/components/MessageDock";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PresencePing } from "@/components/PresencePing";
 import { SitClock } from "@/components/SitClock";
 import { SoundToggle } from "@/components/SoundToggle";
 import { formatUsdt } from "@/lib/money";
@@ -16,6 +18,9 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
       <nav className="site-nav">
         <Link className="nav-link" href="/">
           Rooms
+        </Link>
+        <Link className="nav-link" href="/network">
+          Network
         </Link>
         <Link className="nav-link" href="/rooms/new">
           Create
@@ -40,7 +45,9 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
             <span className="nav-balance">{formatUsdt(user.balance)} USDT</span>
             <SitClock />
             <SoundToggle className="pit-ico header-sound" />
+            <MessageLaunch />
             <NotificationBell />
+            <PresencePing />
             <LogoutButton />
           </>
         ) : (

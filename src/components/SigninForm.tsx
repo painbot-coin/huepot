@@ -7,9 +7,13 @@ import { GoogleButton } from "@/components/GoogleButton";
 export function SigninForm() {
   const [error, setError] = useState("");
   const [age, setAge] = useState(false);
+  const [ref, setRef] = useState("");
 
   useEffect(() => {
-    const value = new URLSearchParams(window.location.search).get("error");
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get("ref")?.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 12) ?? "";
+    if (invite) setRef(invite);
+    const value = params.get("error");
     if (!value) return;
     if (value === "google_not_configured") {
       setError("Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Google login.");
@@ -47,11 +51,16 @@ export function SigninForm() {
       <div className="mt-5">
         <GoogleButton
           disabled={!age}
-          href="/api/auth/google?age=1"
+          href={ref ? `/api/auth/google?age=1&ref=${encodeURIComponent(ref)}` : "/api/auth/google?age=1"}
           label="Continue with Google"
         />
       </div>
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+      {ref ? (
+        <p className="mt-3 text-xs text-zinc-500">
+          Invite code {ref} will tag this new Google account.
+        </p>
+      ) : null}
       {!age ? (
         <p className="mt-3 text-xs text-zinc-500">Tick 18+ to continue.</p>
       ) : null}

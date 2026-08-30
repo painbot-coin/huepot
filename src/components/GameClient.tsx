@@ -585,7 +585,11 @@ export function GameClient({ slug }: { slug: string }) {
           playerId={user?.id ?? ""}
           result={round.result}
           round={round}
-          sharePath={`/rooms/${slug}`}
+          sharePath={
+            user?.inviteCode
+              ? `/rooms/${slug}?ref=${user.inviteCode}`
+              : `/rooms/${slug}`
+          }
           wash={winnerColor?.hex}
         />
       ) : null}

@@ -6,7 +6,8 @@ import {
 } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/http";
-import { withStoreRead } from "@/lib/store";
+import { ensureInviteCode } from "@/lib/referrals";
+import { withStore } from "@/lib/store";
 import type { Tx } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -14,9 +15,10 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     const token = await getSessionToken();
-    const payload = await withStoreRead(async (store) => {
+    const payload = await withStore(async (store) => {
       const user = userFromToken(store, token);
       if (!user) return { user: null };
+      ensureInviteCode(store, user);
       const rows = await prisma.$queryRawUnsafe<
         {
           id: string;

@@ -10,6 +10,7 @@ export function SiteFooter() {
         can afford.
       </p>
       <div className="footer-links">
+        <Link href="/network">Network</Link>
         <Link href="/how-it-works">How it works</Link>
         <Link href="/fairness">Fairness</Link>
         <Link href="/terms">Terms</Link>

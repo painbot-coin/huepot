@@ -108,6 +108,11 @@ function userFromRow(
     resetToken: null,
     resetExpires: null,
     resetSentAt: null,
+    inviteCode: "",
+    invitedBy: null,
+    headline: "",
+    about: "",
+    location: "",
   };
 }
 
@@ -254,6 +259,11 @@ async function loadUserAuth() {
           resetToken: null as string | null,
           resetExpires: null as number | null,
           resetSentAt: null as number | null,
+          inviteCode: "",
+          invitedBy: null as string | null,
+          headline: "",
+          about: "",
+          location: "",
         });
         return [row.id, parsed] as const;
       }),
@@ -266,6 +276,11 @@ async function loadUserAuth() {
         resetToken: string | null;
         resetExpires: number | null;
         resetSentAt: number | null;
+        inviteCode: string;
+        invitedBy: string | null;
+        headline: string;
+        about: string;
+        location: string;
       }
     >();
   }
@@ -528,6 +543,11 @@ async function readStore(): Promise<StoreData> {
     user.resetToken = extra.resetToken;
     user.resetExpires = extra.resetExpires;
     user.resetSentAt = extra.resetSentAt;
+    user.inviteCode = extra.inviteCode ?? "";
+    user.invitedBy = extra.invitedBy ?? null;
+    user.headline = extra.headline ?? "";
+    user.about = extra.about ?? "";
+    user.location = extra.location ?? "";
   }
   const sessionExtra = await loadSessionExtra();
   for (const session of Object.values(store.sessions)) {
@@ -599,11 +619,21 @@ async function persistStore(prev: StoreData, next: StoreData) {
           resetToken: user.resetToken ?? null,
           resetExpires: user.resetExpires ?? null,
           resetSentAt: user.resetSentAt ?? null,
+          inviteCode: user.inviteCode ?? "",
+          invitedBy: user.invitedBy ?? null,
+          headline: user.headline ?? "",
+          about: user.about ?? "",
+          location: user.location ?? "",
         });
         if (
           !same(before?.ageConfirmedAt, user.ageConfirmedAt) ||
           !same(before?.resetToken, user.resetToken) ||
-          !same(before?.resetExpires, user.resetExpires)
+          !same(before?.resetExpires, user.resetExpires) ||
+          !same(before?.inviteCode, user.inviteCode) ||
+          !same(before?.invitedBy, user.invitedBy) ||
+          !same(before?.headline, user.headline) ||
+          !same(before?.about, user.about) ||
+          !same(before?.location, user.location)
         ) {
           await tx.$executeRawUnsafe(
             `UPDATE User SET auth = '${authJson.replace(/'/g, "''")}' WHERE id = '${user.id.replace(/'/g, "''")}'`,
@@ -954,6 +984,11 @@ async function importJsonStore() {
       user.resetToken ??= null;
       user.resetExpires ??= null;
       user.resetSentAt ??= null;
+      user.inviteCode ??= "";
+      user.invitedBy ??= null;
+      user.headline ??= "";
+      user.about ??= "";
+      user.location ??= "";
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;
@@ -969,6 +1004,11 @@ async function importJsonStore() {
       user.resetToken ??= null;
       user.resetExpires ??= null;
       user.resetSentAt ??= null;
+      user.inviteCode ??= "";
+      user.invitedBy ??= null;
+      user.headline ??= "";
+      user.about ??= "";
+      user.location ??= "";
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;
@@ -1044,9 +1084,13 @@ async function ensureDb() {
       if (rooms === 0) await importJsonStore();
       const { ensureChainTables, startChainWatcher } = await import("@/lib/chain");
       const { ensureReportTables } = await import("@/lib/reports");
+      const { ensureFriendTables } = await import("@/lib/friends");
+      const { ensureSocialTables } = await import("@/lib/social");
       await ensureChainTables();
       await ensureFairTables();
       await ensureReportTables();
+      await ensureFriendTables();
+      await ensureSocialTables();
       await migrateMoneyToCents();
       startChainWatcher();
     })().catch((error) => {

@@ -1,6 +1,8 @@
 # Huepot growth plan (low budget)
 
-Huepot is live as product v1.0.0 at https://huepot.net. Getting many users with almost no money is possible, but it will not come from ads. For a custodial USDT pot, people leave because they do not trust the cashier, not because they never saw the logo.
+Huepot is live at https://huepot.net. Getting many users with almost no money is possible, but it will not come from ads. For a custodial USDT pot, people leave because they do not trust the cashier, not because they never saw the logo.
+
+**How to run it this month:** `NETWORK.md` — seed a small player network, name a Classic hour, use the v1.2 rake invite. This file is the constraints.
 
 **The real job:** get a few people to deposit, get paid out once, and tell two friends. Empty tables kill growth faster than no marketing.
 
@@ -73,4 +75,4 @@ Do not spend money until same-day payouts are routine and Classic is busy withou
 
 ## Next useful build
 
-The next useful build is the **rake invite loop + public payout strip**, not more atmosphere.
+Do not build more product for growth. Run `NETWORK.md`. v1.2 is live. Sit Classic, pay the first cash-out, open one Telegram, send invite links to people you already know.

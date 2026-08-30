@@ -15,6 +15,7 @@ const TX_LABEL: Record<Tx["type"], string> = {
   refund: "Back",
   adjust: "Staff",
   rake: "House",
+  invite: "Invite",
 };
 
 export function AccountClient() {
@@ -56,10 +57,11 @@ export function AccountClient() {
         </div>
         <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
           <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-            Wallets
+            Invite earned
           </p>
           <p className="font-display text-3xl text-white">
-            {user.wallets.length}
+            {formatUsdt(user.inviteEarned)}{" "}
+            <span className="text-base text-zinc-500">USDT</span>
           </p>
         </div>
       </section>
@@ -79,13 +81,16 @@ export function AccountClient() {
         <LogoutButton />
       </div>
 
+      <InviteCard user={user} />
       <ProfileCard user={user} onUser={setUser} />
       <LimitsCard user={user} onUser={setUser} />
       <SecurityCard user={user} />
       <LedgerCard txs={user.txs} />
 
       <ul className="mt-10 space-y-2">
-        {user.wallets.map((wallet) => (
+        {user.wallets
+          .filter((wallet) => wallet.live)
+          .map((wallet) => (
           <li
             className="rounded-2xl border border-white/8 px-4 py-3"
             key={wallet.id}
@@ -93,7 +98,7 @@ export function AccountClient() {
             <p className="text-sm text-white">
               {wallet.name}{" "}
               <span className="text-zinc-500">
-                {wallet.standard} {wallet.asset}
+                {wallet.standard} {wallet.asset} · live
               </span>
             </p>
             <p className="mt-1 break-all font-mono text-xs text-zinc-500">
@@ -108,7 +113,7 @@ export function AccountClient() {
 
 const LEDGER_FILTERS: { id: string; label: string; types?: Tx["type"][] }[] = [
   { id: "all", label: "All" },
-  { id: "in", label: "In", types: ["deposit"] },
+  { id: "in", label: "In", types: ["deposit", "invite"] },
   { id: "out", label: "Out", types: ["withdraw"] },
   { id: "click", label: "Click", types: ["click"] },
   { id: "win", label: "Win", types: ["payout"] },
@@ -129,6 +134,46 @@ function withRunning(txs: Tx[]) {
     return { ...tx, balance: run };
   });
   return rows.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function InviteCard({ user }: { user: PublicUser }) {
+  const [copied, setCopied] = useState(false);
+  const link =
+    typeof window === "undefined"
+      ? `/signin?ref=${user.inviteCode}`
+      : `${window.location.origin}/signin?ref=${user.inviteCode}`;
+
+  return (
+    <section className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-5">
+      <h2 className="font-display text-2xl text-white">Invite</h2>
+      <p className="mt-1 text-sm text-zinc-500">
+        New Google accounts from your link are tagged once. When they sit and a
+        house take is created from their losing clicks, you get 20% of that
+        rake — not their stake, not a bank bonus. Cap {formatUsdt(user.inviteEarnedToday + user.inviteDailyLeft)} USDT
+        per UTC day.
+      </p>
+      <p className="mt-5 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        Your code
+      </p>
+      <p className="mt-2 font-mono text-2xl text-white">{user.inviteCode || "—"}</p>
+      <button
+        className="chip-btn mt-4"
+        disabled={!user.inviteCode}
+        onClick={() => {
+          void navigator.clipboard.writeText(link);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1600);
+        }}
+        type="button"
+      >
+        {copied ? "Link copied" : "Copy invite link"}
+      </button>
+      <p className="mt-4 text-sm text-zinc-400">
+        Today {formatUsdt(user.inviteEarnedToday)} USDT · {formatUsdt(user.inviteDailyLeft)} USDT left
+        today · lifetime {formatUsdt(user.inviteEarned)} USDT
+      </p>
+    </section>
+  );
 }
 
 function ProfileCard({

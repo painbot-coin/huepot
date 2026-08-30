@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Fade } from "@/components/Fade";
 import { IconSearch, IconUsers } from "@/components/Icons";
 import { formatUsdt } from "@/lib/money";
 import type { SearchHit } from "@/lib/types";
@@ -10,6 +12,7 @@ export function SearchDock({
 }: {
   onPickRoom: (slug: string) => void;
 }) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [hits, setHits] = useState<SearchHit>({ rooms: [], users: [] });
@@ -44,8 +47,7 @@ export function SearchDock({
         placeholder="Search rooms and players…"
         value={q}
       />
-      {open ? (
-        <div className="search-pop">
+      <Fade className="search-pop" show={open}>
           <p aria-label="Rooms">
             <IconSearch />
           </p>
@@ -74,8 +76,9 @@ export function SearchDock({
             <button
               key={user.username}
               onClick={() => {
-                if (user.rooms[0]) onPickRoom(user.rooms[0].slug);
+                router.push(`/network/u/${encodeURIComponent(user.username)}`);
                 setOpen(false);
+                setQ("");
               }}
               type="button"
             >
@@ -87,8 +90,7 @@ export function SearchDock({
               </em>
             </button>
           ))}
-        </div>
-      ) : null}
+      </Fade>
     </div>
   );
 }

@@ -58,6 +58,11 @@ export function ensureHouseUser(store: StoreData): User {
     resetToken: null,
     resetExpires: null,
     resetSentAt: null,
+    inviteCode: "",
+    invitedBy: null,
+    headline: "",
+    about: "",
+    location: "",
   };
   ensureUserWallets(user);
   store.users[HOUSE_USER_ID] = user;

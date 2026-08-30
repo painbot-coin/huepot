@@ -12,7 +12,21 @@ export async function GET(request: Request) {
       `${appUrl()}/signin?error=google_not_configured`,
     );
   }
-  const ageConfirmed = new URL(request.url).searchParams.get("age") === "1";
-  const state = await withStore((store) => createOAuthState(store, ageConfirmed));
+  const url = new URL(request.url);
+  const ageConfirmed = url.searchParams.get("age") === "1";
+  const inviteCode = url.searchParams.get("ref") || cookieRef(request);
+  const state = await withStore((store) =>
+    createOAuthState(store, ageConfirmed, inviteCode),
+  );
   return NextResponse.redirect(googleAuthUrl(state));
+}
+
+function cookieRef(request: Request) {
+  const match = request.headers.get("cookie")?.match(/(?:^|;\s*)huepot_ref=([^;]+)/);
+  if (!match?.[1]) return "";
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
 }

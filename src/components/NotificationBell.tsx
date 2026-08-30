@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { Fade } from "@/components/Fade";
 import type { Notice } from "@/lib/types";
 
 type Payload = { items: Notice[]; unread: number };
@@ -54,8 +55,7 @@ export function NotificationBell() {
         Alerts
         {data.unread > 0 ? <span className="notice-count">{data.unread}</span> : null}
       </button>
-      {open ? (
-        <div className="notice-panel">
+      <Fade className="notice-panel" show={open}>
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">
               Notifications
@@ -81,8 +81,7 @@ export function NotificationBell() {
               <li className="text-sm text-zinc-500">No notifications yet.</li>
             ) : null}
           </ul>
-        </div>
-      ) : null}
+      </Fade>
     </div>
   );
 }

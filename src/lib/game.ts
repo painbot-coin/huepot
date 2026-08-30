@@ -20,6 +20,7 @@ import { ensureRoundSeed } from "./fairness";
 import { queueSettledRound } from "./fairness-db";
 import { assertCanPlay } from "./limits";
 import { HOUSE_USER_ID, ensureHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
+import { payInviteRake } from "./referrals";
 import {
   floorPayoutPerClick,
   formatCents,
@@ -222,8 +223,27 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
 
   if (rake > 0) {
     const house = ensureHouseUser(store);
-    house.balance += rake;
-    addTx(store, house.id, "rake", rake, `${room.name} round #${round.number} house take`);
+    const invited = payInviteRake(
+      store,
+      room.name,
+      round.number,
+      rake,
+      losingClicks,
+      losingColors,
+      round.clicks,
+      at,
+    );
+    const houseKeep = rake - invited;
+    if (houseKeep > 0) {
+      house.balance += houseKeep;
+      addTx(
+        store,
+        house.id,
+        "rake",
+        houseKeep,
+        `${room.name} round #${round.number} house take`,
+      );
+    }
   }
 
   const payouts: RoundResult["payouts"] = [];

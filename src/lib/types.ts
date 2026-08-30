@@ -2,7 +2,15 @@ import type { ColorId } from "./colors";
 import type { NetworkId } from "./networks";
 
 export type RoundStatus = "live" | "revealing";
-export type TxType = "deposit" | "withdraw" | "click" | "payout" | "refund" | "adjust" | "rake";
+export type TxType =
+  | "deposit"
+  | "withdraw"
+  | "click"
+  | "payout"
+  | "refund"
+  | "adjust"
+  | "rake"
+  | "invite";
 export type NoticeKind =
   | "welcome"
   | "verify"
@@ -11,7 +19,13 @@ export type NoticeKind =
   | "withdraw"
   | "payout"
   | "refund"
-  | "system";
+  | "system"
+  | "friend"
+  | "message"
+  | "post";
+export type FriendStatus = "pending" | "accepted" | "declined";
+export type FriendRelation = "none" | "outgoing" | "incoming" | "friends";
+export type NetworkTab = "pit" | "friends" | "requests";
 export type RoomKind = "basic" | "custom";
 export type RoomEventKind = "chat" | "system" | "payout" | "refund" | "round" | "join";
 
@@ -111,6 +125,11 @@ export type User = {
   resetToken: string | null;
   resetExpires: number | null;
   resetSentAt: number | null;
+  inviteCode: string;
+  invitedBy: string | null;
+  headline: string;
+  about: string;
+  location: string;
 };
 
 export type Session = {
@@ -206,6 +225,10 @@ export type PublicUser = {
   dailyLossCap: number;
   playLossToday: number;
   ageConfirmed: boolean;
+  inviteCode: string;
+  inviteEarned: number;
+  inviteEarnedToday: number;
+  inviteDailyLeft: number;
 };
 
 export type PublicSession = {
@@ -292,4 +315,84 @@ export type LobbyState = {
   now: number;
   user: PublicUser | null;
   rooms: PublicRoomCard[];
+};
+
+export type Friendship = {
+  id: string;
+  lowId: string;
+  highId: string;
+  fromId: string;
+  status: FriendStatus;
+  createdAt: number;
+  resolvedAt: number | null;
+};
+
+export type NetworkCard = {
+  username: string;
+  headline: string;
+  createdAt: number;
+  online: boolean;
+  lastSeen: number | null;
+  room: { slug: string; name: string } | null;
+  relation: FriendRelation;
+  friends: number;
+};
+
+export type NetworkYou = {
+  username: string;
+  headline: string;
+  pendingIn: number;
+  unreadMessages: number;
+  friends: number;
+};
+
+export type NetworkState = {
+  now: number;
+  tab: NetworkTab;
+  q: string;
+  pendingIn: number;
+  you: NetworkYou;
+  cards: NetworkCard[];
+};
+
+export type NetworkPost = {
+  id: string;
+  username: string;
+  headline: string;
+  body: string;
+  createdAt: number;
+  likes: number;
+  liked: boolean;
+  relation: FriendRelation;
+  comments: { id: string; username: string; body: string; createdAt: number }[];
+};
+
+export type NetworkThread = {
+  username: string;
+  headline: string;
+  lastBody: string;
+  lastAt: number;
+  unread: number;
+  online: boolean;
+};
+
+export type NetworkMessage = {
+  id: string;
+  fromYou: boolean;
+  body: string;
+  createdAt: number;
+};
+
+export type NetworkProfile = {
+  username: string;
+  headline: string;
+  about: string;
+  location: string;
+  createdAt: number;
+  online: boolean;
+  lastSeen: number | null;
+  room: { slug: string; name: string } | null;
+  relation: FriendRelation;
+  friends: number;
+  you: boolean;
 };

@@ -67,23 +67,28 @@ function generateOne(family: (typeof NETWORKS)[number]["family"]): StoredWallet 
 
 export function ensureUserWallets(user: User) {
   user.wallets ??= {};
-  for (const network of NETWORKS) {
-    if (!user.wallets[network.id]) {
-      user.wallets[network.id] = generateOne(network.family);
-    }
+  const live = NETWORKS.find((network) => network.id === LIVE_CHAIN_ID);
+  if (live && !user.wallets[live.id]) {
+    user.wallets[live.id] = generateOne(live.family);
   }
 }
 
 export function publicWallets(user: User) {
   ensureUserWallets(user);
-  return NETWORKS.map((network) => ({
-    id: network.id as NetworkId,
-    name: network.name,
-    standard: network.standard,
-    asset: network.asset,
-    family: network.family,
-    hint: network.hint,
-    address: user.wallets[network.id]!.address,
-    live: network.id === LIVE_CHAIN_ID,
-  }));
+  return NETWORKS.flatMap((network) => {
+    const stored = user.wallets[network.id];
+    if (!stored) return [];
+    return [
+      {
+        id: network.id as NetworkId,
+        name: network.name,
+        standard: network.standard,
+        asset: network.asset,
+        family: network.family,
+        hint: network.hint,
+        address: stored.address,
+        live: network.id === LIVE_CHAIN_ID,
+      },
+    ];
+  });
 }
