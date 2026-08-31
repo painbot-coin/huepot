@@ -297,6 +297,13 @@ export type PublicRoom = PublicRoomCard & {
   slowMode: boolean;
 };
 
+export type ClassicHour = {
+  hour: number;
+  startAt: number;
+  endsAt: number;
+  live: boolean;
+};
+
 export type GameState = {
   now: number;
   user: PublicUser | null;
@@ -305,6 +312,7 @@ export type GameState = {
   feed: RoomEvent[];
   rooms: PublicRoomCard[];
   seats: PublicSeat[];
+  classicHour: ClassicHour;
 };
 
 export type SearchHit = {
@@ -316,6 +324,7 @@ export type LobbyState = {
   now: number;
   user: PublicUser | null;
   rooms: PublicRoomCard[];
+  classicHour: ClassicHour;
 };
 
 export type Friendship = {

@@ -1897,6 +1897,11 @@ select.field {
   line-height: 1.6;
 }
 
+.lobby-hour {
+  color: #ffd27a !important;
+  font-size: 0.9rem;
+}
+
 .lobby-kicker,
 .lobby-label {
   margin: 0;

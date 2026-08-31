@@ -28,6 +28,7 @@ import {
   splitCentsByClicks,
 } from "./money";
 import { ensureUserWallets } from "./wallets";
+import { classicHourAt } from "./classic-hour";
 import type {
   GameState,
   LobbyState,
@@ -535,6 +536,7 @@ export function getLobbyState(store: StoreData, userId: string | null): LobbySta
     now: nowMs(),
     user: publicUserFor(store, userId),
     rooms: listRoomCards(store),
+    classicHour: classicHourAt(),
   };
 }
 
@@ -558,6 +560,7 @@ export function getRoomState(
     feed: room.events.slice(-80),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
+    classicHour: classicHourAt(),
   };
 }
 
@@ -580,6 +583,7 @@ export function snapshotRoomState(
     feed: room.events.slice(-80),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
+    classicHour: classicHourAt(),
   };
 }
 

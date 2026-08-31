@@ -7,8 +7,9 @@ import { IconPlus } from "@/components/Icons";
 import { PublicPayouts } from "@/components/PublicPayouts";
 import { SearchDock } from "@/components/SearchDock";
 import { BASIC_ROOMS } from "@/lib/rooms";
-import { formatClock, formatUsdt } from "@/lib/money";
-import type { LobbyState, PublicRoomCard } from "@/lib/types";
+import { classicHourClock } from "@/lib/classic-hour";
+import { formatClock, formatUsdt, formatWait } from "@/lib/money";
+import type { ClassicHour, LobbyState, PublicRoomCard } from "@/lib/types";
 
 function blurbFor(room: PublicRoomCard) {
   const base =
@@ -45,12 +46,29 @@ function ClassicLine({ rooms }: { rooms: PublicRoomCard[] }) {
   );
 }
 
-function ClassicInvite({ code }: { code: string }) {
+function ClassicHourLine({ hour, now }: { hour?: ClassicHour; now: number }) {
+  if (!hour) return null;
+  if (hour.live) {
+    return (
+      <p className="lobby-hour">
+        <Link href="/rooms/classic">Classic hour</Link> is on · sit now
+      </p>
+    );
+  }
+  return (
+    <p className="lobby-hour">
+      Next hour {classicHourClock(hour.hour)} · in {formatWait(hour.startAt - now)}
+    </p>
+  );
+}
+
+function ClassicInvite({ code, hour }: { code: string; hour?: number }) {
   const [copied, setCopied] = useState(false);
 
   function copy() {
     const url = `${window.location.origin}/rooms/classic?ref=${code}`;
-    const text = `Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
+    const when = hour != null ? `Classic sits ${classicHourClock(hour)}. ` : "";
+    const text = `${when}Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
@@ -113,9 +131,12 @@ export function RoomLobby() {
         <p className="lobby-kicker">Sit. Pick a color. Watch the pot.</p>
         <h1 className="font-display">Huepot tables</h1>
         <ClassicLine rooms={basic} />
+        <ClassicHourLine hour={state?.classicHour} now={now} />
         <div className="lobby-hero-tools">
           <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
-          {state?.user?.inviteCode ? <ClassicInvite code={state.user.inviteCode} /> : null}
+          {state?.user?.inviteCode ? (
+            <ClassicInvite code={state.user.inviteCode} hour={state.classicHour?.hour} />
+          ) : null}
           <Link aria-label="Create room" className="pit-create" href="/rooms/new">
             <IconPlus />
           </Link>
@@ -128,7 +149,13 @@ export function RoomLobby() {
         <h2 className="lobby-label">House</h2>
         <div className="lobby-grid">
           {basic.map((room) => (
-            <RoomCard key={room.slug} now={now} room={room} blurb={blurbFor(room)} />
+            <RoomCard
+              key={room.slug}
+              now={now}
+              room={room}
+              blurb={blurbFor(room)}
+              hourOn={room.slug === "classic" && Boolean(state?.classicHour?.live)}
+            />
           ))}
         </div>
       </section>
@@ -155,10 +182,12 @@ function RoomCard({
   room,
   blurb,
   now,
+  hourOn,
 }: {
   room: PublicRoomCard;
   blurb: string;
   now: number;
+  hourOn?: boolean;
 }) {
   return (
     <Link className="room-card" href={`/rooms/${room.slug}`}>
@@ -191,6 +220,7 @@ function RoomCard({
       <p className="room-card-foot">
         #{room.roundNumber || 1} · {sittingLine(room)}
         {` · ${room.paused ? "paused" : room.status}`}
+        {hourOn ? " · hour on" : ""}
         {room.closesAt ? ` · ${formatClock(room.closesAt - now)}` : ""}
       </p>
     </Link>

@@ -33,6 +33,15 @@ export function formatClock(ms: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+export function formatWait(ms: number) {
+  const safe = Math.max(0, ms);
+  const total = Math.ceil(safe / 1000);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return formatClock(safe);
+}
+
 /** Split `pot` cents across click shares. Leftover cents go in player-id order. */
 export function splitCentsByClicks(
   pot: number,
