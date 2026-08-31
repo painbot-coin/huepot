@@ -35,7 +35,7 @@ export const BASIC_ROOMS: BasicRoomDef[] = [
     buttonCount: 4,
     clickPrice: CLICK_PRICE,
     roundSeconds: ROUND_SECONDS,
-    blurb: "Four coins, 1 USDT, one minute. The original table.",
+    blurb: "The public pit. Four coins, 1 USDT, one minute.",
   },
   {
     slug: "lightning",

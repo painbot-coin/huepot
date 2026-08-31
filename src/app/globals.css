@@ -953,6 +953,33 @@ body,
   font-weight: 800;
 }
 
+.take-share {
+  margin-top: 0.75rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(21, 21, 21, 0.12);
+}
+
+.take-share-line {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+
+.take-share-btn,
+.take-share a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(21, 21, 21, 0.28);
+  text-underline-offset: 4px;
+}
+
+.take-share-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
 .take-veil {
   position: relative;
   isolation: isolate;

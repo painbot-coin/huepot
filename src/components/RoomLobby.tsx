@@ -73,6 +73,9 @@ export function RoomLobby() {
           public counts in the last 12 seconds so the last click is a guess, not
           a pile-on.
         </p>
+        <p>
+          <Link href="/rooms/classic">Classic</Link> is the public pit.
+        </p>
         <div className="lobby-hero-tools">
           <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
           <Link aria-label="Create room" className="pit-create" href="/rooms/new">

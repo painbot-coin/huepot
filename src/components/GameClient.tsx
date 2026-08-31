@@ -585,6 +585,7 @@ export function GameClient({ slug }: { slug: string }) {
           playerId={user?.id ?? ""}
           result={round.result}
           round={round}
+          roomName={room.name}
           sharePath={
             user?.inviteCode
               ? `/rooms/${slug}?ref=${user.inviteCode}`
@@ -798,26 +799,49 @@ function CountUsdt({ value }: { value: number }) {
   return <>{formatUsdt(shown)}</>;
 }
 
-function ShareTable({ path }: { path: string }) {
-  const [copied, setCopied] = useState(false);
+function takeLine(names: string, take: number, roomName: string) {
+  return `${names} took ${formatUsdt(take)} USDT on ${roomName} — sit the next round`;
+}
+
+function ShareTake({ path, line }: { path: string; line: string }) {
+  const [status, setStatus] = useState<"idle" | "copied" | "shared">("idle");
+
+  async function share() {
+    const url = `${window.location.origin}${path}`;
+    const text = `${line}.\n${url}`;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: "Huepot", text: line, url });
+        setStatus("shared");
+      } else {
+        await navigator.clipboard.writeText(text);
+        setStatus("copied");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus("copied");
+      } catch {
+        /* ignore */
+      }
+    }
+    window.setTimeout(() => setStatus("idle"), 1800);
+  }
+
+  const label = status === "copied" ? "Copied" : status === "shared" ? "Shared" : "Share this take";
+
   return (
-    <p className="mt-3 text-sm text-zinc-300">
-      <button
-        className="underline decoration-white/25 underline-offset-4"
-        onClick={() => {
-          void navigator.clipboard.writeText(`${window.location.origin}${path}`);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1600);
-        }}
-        type="button"
-      >
-        {copied ? "Link copied" : "Copy table link"}
-      </button>
-      {" · "}
-      <Link className="underline decoration-white/25 underline-offset-4" href="/rooms/new">
-        Open a Fog table
-      </Link>
-    </p>
+    <div className="take-share">
+      <p className="take-share-line">{line}.</p>
+      <p>
+        <button className="take-share-btn" onClick={() => void share()} type="button">
+          {label}
+        </button>
+        {" · "}
+        <Link href="/rooms/new">Open a Fog table</Link>
+      </p>
+    </div>
   );
 }
 
@@ -825,12 +849,14 @@ function ResultCard({
   result,
   round,
   playerId,
+  roomName,
   sharePath,
   wash,
 }: {
   result: NonNullable<PublicRound["result"]>;
   round: PublicRound;
   playerId: string;
+  roomName: string;
   sharePath: string;
   wash?: string;
 }) {
@@ -897,7 +923,14 @@ function ResultCard({
         ""
       )}
       {sheet}
-      <ShareTable path={sharePath} />
+      <ShareTake
+        line={takeLine(
+          names,
+          result.payouts.reduce((sum, payout) => sum + payout.amount, 0),
+          roomName,
+        )}
+        path={sharePath}
+      />
     </div>
   );
 }
