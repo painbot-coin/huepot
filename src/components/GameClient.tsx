@@ -591,6 +591,11 @@ export function GameClient({ slug }: { slug: string }) {
               ? `/rooms/${slug}?ref=${user.inviteCode}`
               : `/rooms/${slug}`
           }
+          canOpenFog={Boolean(user?.emailVerified) && !user?.blocked}
+          inviteCode={user?.inviteCode ?? ""}
+          buttonCount={room.buttonCount}
+          clickPrice={round.clickPrice}
+          roundSeconds={room.roundSeconds}
           wash={winnerColor?.hex}
         />
       ) : null}
@@ -803,8 +808,28 @@ function takeLine(names: string, take: number, roomName: string) {
   return `${names} took ${formatUsdt(take)} USDT on ${roomName} — sit the next round`;
 }
 
-function ShareTake({ path, line }: { path: string; line: string }) {
+function ShareTake({
+  path,
+  line,
+  fogName,
+  canOpenFog,
+  inviteCode,
+  buttonCount,
+  clickPrice,
+  roundSeconds,
+}: {
+  path: string;
+  line: string;
+  fogName: string;
+  canOpenFog: boolean;
+  inviteCode: string;
+  buttonCount: number;
+  clickPrice: number;
+  roundSeconds: number;
+}) {
   const [status, setStatus] = useState<"idle" | "copied" | "shared">("idle");
+  const [fogBusy, setFogBusy] = useState(false);
+  const [fogError, setFogError] = useState("");
 
   async function share() {
     const url = `${window.location.origin}${path}`;
@@ -829,6 +854,39 @@ function ShareTake({ path, line }: { path: string; line: string }) {
     window.setTimeout(() => setStatus("idle"), 1800);
   }
 
+  async function openFog() {
+    setFogBusy(true);
+    setFogError("");
+    try {
+      const response = await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fogName,
+          buttonCount,
+          clickPrice,
+          roundSeconds,
+          liveMinutes: 30,
+          fog: true,
+        }),
+      });
+      const data = (await response.json()) as GameState & { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not open Fog");
+      const slug = data.room.slug;
+      const next = inviteCode ? `/rooms/${slug}?ref=${inviteCode}` : `/rooms/${slug}`;
+      const url = `${window.location.origin}${next}`;
+      try {
+        await navigator.clipboard.writeText(`${line}. Fog is open 30 minutes.\n${url}`);
+      } catch {
+        /* ignore */
+      }
+      window.location.assign(`/rooms/${slug}`);
+    } catch (err) {
+      setFogError(err instanceof Error ? err.message : "Could not open Fog");
+      setFogBusy(false);
+    }
+  }
+
   const label = status === "copied" ? "Copied" : status === "shared" ? "Shared" : "Share this take";
 
   return (
@@ -839,8 +897,15 @@ function ShareTake({ path, line }: { path: string; line: string }) {
           {label}
         </button>
         {" · "}
-        <Link href="/rooms/new">Open a Fog table</Link>
+        {canOpenFog ? (
+          <button className="take-share-btn" disabled={fogBusy} onClick={() => void openFog()} type="button">
+            {fogBusy ? "Opening Fog…" : "Open a 30-min Fog table"}
+          </button>
+        ) : (
+          <Link href="/signin">Sign in to open Fog</Link>
+        )}
       </p>
+      {fogError ? <p className="mt-2 text-sm text-red-800">{fogError}</p> : null}
     </div>
   );
 }
@@ -851,6 +916,11 @@ function ResultCard({
   playerId,
   roomName,
   sharePath,
+  canOpenFog,
+  inviteCode,
+  buttonCount,
+  clickPrice,
+  roundSeconds,
   wash,
 }: {
   result: NonNullable<PublicRound["result"]>;
@@ -858,6 +928,11 @@ function ResultCard({
   playerId: string;
   roomName: string;
   sharePath: string;
+  canOpenFog: boolean;
+  inviteCode: string;
+  buttonCount: number;
+  clickPrice: number;
+  roundSeconds: number;
   wash?: string;
 }) {
   const yours = result.payouts.find((payout) => payout.playerId === playerId);
@@ -924,12 +999,18 @@ function ResultCard({
       )}
       {sheet}
       <ShareTake
+        buttonCount={buttonCount}
+        canOpenFog={canOpenFog}
+        clickPrice={clickPrice}
+        fogName={`${names.split(" & ")[0]} Fog`.slice(0, 28)}
+        inviteCode={inviteCode}
         line={takeLine(
           names,
           result.payouts.reduce((sum, payout) => sum + payout.amount, 0),
           roomName,
         )}
         path={sharePath}
+        roundSeconds={roundSeconds}
       />
     </div>
   );
