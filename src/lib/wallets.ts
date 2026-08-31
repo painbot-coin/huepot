@@ -75,20 +75,20 @@ export function ensureUserWallets(user: User) {
 
 export function publicWallets(user: User) {
   ensureUserWallets(user);
-  return NETWORKS.flatMap((network) => {
-    const stored = user.wallets[network.id];
-    if (!stored) return [];
-    return [
-      {
-        id: network.id as NetworkId,
-        name: network.name,
-        standard: network.standard,
-        asset: network.asset,
-        family: network.family,
-        hint: network.hint,
-        address: stored.address,
-        live: network.id === LIVE_CHAIN_ID,
-      },
-    ];
-  });
+  const live = NETWORKS.find((network) => network.id === LIVE_CHAIN_ID);
+  if (!live) return [];
+  const stored = user.wallets[live.id];
+  if (!stored) return [];
+  return [
+    {
+      id: live.id as NetworkId,
+      name: live.name,
+      standard: live.standard,
+      asset: live.asset,
+      family: live.family,
+      hint: live.hint,
+      address: stored.address,
+      live: true,
+    },
+  ];
 }

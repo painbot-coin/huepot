@@ -11,8 +11,7 @@ export default function HowItWorksPage() {
         <li>
           Add at least 10 USDT on BNB Chain (BEP-20) only. Huepot watches
           that chain and credits your bank after enough confirms. Send on any
-          other network and the money is gone. New accounts get one BNB Chain
-          address. Extra leftover addresses on Add USDT are not watched.
+          other network and the money is gone. You get one BNB Chain address.
         </li>
         <li>
           Join a basic room for free — Classic, Lightning, Duo, High Table, or

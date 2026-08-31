@@ -161,7 +161,7 @@ export function loginWithGoogle(
     notify(store, user.id, {
       kind: "welcome",
       title: "Welcome to Huepot",
-      body: "Signed in with Google. Your BNB Chain address is ready on Invest.",
+      body: "Signed in with Google. Your BNB Chain USDT address is ready on Add USDT.",
       href: "/invest",
     });
   } else {

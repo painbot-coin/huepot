@@ -37,7 +37,6 @@ export function InvestClient() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [demoMoney, setDemoMoney] = useState(false);
-  const [showOther, setShowOther] = useState(false);
   const [chain, setChain] = useState<ChainStatus | null>(null);
   const [pending, setPending] = useState<PendingDeposit[]>([]);
 
@@ -90,7 +89,6 @@ export function InvestClient() {
   const liveWallet: PublicWallet | undefined = state?.user?.wallets.find(
     (item) => item.live,
   );
-  const otherWallets = state?.user?.wallets.filter((item) => !item.live) ?? [];
   const confirms = chain?.confirms ?? 12;
 
   async function copyAddress() {
@@ -132,9 +130,9 @@ export function InvestClient() {
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
       <h1 className="font-display text-4xl text-white">Add USDT</h1>
       <p className="mt-2 text-zinc-400">
-        Send at least {MIN_DEPOSIT} USDT on BNB Chain (BEP-20) to your live
-        address. Credit lands after {confirms} confirms. Any other chain is gone
-        — Huepot does not watch it.
+        One address. Send at least {MIN_DEPOSIT} USDT on BNB Chain (BEP-20).
+        Credit lands after {confirms} confirms. Any other chain is gone — Huepot
+        does not watch it.
       </p>
 
       <p className="mt-6 font-display text-3xl text-white">
@@ -225,36 +223,6 @@ export function InvestClient() {
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
-
-      {otherWallets.length > 0 ? (
-        <section className="mt-8">
-          <button
-            className="text-xs uppercase tracking-[0.18em] text-zinc-500 underline decoration-white/15 underline-offset-4"
-            onClick={() => setShowOther((open) => !open)}
-            type="button"
-          >
-            {showOther ? "Hide" : "More networks (not live)"}
-          </button>
-          {showOther ? (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {otherWallets.map((item) => (
-                <div className="wallet-card" key={item.id}>
-                  <p className="text-[11px] uppercase tracking-widest text-zinc-500">
-                    {item.standard} · not watched
-                  </p>
-                  <p className="mt-1 text-lg text-white">{item.name}</p>
-                  <p className="mt-2 break-all font-mono text-xs text-zinc-400">
-                    {item.address}
-                  </p>
-                  <p className="mt-2 text-xs text-red-200/80">
-                    Do not send here. Only BNB Chain USDT is credited.
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : null}
         </section>
       ) : null}
 
