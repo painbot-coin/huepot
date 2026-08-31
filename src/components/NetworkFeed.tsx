@@ -79,8 +79,10 @@ export function NetworkFeed() {
       setPeople(data.people ?? []);
       if (data.you) setYou(data.you);
       if (body.action === "post") setDraft("");
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not post");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -272,7 +274,7 @@ function PostCard({
   post: NetworkPost;
   you: string;
   busy: boolean;
-  onAct: (body: Record<string, string>) => void;
+  onAct: (body: Record<string, string>) => Promise<boolean>;
   onRelate: (action: string, username: string) => void;
 }) {
   const [comment, setComment] = useState("");
@@ -320,8 +322,9 @@ function PostCard({
         onSubmit={(event) => {
           event.preventDefault();
           if (!comment.trim()) return;
-          onAct({ action: "comment", postId: post.id, body: comment });
-          setComment("");
+          void onAct({ action: "comment", postId: post.id, body: comment }).then((ok) => {
+            if (ok) setComment("");
+          });
         }}
       >
         <input

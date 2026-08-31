@@ -187,7 +187,7 @@ export type PublicWallet = {
   live: boolean;
 };
 
-export type WithdrawalStatus = "queued" | "paid" | "rejected";
+export type WithdrawalStatus = "queued" | "sending" | "paid" | "rejected";
 
 export type Withdrawal = {
   id: string;

@@ -5,7 +5,7 @@ import {
   requireVerified,
   withdrawFromNetwork,
 } from "@/lib/auth";
-import { dailyWithdrawTotal, insertWithdrawal, listWithdrawalsForUser } from "@/lib/chain";
+import { dailyWithdrawTotal, deleteWithdrawal, insertWithdrawal, listWithdrawalsForUser } from "@/lib/chain";
 import {
   LIVE_CHAIN_ID,
   MAX_DAILY_WITHDRAW,
@@ -45,46 +45,47 @@ export async function POST(request: Request) {
     const payoutId = queued ? crypto.randomUUID() : undefined;
     const amount = Number(body.amount);
 
-    if (queued) {
-      const userId = await withStoreRead((store) => {
+    let queuedId = "";
+    try {
+      const packed = await withStore(async (store) => {
         const user = requireUser(store, token);
         requireVerified(user);
-        return user.id;
+        if (queued) {
+          const spent = await dailyWithdrawTotal(user.id);
+          if (spent + toCents(amount) > toCents(MAX_DAILY_WITHDRAW)) {
+            throw new Error(`Daily cash-out cap is ${MAX_DAILY_WITHDRAW} USDT.`);
+          }
+        }
+        const result = withdrawFromNetwork(
+          store,
+          user,
+          amount,
+          body.networkId ?? "",
+          body.address ?? "",
+          payoutId,
+        );
+        if (queued && payoutId) {
+          queuedId = payoutId;
+          await insertWithdrawal({
+            id: payoutId,
+            userId: user.id,
+            networkId: LIVE_CHAIN_ID,
+            address: result.address,
+            amount: result.amount,
+            status: "queued",
+            createdAt: Date.now(),
+            note: "Queued for send",
+          });
+        }
+        return { state: getGameState(store, user.id), result };
       });
-      const spent = await dailyWithdrawTotal(userId);
-      if (spent + toCents(amount) > toCents(MAX_DAILY_WITHDRAW)) {
-        throw new Error(`Daily cash-out cap is ${MAX_DAILY_WITHDRAW} USDT.`);
+      return NextResponse.json(packed.state);
+    } catch (error) {
+      if (queuedId) {
+        await deleteWithdrawal(queuedId).catch(() => undefined);
       }
+      throw error;
     }
-
-    const packed = await withStore((store) => {
-      const user = requireUser(store, token);
-      requireVerified(user);
-      const result = withdrawFromNetwork(
-        store,
-        user,
-        amount,
-        body.networkId ?? "",
-        body.address ?? "",
-        payoutId,
-      );
-      return { state: getGameState(store, user.id), userId: user.id, result };
-    });
-
-    if (queued && payoutId) {
-      await insertWithdrawal({
-        id: payoutId,
-        userId: packed.userId,
-        networkId: LIVE_CHAIN_ID,
-        address: packed.result.address,
-        amount: packed.result.amount,
-        status: "queued",
-        createdAt: Date.now(),
-        note: "Queued for send",
-      });
-    }
-
-    return NextResponse.json(packed.state);
   } catch (error) {
     return jsonError(error);
   }

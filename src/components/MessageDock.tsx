@@ -215,7 +215,12 @@ export function MessageDock() {
         </section>
       ) : null}
 
-      {open ? (
+      {!open ? (
+        <button className="msg-tab is-fade-in" onClick={() => setOpen(true)} type="button">
+          Messaging
+          {unread ? <b>{unread}</b> : null}
+        </button>
+      ) : !(chatOpen && peer) ? (
         <section className="msg-panel msg-inbox is-fade-in">
           <header className="msg-bar">
             <strong>Messaging</strong>
@@ -287,12 +292,7 @@ export function MessageDock() {
             Open messaging
           </Link>
         </section>
-      ) : (
-        <button className="msg-tab is-fade-in" onClick={() => setOpen(true)} type="button">
-          Messaging
-          {unread ? <b>{unread}</b> : null}
-        </button>
-      )}
+      ) : null}
     </div>
   );
 }

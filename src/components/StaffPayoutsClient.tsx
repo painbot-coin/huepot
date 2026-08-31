@@ -124,9 +124,9 @@ export function StaffPayoutsClient() {
                   </a>
                 ) : null}
               </div>
-              {row.status === "queued" ? (
+              {row.status === "queued" || row.status === "sending" ? (
                 <div className="flex gap-2">
-                  {canSend ? (
+                  {canSend && row.status === "queued" ? (
                     <button
                       className="chip-btn"
                       disabled={busy}
@@ -144,14 +144,16 @@ export function StaffPayoutsClient() {
                   >
                     Paid
                   </button>
-                  <button
-                    className="chip-btn chip-btn-ghost"
-                    disabled={busy}
-                    onClick={() => void act(row.id, "rejected")}
-                    type="button"
-                  >
-                    Reject
-                  </button>
+                  {row.status === "queued" ? (
+                    <button
+                      className="chip-btn chip-btn-ghost"
+                      disabled={busy}
+                      onClick={() => void act(row.id, "rejected")}
+                      type="button"
+                    >
+                      Reject
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </div>

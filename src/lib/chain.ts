@@ -337,6 +337,13 @@ export async function scanChain() {
   }
 }
 
+async function depositAlreadyCredited(txHash: string) {
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM Tx WHERE type = 'deposit' AND note LIKE ${`%${txHash}%`} LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
 async function creditLog(input: {
   userId: string;
   address: string;
@@ -347,20 +354,34 @@ async function creditLog(input: {
 }) {
   const idValue = crypto.randomUUID();
   const txHash = input.txHash.toLowerCase();
+  let inserted = false;
   try {
     await prisma.$executeRawUnsafe(
       `INSERT INTO ChainDeposit (id, txHash, logIndex, userId, address, amount, blockNumber, createdAt)
        VALUES ('${idValue}', '${esc(txHash)}', ${input.logIndex}, '${esc(input.userId)}', '${esc(input.address)}', ${input.amount}, ${input.blockNumber}, ${Date.now()})`,
     );
+    inserted = true;
   } catch {
-    /* already recorded — still try credit in case the ledger write failed */
+    inserted = false;
   }
+
+  if (!inserted && (await depositAlreadyCredited(txHash))) return;
 
   const { withStore } = await import("@/lib/store");
   const { creditConfirmedDeposit } = await import("@/lib/ledger");
   await withStore((store) => {
     creditConfirmedDeposit(store, input.userId, input.amount, txHash);
   });
+}
+
+async function claimWithdrawal(id: string, from: WithdrawalStatus | WithdrawalStatus[], to: WithdrawalStatus) {
+  const allowed = (Array.isArray(from) ? from : [from]).map((status) => `'${esc(status)}'`).join(", ");
+  const now = Date.now();
+  const stamp = to === "sending" ? "" : `, resolvedAt = ${now}`;
+  const changed = await prisma.$executeRawUnsafe(
+    `UPDATE Withdrawal SET status = '${esc(to)}'${stamp} WHERE id = '${esc(id)}' AND status IN (${allowed})`,
+  );
+  return Number(changed) > 0;
 }
 
 export async function insertWithdrawal(row: {
@@ -536,9 +557,20 @@ export async function resolveWithdrawal(
   );
   const row = rows[0];
   if (!row) throw new Error("That payout was not found.");
-  if (row.status !== "queued") throw new Error("That payout is already resolved.");
+  if (row.status === "paid" || row.status === "rejected") {
+    throw new Error("That payout is already resolved.");
+  }
+  if (action === "rejected" && row.status !== "queued") {
+    throw new Error("That payout is already sending.");
+  }
 
-  const now = Date.now();
+  const claimed = await claimWithdrawal(
+    id,
+    action === "rejected" ? "queued" : ["queued", "sending"],
+    action,
+  );
+  if (!claimed) throw new Error("That payout is already resolved.");
+
   if (action === "rejected") {
     const { withStore } = await import("@/lib/store");
     const { refundQueuedWithdraw } = await import("@/lib/ledger");
@@ -546,9 +578,6 @@ export async function resolveWithdrawal(
       refundQueuedWithdraw(store, row.userId, row.amount, row.address);
     });
   }
-  await prisma.$executeRawUnsafe(
-    `UPDATE Withdrawal SET status = '${action === "paid" ? "paid" : "rejected"}', resolvedAt = ${now} WHERE id = '${esc(id)}'`,
-  );
   await announcePayout(row.id, row.userId, row.amount, action, row.txHash ?? "");
 }
 
@@ -580,7 +609,15 @@ export async function sendQueuedWithdrawal(id: string) {
     );
     const row = rows[0];
     if (!row) throw new Error("That payout was not found.");
-    if (row.status !== "queued") throw new Error("That payout is already resolved.");
+    if (row.status === "paid" || row.status === "rejected") {
+      throw new Error("That payout is already resolved.");
+    }
+    if (row.status === "queued") {
+      const claimed = await claimWithdrawal(id, "queued", "sending");
+      if (!claimed) throw new Error("That payout is already resolved.");
+    } else if (row.status !== "sending") {
+      throw new Error("That payout is already resolved.");
+    }
 
     let hash = (row.txHash ?? "").trim();
     if (!hash) {
@@ -613,10 +650,21 @@ export async function sendQueuedWithdrawal(id: string) {
     }
 
     const now = Date.now();
-    await prisma.$executeRawUnsafe(
-      `UPDATE Withdrawal SET status = 'paid', resolvedAt = ${now}, txHash = '${esc(hash)}', note = 'Sent ${hash}' WHERE id = '${esc(id)}'`,
+    const marked = await prisma.$executeRawUnsafe(
+      `UPDATE Withdrawal SET status = 'paid', resolvedAt = ${now}, txHash = '${esc(hash)}', note = 'Sent ${hash}' WHERE id = '${esc(id)}' AND status IN ('queued', 'sending')`,
     );
+    if (Number(marked) < 1) throw new Error("That payout is already resolved.");
     await announcePayout(row.id, row.userId, row.amount, "paid", hash);
+  } catch (error) {
+    const hasHash = await prisma.$queryRawUnsafe<{ txHash?: string | null }[]>(
+      `SELECT txHash FROM Withdrawal WHERE id = '${esc(id)}' LIMIT 1`,
+    );
+    if (!(hasHash[0]?.txHash ?? "").trim()) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE Withdrawal SET status = 'queued', resolvedAt = NULL WHERE id = '${esc(id)}' AND status = 'sending'`,
+      );
+    }
+    throw error;
   } finally {
     sending.delete(id);
   }

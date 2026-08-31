@@ -192,9 +192,9 @@ export function StaffConsole() {
                     </a>
                   ) : null}
                 </div>
-                {row.status === "queued" ? (
+                {row.status === "queued" || row.status === "sending" ? (
                   <div className="flex gap-2">
-                    {canSend ? (
+                    {canSend && row.status === "queued" ? (
                       <button className="chip-btn" disabled={busy} onClick={() => void act({ action: "send", id: row.id })} type="button">
                         Send
                       </button>
@@ -202,9 +202,11 @@ export function StaffConsole() {
                     <button className="chip-btn" disabled={busy} onClick={() => void act({ action: "paid", id: row.id })} type="button">
                       Paid
                     </button>
-                    <button className="chip-btn chip-btn-ghost" disabled={busy} onClick={() => void act({ action: "rejected", id: row.id })} type="button">
-                      Reject
-                    </button>
+                    {row.status === "queued" ? (
+                      <button className="chip-btn chip-btn-ghost" disabled={busy} onClick={() => void act({ action: "rejected", id: row.id })} type="button">
+                        Reject
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

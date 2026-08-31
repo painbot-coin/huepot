@@ -46,7 +46,13 @@ export function NetworkChrome({
             href={link.href}
             key={link.label}
             onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-              if (link.href === "/network/messages" && !event.metaKey && !event.ctrlKey) {
+              if (
+                you &&
+                link.href === "/network/messages" &&
+                !path.startsWith("/network/messages") &&
+                !event.metaKey &&
+                !event.ctrlKey
+              ) {
                 event.preventDefault();
                 openMessageDock();
               }

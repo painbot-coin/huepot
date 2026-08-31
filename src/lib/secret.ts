@@ -2,9 +2,10 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypt
 
 function key() {
   const secret = process.env.WALLET_SECRET;
+  const watching = Boolean(process.env.BSC_RPC_URL || process.env.CHAIN_WATCH === "1");
   if (!secret || secret === "huepot-dev-wallet-secret-change-me") {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Set WALLET_SECRET before running Huepot in production.");
+    if (process.env.NODE_ENV === "production" || watching) {
+      throw new Error("Set WALLET_SECRET before watching live deposits.");
     }
   }
   return createHash("sha256")

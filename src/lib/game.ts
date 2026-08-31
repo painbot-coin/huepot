@@ -18,7 +18,7 @@ import {
 } from "./rooms";
 import { ensureRoundSeed } from "./fairness";
 import { queueSettledRound } from "./fairness-db";
-import { assertCanPlay } from "./limits";
+import { assertCanPlay, notePlayTx } from "./limits";
 import { HOUSE_USER_ID, ensureHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
 import { payInviteRake } from "./referrals";
 import {
@@ -90,6 +90,7 @@ function addTx(
     note,
   });
   store.txs = store.txs.slice(0, 400);
+  notePlayTx(playerId, type, amount);
 }
 
 function playerClicksOn(round: Round, playerId: string): PlayerClicks {
@@ -828,26 +829,30 @@ export function hostMutePlayer(
   return getRoomState(store, slug, hostId);
 }
 
-export function searchPit(store: StoreData, query: string): SearchHit {
-  ensureRooms(store);
-  pruneExpiredRooms(store);
+export function searchPit(
+  store: StoreData,
+  query: string,
+  includeUsers = false,
+): SearchHit {
   const q = query.trim().toLowerCase();
-  if (q.length < 1) return { rooms: listRoomCards(store).slice(0, 8), users: [] };
-  const rooms = listRoomCards(store).filter(
-    (room) =>
-      room.name.toLowerCase().includes(q) ||
-      room.slug.toLowerCase().includes(q) ||
-      (room.ownerName ?? "").toLowerCase().includes(q),
-  );
+  const rooms = (
+    q.length < 1
+      ? listRoomCards(store).slice(0, 8)
+      : listRoomCards(store).filter(
+          (room) =>
+            room.name.toLowerCase().includes(q) ||
+            room.slug.toLowerCase().includes(q) ||
+            (room.ownerName ?? "").toLowerCase().includes(q),
+        )
+  ).slice(0, 12);
+  if (!includeUsers || q.length < 1) return { rooms, users: [] };
   const users = Object.values(store.users)
     .filter((user) => user.id !== HOUSE_USER_ID)
     .filter((user) => user.username.toLowerCase().includes(q))
     .slice(0, 12)
     .map((user) => ({
       username: user.username,
-      rooms: Object.values(store.rooms)
-        .filter((room) => room.playerIds.includes(user.id))
-        .map((room) => ({ slug: room.slug, name: room.name })),
+      rooms: [] as { slug: string; name: string }[],
     }));
-  return { rooms: rooms.slice(0, 12), users };
+  return { rooms, users };
 }

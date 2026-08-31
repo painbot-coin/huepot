@@ -1,4 +1,5 @@
 import { LIVE_CHAIN_ID } from "@/lib/config";
+import { notePlayTx } from "@/lib/limits";
 import { formatCents } from "@/lib/money";
 import { networkById } from "@/lib/networks";
 import { notify } from "@/lib/notifications";
@@ -45,6 +46,7 @@ export function refundQueuedWithdraw(
   if (!user) return;
   const credit = Math.round(amount);
   user.balance += credit;
+  notePlayTx(userId, "refund", credit);
   store.txs.unshift({
     id: crypto.randomUUID(),
     playerId: userId,

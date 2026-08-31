@@ -1,10 +1,14 @@
 import { randomBytes } from "crypto";
 import { INVITE_DAILY_CAP, INVITE_RAKE_SHARE_BPS } from "./config";
+import { prisma } from "./db";
 import { isHouseUser } from "./house";
 import { formatCents, toCents } from "./money";
 import { notify } from "./notifications";
 import type { ColorId } from "./colors";
 import type { StoreData, Tx, User } from "./types";
+
+const inviteToday = new Map<string, { day: number; cents: number }>();
+const inviteLife = new Map<string, number>();
 
 const CODE_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -75,11 +79,33 @@ export function applyInviteOnSignup(store: StoreData, user: User, rawCode: strin
   return inviter;
 }
 
+export async function warmInviteTotals() {
+  const day = utcDayStart(Date.now());
+  const today = await prisma.$queryRaw<{ playerId: string; total: number }[]>`
+    SELECT playerId, COALESCE(SUM(amount), 0) as total FROM Tx
+    WHERE type = 'invite' AND createdAt >= ${day} GROUP BY playerId
+  `;
+  const life = await prisma.$queryRaw<{ playerId: string; total: number }[]>`
+    SELECT playerId, COALESCE(SUM(amount), 0) as total FROM Tx
+    WHERE type = 'invite' GROUP BY playerId
+  `;
+  inviteToday.clear();
+  inviteLife.clear();
+  for (const row of today) {
+    inviteToday.set(row.playerId, { day, cents: Math.round(Number(row.total)) });
+  }
+  for (const row of life) {
+    inviteLife.set(row.playerId, Math.round(Number(row.total)));
+  }
+}
+
 export function inviteTxsFor(store: StoreData, userId: string) {
   return store.txs.filter((tx) => tx.playerId === userId && tx.type === "invite");
 }
 
 export function inviteEarnedCents(store: StoreData, userId: string, since = 0) {
+  if (since <= 0 && inviteLife.has(userId)) return inviteLife.get(userId) ?? 0;
+  if (since > 0) return inviteEarnedTodayCents(store, userId, since);
   return inviteTxsFor(store, userId).reduce((sum, tx) => {
     if (tx.createdAt < since) return sum;
     return sum + tx.amount;
@@ -87,7 +113,13 @@ export function inviteEarnedCents(store: StoreData, userId: string, since = 0) {
 }
 
 export function inviteEarnedTodayCents(store: StoreData, userId: string, at = Date.now()) {
-  return inviteEarnedCents(store, userId, utcDayStart(at));
+  const day = utcDayStart(at);
+  const hit = inviteToday.get(userId);
+  if (hit && hit.day === day) return hit.cents;
+  return inviteTxsFor(store, userId).reduce((sum, tx) => {
+    if (tx.createdAt < day) return sum;
+    return sum + tx.amount;
+  }, 0);
 }
 
 function addInviteTx(store: StoreData, playerId: string, amount: number, note: string, at: number) {
@@ -101,6 +133,11 @@ function addInviteTx(store: StoreData, playerId: string, amount: number, note: s
   };
   store.txs.unshift(tx);
   store.txs = store.txs.slice(0, 400);
+  const day = utcDayStart(at);
+  const hit = inviteToday.get(playerId);
+  if (!hit || hit.day !== day) inviteToday.set(playerId, { day, cents: amount });
+  else hit.cents += amount;
+  inviteLife.set(playerId, (inviteLife.get(playerId) ?? 0) + amount);
 }
 
 function losingClicksFor(

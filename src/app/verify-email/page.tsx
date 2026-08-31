@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function VerifyEmailPage() {
-  redirect("/signin");
+  redirect("/signin?notice=google");
 }

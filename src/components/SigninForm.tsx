@@ -13,6 +13,9 @@ export function SigninForm() {
     const params = new URLSearchParams(window.location.search);
     const invite = params.get("ref")?.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 12) ?? "";
     if (invite) setRef(invite);
+    if (params.get("notice") === "google") {
+      setError("Email sign-in is closed. Continue with Google.");
+    }
     const value = params.get("error");
     if (!value) return;
     if (value === "google_not_configured") {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { scanChain, startChainWatcher } from "@/lib/chain";
-import { adminSecret, chainWatchEnabled } from "@/lib/config";
+import { adminSecret, chainWatchEnabled, productMode } from "@/lib/config";
 import { jsonError } from "@/lib/http";
 
 export const runtime = "nodejs";
@@ -8,10 +8,8 @@ export const runtime = "nodejs";
 function allowScan(request: Request) {
   const secret = adminSecret();
   const header = request.headers.get("x-admin-secret") ?? "";
-  const url = new URL(request.url);
-  const query = url.searchParams.get("secret") ?? "";
-  if (!secret) return process.env.NODE_ENV !== "production";
-  return header === secret || query === secret;
+  if (!secret) return !productMode() && process.env.NODE_ENV !== "production";
+  return header === secret;
 }
 
 export async function POST(request: Request) {

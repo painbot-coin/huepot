@@ -1,7 +1,38 @@
-import type { PlayLimits, StoreData, User } from "@/lib/types";
+import { prisma } from "@/lib/db";
+import type { PlayLimits, StoreData, Tx, User } from "@/lib/types";
 import { formatCents, toCents } from "@/lib/money";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const lossToday = new Map<string, { since: number; cents: number }>();
+
+export async function warmPlayLoss() {
+  const since = Date.now() - DAY_MS;
+  const rows = await prisma.$queryRaw<{ playerId: string; type: string; amount: number }[]>`
+    SELECT playerId, type, amount FROM Tx
+    WHERE createdAt >= ${since} AND type IN ('click', 'payout', 'refund')
+  `;
+  const byUser = new Map<string, number>();
+  for (const row of rows) {
+    let n = byUser.get(row.playerId) ?? 0;
+    if (row.type === "click") n += Number(row.amount);
+    if (row.type === "payout" || row.type === "refund") n -= Number(row.amount);
+    byUser.set(row.playerId, n);
+  }
+  lossToday.clear();
+  for (const [playerId, cents] of byUser) {
+    lossToday.set(playerId, { since, cents: Math.max(0, Math.round(cents)) });
+  }
+}
+
+export function notePlayTx(playerId: string, type: Tx["type"], amount: number) {
+  if (type !== "click" && type !== "payout" && type !== "refund") return;
+  const since = Date.now() - DAY_MS;
+  const hit = lossToday.get(playerId) ?? { since, cents: 0 };
+  if (type === "click") hit.cents += amount;
+  else hit.cents -= amount;
+  hit.cents = Math.max(0, Math.round(hit.cents));
+  lossToday.set(playerId, hit);
+}
 
 export const COOL_OFF_HOURS = [1, 24, 168] as const;
 export const SELF_EXCLUDE_DAYS = [30, 90, 180] as const;
@@ -22,6 +53,10 @@ export function userLimits(user: User): PlayLimits {
 }
 
 export function playLossSince(store: StoreData, userId: string, since: number) {
+  const cached = lossToday.get(userId);
+  if (cached && cached.since <= since) {
+    return Math.max(0, Math.round(cached.cents));
+  }
   let loss = 0;
   for (const tx of store.txs) {
     if (tx.playerId !== userId || tx.createdAt < since) continue;

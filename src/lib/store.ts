@@ -1092,6 +1092,10 @@ async function ensureDb() {
       await ensureFriendTables();
       await ensureSocialTables();
       await migrateMoneyToCents();
+      const { warmPlayLoss } = await import("@/lib/limits");
+      const { warmInviteTotals } = await import("@/lib/referrals");
+      await warmPlayLoss();
+      await warmInviteTotals();
       startChainWatcher();
     })().catch((error) => {
       boot = null;

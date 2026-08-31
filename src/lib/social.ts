@@ -9,6 +9,7 @@ import {
   seatedAt,
 } from "@/lib/friends";
 import { isHouseUser } from "@/lib/house";
+import { playBlock } from "@/lib/limits";
 import { notify } from "@/lib/notifications";
 import { isOnline, presenceAt, touchPresence } from "@/lib/presence";
 import type {
@@ -28,6 +29,7 @@ const ABOUT_MAX = 500;
 const LOCATION_MAX = 40;
 const POST_DAY_CAP = 20;
 const MESSAGE_DAY_CAP = 40;
+const COMMENT_DAY_CAP = 80;
 
 function esc(value: string) {
   return value.replace(/'/g, "''");
@@ -230,51 +232,70 @@ export async function listAuthorPosts(store: StoreData, viewer: User, authorId: 
   return hydratePosts(store, viewer, posts);
 }
 
+function assertCanSocialize(user: User) {
+  const block = playBlock(user);
+  if (block?.kind === "frozen" || block?.kind === "self-exclude") {
+    throw new Error(block.message);
+  }
+}
+
 export async function createPost(store: StoreData, viewer: User, raw: string) {
+  assertCanSocialize(viewer);
   const body = raw.trim().slice(0, POST_MAX);
   if (body.length < 2) throw new Error("Write a little more.");
   const since = dayStart();
-  const today = await prisma.$queryRawUnsafe<{ n: number | bigint }[]>(
-    `SELECT COUNT(*) as n FROM NetworkPost WHERE userId='${esc(viewer.id)}' AND createdAt>=${since}`,
-  );
+  const today = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) as n FROM NetworkPost WHERE userId = ${viewer.id} AND createdAt >= ${since}
+  `;
   if (Number(today[0]?.n ?? 0) >= POST_DAY_CAP) {
     throw new Error("That is enough posts for today.");
   }
   const id = crypto.randomUUID();
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO NetworkPost (id, userId, body, createdAt) VALUES ('${esc(id)}', '${esc(viewer.id)}', '${esc(body)}', ${Date.now()})`,
-  );
+  await prisma.$executeRaw`
+    INSERT INTO NetworkPost (id, userId, body, createdAt) VALUES (${id}, ${viewer.id}, ${body}, ${Date.now()})
+  `;
   return listFeed(store, viewer);
 }
 
 export async function toggleLike(store: StoreData, viewer: User, postId: string) {
+  assertCanSocialize(viewer);
   const id = postId.replace(/[^a-zA-Z0-9-]/g, "");
-  const existing = await prisma.$queryRawUnsafe<{ userId: string }[]>(
-    `SELECT userId FROM NetworkLike WHERE postId='${esc(id)}' AND userId='${esc(viewer.id)}' LIMIT 1`,
-  );
+  const existing = await prisma.$queryRaw<{ userId: string }[]>`
+    SELECT userId FROM NetworkLike WHERE postId = ${id} AND userId = ${viewer.id} LIMIT 1
+  `;
   if (existing[0]) {
-    await prisma.$executeRawUnsafe(
-      `DELETE FROM NetworkLike WHERE postId='${esc(id)}' AND userId='${esc(viewer.id)}'`,
-    );
+    await prisma.$executeRaw`
+      DELETE FROM NetworkLike WHERE postId = ${id} AND userId = ${viewer.id}
+    `;
   } else {
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO NetworkLike (postId, userId) VALUES ('${esc(id)}', '${esc(viewer.id)}')`,
-    );
+    await prisma.$executeRaw`
+      INSERT INTO NetworkLike (postId, userId) VALUES (${id}, ${viewer.id})
+    `;
   }
   return listFeed(store, viewer);
 }
 
 export async function addComment(store: StoreData, viewer: User, postId: string, raw: string) {
+  assertCanSocialize(viewer);
   const body = raw.trim().slice(0, COMMENT_MAX);
   if (body.length < 1) throw new Error("Write a comment.");
   const id = postId.replace(/[^a-zA-Z0-9-]/g, "");
-  const post = await prisma.$queryRawUnsafe<{ userId: string }[]>(
-    `SELECT userId FROM NetworkPost WHERE id='${esc(id)}' LIMIT 1`,
-  );
+  const post = await prisma.$queryRaw<{ userId: string }[]>`
+    SELECT userId FROM NetworkPost WHERE id = ${id} LIMIT 1
+  `;
   if (!post[0]) throw new Error("That post is gone.");
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO NetworkComment (id, postId, userId, body, createdAt) VALUES ('${crypto.randomUUID()}', '${esc(id)}', '${esc(viewer.id)}', '${esc(body)}', ${Date.now()})`,
-  );
+  const since = dayStart();
+  const today = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) as n FROM NetworkComment WHERE userId = ${viewer.id} AND createdAt >= ${since}
+  `;
+  if (Number(today[0]?.n ?? 0) >= COMMENT_DAY_CAP) {
+    throw new Error("That is enough comments for today.");
+  }
+  const commentId = crypto.randomUUID();
+  await prisma.$executeRaw`
+    INSERT INTO NetworkComment (id, postId, userId, body, createdAt)
+    VALUES (${commentId}, ${id}, ${viewer.id}, ${body}, ${Date.now()})
+  `;
   const author = store.users[post[0].userId];
   if (author && author.id !== viewer.id) {
     notify(store, author.id, {
@@ -342,20 +363,23 @@ export async function listThread(
 }
 
 export async function sendMessage(store: StoreData, viewer: User, username: string, raw: string) {
+  assertCanSocialize(viewer);
   const other = findPlayer(store, username);
   if (other.id === viewer.id) throw new Error("Message someone else.");
   const body = raw.trim().slice(0, MESSAGE_MAX);
   if (body.length < 1) throw new Error("Write a message.");
   const since = dayStart();
-  const today = await prisma.$queryRawUnsafe<{ n: number | bigint }[]>(
-    `SELECT COUNT(*) as n FROM NetworkMessage WHERE fromId='${esc(viewer.id)}' AND createdAt>=${since}`,
-  );
+  const today = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) as n FROM NetworkMessage WHERE fromId = ${viewer.id} AND createdAt >= ${since}
+  `;
   if (Number(today[0]?.n ?? 0) >= MESSAGE_DAY_CAP) {
     throw new Error("That is enough messages for today.");
   }
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO NetworkMessage (id, fromId, toId, body, createdAt, read) VALUES ('${crypto.randomUUID()}', '${esc(viewer.id)}', '${esc(other.id)}', '${esc(body)}', ${Date.now()}, 0)`,
-  );
+  const id = crypto.randomUUID();
+  await prisma.$executeRaw`
+    INSERT INTO NetworkMessage (id, fromId, toId, body, createdAt, read)
+    VALUES (${id}, ${viewer.id}, ${other.id}, ${body}, ${Date.now()}, 0)
+  `;
   notify(store, other.id, {
     kind: "message",
     title: "New message",

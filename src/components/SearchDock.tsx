@@ -83,11 +83,7 @@ export function SearchDock({
               type="button"
             >
               <strong>@{user.username}</strong>
-              <em>
-                {user.rooms.length
-                  ? user.rooms.map((room) => room.name).join(", ")
-                  : "Not seated"}
-              </em>
+              <em>Player</em>
             </button>
           ))}
       </Fade>
