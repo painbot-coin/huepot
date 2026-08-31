@@ -1192,11 +1192,6 @@ select.field {
     white-space: nowrap;
     flex-shrink: 0;
   }
-
-  .site-nav a[href="/how-it-works"],
-  .site-nav a[href="/fairness"] {
-    display: none;
-  }
 }
 
 .nav-link {
@@ -1943,6 +1938,7 @@ select.field {
 
 .lobby-hero-tools {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
   margin-top: 1rem;
@@ -2275,6 +2271,31 @@ body:has(.pit-app) .page-stage {
   overflow: hidden;
   gap: 0.55rem;
   padding: 0.45rem 0.6rem 0.4rem;
+}
+
+.pit-app > .loader-stage {
+  flex: 1;
+  min-height: 0;
+}
+
+.pit-rule {
+  margin: 0.65rem 0 0;
+  color: #d8d8e2;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.pit-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  margin: 0.85rem 0 0;
+}
+
+.pit-cta span {
+  color: #c9c9d4;
+  font-size: 0.88rem;
 }
 
 .pit-top {
@@ -2685,15 +2706,20 @@ body:has(.pit-app) .page-stage {
 }
 
 .pit-tabs button {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: #16131f;
   color: #d8d8e2;
   border-radius: 0.8rem;
-  padding: 0.7rem 0.2rem;
-  min-height: 2.7rem;
+  padding: 0.45rem 0.2rem 0.4rem;
+  min-height: 2.9rem;
   cursor: pointer;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
   transition: transform 160ms ease, background 160ms ease, color 160ms ease;
 }
 
@@ -2808,6 +2834,11 @@ body:has(.pit-app) .page-stage {
 @media (max-width: 1079px) {
   .desk-only {
     display: none !important;
+  }
+
+  .pit-hint {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.88rem;
   }
 }
 
@@ -3602,7 +3633,6 @@ main table {
 }
 
 @media (max-width: 640px) {
-  .site-nav a[href="/rooms/new"],
   .site-nav a[href="/invest"],
   .site-nav a[href="/withdraw"] {
     display: none;

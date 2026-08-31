@@ -13,6 +13,7 @@ import {
   IconUndo,
 } from "@/components/Icons";
 import type { GameState, PublicUser, RoomEvent } from "@/lib/types";
+import { isQuietRoundLine } from "@/lib/rooms";
 
 const KIND_ICON: Record<RoomEvent["kind"], ReactNode> = {
   chat: <IconChat />,
@@ -101,18 +102,22 @@ export function RoomFeed({
     }
   }
 
+  const visible = feed.filter(
+    (item) => item.kind !== "round" || !isQuietRoundLine(item.body),
+  );
+
   return (
     <aside className="room-feed">
       <div className="room-feed-head">
         <IconBell />
         {onHide ? (
-          <button aria-label="Hide news" className="pit-ico desk-only" onClick={onHide} type="button">
+          <button aria-label="Hide talk" className="pit-ico desk-only" onClick={onHide} type="button">
             <IconHideRight />
           </button>
         ) : null}
       </div>
       <div className="room-feed-list" ref={scroller}>
-        {feed.map((item) =>
+        {visible.map((item) =>
           item.kind === "chat" ? (
             <article className="news-chat" key={item.id}>
               <span className="news-ava">{(item.username ?? "p").slice(0, 1).toUpperCase()}</span>
@@ -146,7 +151,7 @@ export function RoomFeed({
             </article>
           ),
         )}
-        {feed.length === 0 ? <p className="room-feed-empty">Quiet table.</p> : null}
+        {visible.length === 0 ? <p className="room-feed-empty">Takes and talk land here.</p> : null}
       </div>
       {user?.emailVerified && !muted ? (
         <form className="room-chat" onSubmit={(event) => void send(event)}>

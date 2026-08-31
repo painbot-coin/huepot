@@ -4,15 +4,15 @@ export default function HowItWorksPage() {
       <h1 className="font-display text-4xl text-white">How it works</h1>
       <p>
         Huepot is a timed color pot played in rooms. Each room has its own coins,
-        click price, round clock, and a live feed for chat plus wager statements.
+        click price, round clock, and a live feed for takes and table talk.
       </p>
       <ol>
-        <li>Sign in with Google. Tick 18+ on the sign-in page, then you can invest, click, and chat.</li>
+        <li>Sign in with Google. Tick 18+ on the sign-in page, then you can add USDT, click, and chat.</li>
         <li>
-          Invest at least 10 USDT on BNB Chain (BEP-20) only. Huepot watches
+          Add at least 10 USDT on BNB Chain (BEP-20) only. Huepot watches
           that chain and credits your bank after enough confirms. Send on any
           other network and the money is gone. New accounts get one BNB Chain
-          address. Extra leftover addresses on Invest are not watched.
+          address. Extra leftover addresses on Add USDT are not watched.
         </li>
         <li>
           Join a basic room for free — Classic, Lightning, Duo, High Table, or
@@ -33,7 +33,8 @@ export default function HowItWorksPage() {
           If every color ties, clicks are refunded. Withdraw to a BNB Chain
           address; staff send USDT from the payout queue. Share your Account
           invite link: a new Google player from that link can earn you a slice
-          of house rake only, capped per day.
+          of house rake only, capped per day. Copy Classic invite from the lobby
+          when you are signed in.
         </li>
       </ol>
       <p>

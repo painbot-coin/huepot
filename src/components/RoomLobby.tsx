@@ -112,11 +112,6 @@ export function RoomLobby() {
       <header className="lobby-hero">
         <p className="lobby-kicker">Sit. Pick a color. Watch the pot.</p>
         <h1 className="font-display">Huepot tables</h1>
-        <p>
-          One click is one stake. Biggest color takes the rest. Fog Pit hides
-          public counts in the last 12 seconds so the last click is a guess, not
-          a pile-on.
-        </p>
         <ClassicLine rooms={basic} />
         <div className="lobby-hero-tools">
           <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />

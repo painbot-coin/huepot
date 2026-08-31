@@ -130,7 +130,7 @@ export function InvestClient() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
-      <h1 className="font-display text-4xl text-white">Invest</h1>
+      <h1 className="font-display text-4xl text-white">Add USDT</h1>
       <p className="mt-2 text-zinc-400">
         Send at least {MIN_DEPOSIT} USDT on BNB Chain (BEP-20) to your live
         address. Credit lands after {confirms} confirms. Any other chain is gone

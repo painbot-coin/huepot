@@ -293,14 +293,16 @@ export function GameClient({ slug }: { slug: string }) {
 
   if (!state) {
     return (
-      <div className="loader-stage">
-        <div className="loader-ring" />
-        <p>{error || "Opening the arena…"}</p>
-        {error ? (
-          <Link className="underline" href="/">
-            Back to rooms
-          </Link>
-        ) : null}
+      <div className="pit-app">
+        <div className="loader-stage">
+          <div className="loader-ring" />
+          <p>{error || "Opening the table…"}</p>
+          {error ? (
+            <Link className="underline" href="/">
+              Back to rooms
+            </Link>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -330,18 +332,26 @@ export function GameClient({ slug }: { slug: string }) {
           <IconPlus />
         </button>
         <SoundToggle />
+        {user ? (
+          <button
+            aria-label="Copy invite"
+            className="pit-ico"
+            onClick={() => {
+              const url = user.inviteCode
+                ? `${window.location.origin}/rooms/${slug}?ref=${user.inviteCode}`
+                : window.location.href;
+              const text = user.inviteCode
+                ? `Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`
+                : url;
+              void navigator.clipboard.writeText(text);
+            }}
+            type="button"
+          >
+            <IconLink />
+          </button>
+        ) : null}
         {room.host ? (
           <>
-            <button
-              aria-label="Copy invite"
-              className="pit-ico"
-              onClick={() => {
-                void navigator.clipboard.writeText(window.location.href);
-              }}
-              type="button"
-            >
-              <IconLink />
-            </button>
             <button
               aria-label={room.paused ? "Resume table" : "Pause table"}
               className="pit-ico"
@@ -431,7 +441,7 @@ export function GameClient({ slug }: { slug: string }) {
         </aside>
         <div className={`pit-main ${pane === "play" ? "is-open" : ""}`}>
     <div className="game-stage">
-      <p className="room-back">
+      <div className="room-back">
         {room.host && renaming ? (
           <form
             className="flex items-center gap-2"
@@ -475,7 +485,7 @@ export function GameClient({ slug }: { slug: string }) {
           {" · "}
           <Link href={`/fairness?slug=${slug}`}>Fairness</Link>
         </span>
-      </p>
+      </div>
       {revealing && winnerColor ? (
         <div
           className="take-veil"
@@ -544,38 +554,32 @@ export function GameClient({ slug }: { slug: string }) {
             }}
           />
         </div>
-        <p className="text-sm leading-6 text-zinc-400">
-          Every color costs{" "}
-          <strong className="text-zinc-200">
-            {formatUsdt(round.clickPrice)} USDT
-          </strong>{" "}
-          per click. The color with the most clicks takes the other colors’
-          money and splits it by click.
+        <p className="pit-rule">
+          Same price every coin. Biggest color takes the rest.
           {room.fogSeconds
-            ? ` Last ${room.fogSeconds} seconds, public counts go dark.`
+            ? ` Last ${room.fogSeconds}s, public counts go dark.`
             : ""}
         </p>
         {!user ? (
-          <p className="text-sm text-zinc-300">
-            <Link className="underline" href="/signin">
-              Sign in with Google
-            </Link>{" "}
-            to click. You can watch the round live either way.
+          <p className="pit-cta">
+            <Link className="chip-btn" href="/signin">
+              Sign in to sit
+            </Link>
+            <span>Watch the round live either way.</span>
           </p>
         ) : !user.emailVerified ? (
-          <p className="text-sm text-zinc-300">
-            <Link className="underline" href="/signin">
+          <p className="pit-cta">
+            <Link className="chip-btn" href="/signin">
               Sign in with Google
-            </Link>{" "}
-            to click colors.
+            </Link>
+            <span>Then you can click colors.</span>
           </p>
         ) : user.balance < round.clickPrice ? (
-          <p className="text-sm text-zinc-300">
-            Bank is below this table’s click price.{" "}
-            <Link className="underline" href="/invest">
-              Invest USDT
-            </Link>{" "}
-            to sit.
+          <p className="pit-cta">
+            <Link className="chip-btn" href="/invest">
+              Add USDT to sit
+            </Link>
+            <span>Bank is below this table’s click price.</span>
           </p>
         ) : null}
       </section>
@@ -605,7 +609,7 @@ export function GameClient({ slug }: { slug: string }) {
           {error}{" "}
           {error.toLowerCase().includes("invest") ? (
             <Link className="underline" href="/invest">
-              Open invest
+              Add USDT
             </Link>
           ) : null}
           {error.toLowerCase().includes("google") || error.toLowerCase().includes("verify") ? (
@@ -729,7 +733,7 @@ export function GameClient({ slug }: { slug: string }) {
             user={user}
           />
           <button
-            aria-label="Show news"
+            aria-label="Show talk"
             className="pit-ico pit-slim-open"
             onClick={() => setNewsOpen(true)}
             type="button"
@@ -756,15 +760,19 @@ export function GameClient({ slug }: { slug: string }) {
       <nav className="pit-tabs">
         <button aria-label="Rooms" className={pane === "rooms" ? "is-on" : ""} onClick={() => setPane("rooms")} type="button">
           <IconUsers />
+          <span>Rooms</span>
         </button>
         <button aria-label="Play" className={pane === "play" ? "is-on" : ""} onClick={() => setPane("play")} type="button">
           <IconCoin />
+          <span>Play</span>
         </button>
         <button aria-label="Table" className={pane === "table" ? "is-on" : ""} onClick={() => setPane("table")} type="button">
           <IconTable />
+          <span>Table</span>
         </button>
-        <button aria-label="News" className={pane === "chat" ? "is-on" : ""} onClick={() => setPane("chat")} type="button">
+        <button aria-label="Talk" className={pane === "chat" ? "is-on" : ""} onClick={() => setPane("chat")} type="button">
           <IconChat />
+          <span>Talk</span>
         </button>
       </nav>
       {creating ? (

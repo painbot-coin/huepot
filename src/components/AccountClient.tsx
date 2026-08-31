@@ -73,7 +73,7 @@ export function AccountClient() {
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Link className="chip-btn" href="/invest">
-          Invest
+          Add USDT
         </Link>
         <Link className="chip-btn chip-btn-ghost" href="/withdraw">
           Withdraw

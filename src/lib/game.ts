@@ -140,10 +140,6 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
       rake: 0,
       payouts: [],
     };
-    postRoomEvent(room, {
-      kind: "round",
-      body: `Round #${round.number} had no clicks. The table stays empty.`,
-    });
     queueSettledRound(room, round, at);
     return;
   }
@@ -334,10 +330,6 @@ function tickRoom(store: StoreData, room: Room) {
   if (!room.round) {
     room.roundNumber += 1;
     room.round = newRound(room, room.roundNumber, at);
-    postRoomEvent(room, {
-      kind: "round",
-      body: `Round #${room.roundNumber} is live.`,
-    });
     return;
   }
 
@@ -355,10 +347,6 @@ function tickRoom(store: StoreData, room: Room) {
   ) {
     room.roundNumber += 1;
     room.round = newRound(room, room.roundNumber, at);
-    postRoomEvent(room, {
-      kind: "round",
-      body: `Round #${room.roundNumber} is live.`,
-    });
   }
 }
 

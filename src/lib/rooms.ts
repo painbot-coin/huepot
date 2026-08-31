@@ -218,6 +218,10 @@ export function findRoom(store: StoreData, slug: string) {
   return room;
 }
 
+export function isQuietRoundLine(body: string) {
+  return /had no clicks/.test(body) || /is live\.?$/.test(body);
+}
+
 export function postRoomEvent(
   room: Room,
   input: {
