@@ -276,6 +276,7 @@ export type PublicRoomCard = {
   liveMinutes: number | null;
   closesAt: number | null;
   paused: boolean;
+  sitting: string[];
 };
 
 export type PublicSeat = {

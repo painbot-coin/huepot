@@ -19,8 +19,8 @@ import {
 import { ensureRoundSeed } from "./fairness";
 import { queueSettledRound } from "./fairness-db";
 import { assertCanPlay, notePlayTx } from "./limits";
-import { HOUSE_USER_ID, ensureHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
-import { payInviteRake } from "./referrals";
+import { HOUSE_USER_ID, ensureHouseUser, isHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
+import { payInviteRake, ensureInviteCode } from "./referrals";
 import {
   floorPayoutPerClick,
   formatCents,
@@ -408,6 +408,18 @@ function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound
   };
 }
 
+function sittingNames(store: StoreData, room: Room) {
+  if (room.round && isLiveFog(room, room.round, nowMs() - pauseShift(room))) return [];
+  const names: string[] = [];
+  for (const id of room.playerIds) {
+    const user = store.users[id];
+    if (!user || isHouseUser(user)) continue;
+    names.push(user.username);
+    if (names.length >= 4) break;
+  }
+  return names;
+}
+
 function toPublicRoomCard(store: StoreData, room: Room): PublicRoomCard {
   const round = room.round;
   const totalClicks = round
@@ -430,6 +442,7 @@ function toPublicRoomCard(store: StoreData, room: Room): PublicRoomCard {
     liveMinutes: room.liveMinutes ?? null,
     closesAt: room.closesAt ? room.closesAt + pauseShift(room) : null,
     paused: Boolean(room.paused),
+    sitting: sittingNames(store, room),
   };
 }
 
@@ -519,6 +532,7 @@ function publicUserFor(store: StoreData, userId: string | null) {
   if (!userId || !store.users[userId]) return null;
   const user = store.users[userId];
   ensureUserWallets(user);
+  ensureInviteCode(store, user);
   const txs = store.txs.filter((tx) => tx.playerId === userId).slice(0, 100);
   return toPublicUser(user, txs, store);
 }

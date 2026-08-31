@@ -20,6 +20,50 @@ function blurbFor(room: PublicRoomCard) {
   return base;
 }
 
+function sittingLine(room: PublicRoomCard) {
+  const names = room.sitting ?? [];
+  if (names.length) return names.map((name) => `@${name}`).join(" · ");
+  if (room.players) return `${room.players} sitting`;
+  return "empty";
+}
+
+function ClassicLine({ rooms }: { rooms: PublicRoomCard[] }) {
+  const classic = rooms.find((room) => room.slug === "classic");
+  const names = classic?.sitting ?? [];
+  if (names.length) {
+    return (
+      <p>
+        <Link href="/rooms/classic">Classic</Link>
+        {` is sat · ${names.map((name) => `@${name}`).join(" · ")}`}
+      </p>
+    );
+  }
+  return (
+    <p>
+      <Link href="/rooms/classic">Classic</Link> is the public pit.
+    </p>
+  );
+}
+
+function ClassicInvite({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function copy() {
+    const url = `${window.location.origin}/rooms/classic?ref=${code}`;
+    const text = `Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    });
+  }
+
+  return (
+    <button className="chip-btn lobby-invite" onClick={copy} type="button">
+      {copied ? "Invite copied" : "Copy Classic invite"}
+    </button>
+  );
+}
+
 export function RoomLobby() {
   const router = useRouter();
   const [state, setState] = useState<LobbyState | null>(null);
@@ -73,11 +117,10 @@ export function RoomLobby() {
           public counts in the last 12 seconds so the last click is a guess, not
           a pile-on.
         </p>
-        <p>
-          <Link href="/rooms/classic">Classic</Link> is the public pit.
-        </p>
+        <ClassicLine rooms={basic} />
         <div className="lobby-hero-tools">
           <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
+          {state?.user?.inviteCode ? <ClassicInvite code={state.user.inviteCode} /> : null}
           <Link aria-label="Create room" className="pit-create" href="/rooms/new">
             <IconPlus />
           </Link>
@@ -151,7 +194,8 @@ function RoomCard({
         </div>
       </dl>
       <p className="room-card-foot">
-        #{room.roundNumber || 1} · {room.players} · {room.paused ? "paused" : room.status}
+        #{room.roundNumber || 1} · {sittingLine(room)}
+        {` · ${room.paused ? "paused" : room.status}`}
         {room.closesAt ? ` · ${formatClock(room.closesAt - now)}` : ""}
       </p>
     </Link>

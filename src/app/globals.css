@@ -1952,6 +1952,11 @@ select.field {
   flex: 1;
 }
 
+.lobby-hero-tools .lobby-invite {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .lobby-row {
   display: flex;
   justify-content: space-between;
