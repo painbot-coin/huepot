@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatUsdt } from "@/lib/money";
 import type { Tx, Withdrawal } from "@/lib/types";
 import type { StaffUserRow } from "@/lib/staff";
 
-type Tab = "payouts" | "players" | "tables" | "ledger" | "reports";
+type Tab = "payouts" | "players" | "tables" | "ledger" | "reports" | "log";
+type LogRow = {
+  id: string;
+  at: number;
+  operator: string;
+  ip: string;
+  action: string;
+  target: string;
+  note: string;
+};
 type ReportRow = {
   id: string;
   roomSlug: string;
@@ -35,10 +44,14 @@ type Treasury = {
 
 export function StaffConsole() {
   const [secret, setSecret] = useState("");
+  const [name, setName] = useState("staff");
+  const [signedIn, setSignedIn] = useState(false);
+  const [operator, setOperator] = useState("");
   const [tab, setTab] = useState<Tab>("payouts");
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [logs, setLogs] = useState<LogRow[]>([]);
   const [canSend, setCanSend] = useState(false);
   const [treasury, setTreasury] = useState<Treasury | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
@@ -50,15 +63,58 @@ export function StaffConsole() {
   const [note, setNote] = useState("");
   const [amount, setAmount] = useState("");
 
+  async function checkSession() {
+    const response = await fetch("/api/staff/session");
+    const data = (await response.json()) as { signedIn?: boolean; operator?: string };
+    if (data.signedIn && data.operator) {
+      setSignedIn(true);
+      setOperator(data.operator);
+      return true;
+    }
+    setSignedIn(false);
+    return false;
+  }
+
+  async function signIn() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/staff/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret, name }),
+      });
+      const data = (await response.json()) as { error?: string; operator?: string };
+      if (!response.ok) throw new Error(data.error || "Could not sign in");
+      setSecret("");
+      setSignedIn(true);
+      setOperator(data.operator ?? name);
+      await load("payouts");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sign in");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function signOut() {
+    await fetch("/api/staff/logout", { method: "POST" });
+    setSignedIn(false);
+    setOperator("");
+    setWithdrawals([]);
+    setUsers([]);
+    setLogs([]);
+    setHouse(null);
+    setTreasury(null);
+  }
+
   async function load(next = tab) {
     setBusy(true);
     setError("");
     try {
       const params = new URLSearchParams({ tab: next });
       if (next === "players" && query) params.set("q", query);
-      const response = await fetch(`/api/staff/console?${params}`, {
-        headers: { "x-admin-secret": secret },
-      });
+      const response = await fetch(`/api/staff/console?${params}`);
       const data = (await response.json()) as {
         error?: string;
         withdrawals?: Withdrawal[];
@@ -66,19 +122,28 @@ export function StaffConsole() {
         rooms?: RoomRow[];
         txs?: (Tx & { username?: string })[];
         reports?: ReportRow[];
+        logs?: LogRow[];
         house?: { balance: number; percent: string };
         canSend?: boolean;
         treasury?: Treasury;
+        you?: { operator?: string };
       };
+      if (response.status === 401) {
+        setSignedIn(false);
+        throw new Error(data.error || "Sign in to the staff desk.");
+      }
       if (!response.ok) throw new Error(data.error || "Could not load staff");
       if (data.withdrawals) setWithdrawals(data.withdrawals);
       if (data.users) setUsers(data.users);
       if (data.rooms) setRooms(data.rooms);
       if (data.txs) setTxs(data.txs);
       if (data.reports) setReports(data.reports);
+      if (data.logs) setLogs(data.logs);
       if (data.house) setHouse(data.house);
       if (typeof data.canSend === "boolean") setCanSend(data.canSend);
       if (data.treasury) setTreasury(data.treasury);
+      if (data.you?.operator) setOperator(data.you.operator);
+      setSignedIn(true);
       setTab(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load staff");
@@ -93,10 +158,7 @@ export function StaffConsole() {
     try {
       const response = await fetch("/api/staff/console", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-secret": secret,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const data = (await response.json()) as {
@@ -104,11 +166,17 @@ export function StaffConsole() {
         withdrawals?: Withdrawal[];
         users?: StaffUserRow[];
         rooms?: RoomRow[];
+        reports?: ReportRow[];
       };
+      if (response.status === 401) {
+        setSignedIn(false);
+        throw new Error(data.error || "Sign in to the staff desk.");
+      }
       if (!response.ok) throw new Error(data.error || "Could not update");
       if (data.withdrawals) setWithdrawals(data.withdrawals);
       if (data.users) setUsers(data.users);
       if (data.rooms) setRooms(data.rooms);
+      if (data.reports) setReports(data.reports);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update");
     } finally {
@@ -116,33 +184,58 @@ export function StaffConsole() {
     }
   }
 
+  useEffect(() => {
+    void checkSession().then((ok) => {
+      if (ok) void load("payouts");
+    });
+  }, []);
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
       <h1 className="font-display text-4xl text-white">Staff</h1>
       <p className="mt-2 text-zinc-400">
-        Payouts, player freezes, balance adjusts, and voiding a live round.
-        {canSend
+        {signedIn
+          ? `Signed in as ${operator}. Session lasts 4 hours and stays on this network.`
+          : "Sign in once. The secret is not kept in the page after that."}
+        {signedIn && canSend
           ? " Send broadcasts BNB Chain USDT from the house wallet. Paid is for a send you already made outside the pit."
-          : " Set WITHDRAW_KEY to send on-chain. Paid still marks a manual send."}
+          : signedIn
+            ? " Set WITHDRAW_KEY to send on-chain. Paid still marks a manual send."
+            : ""}
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <input
-          className="field"
-          onChange={(event) => setSecret(event.target.value)}
-          placeholder="Staff secret"
-          type="password"
-          value={secret}
-        />
-        <button
-          className="chip-btn justify-center whitespace-nowrap"
-          disabled={busy || !secret}
-          onClick={() => void load(tab)}
-          type="button"
+      {signedIn ? (
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button className="chip-btn chip-btn-ghost" disabled={busy} onClick={() => void signOut()} type="button">
+            Sign out
+          </button>
+        </div>
+      ) : (
+        <form
+          className="mt-6 flex flex-wrap gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void signIn();
+          }}
         >
-          {busy ? "Loading…" : "Open"}
-        </button>
-      </div>
+          <input
+            className="field"
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Your name"
+            value={name}
+          />
+          <input
+            className="field"
+            onChange={(event) => setSecret(event.target.value)}
+            placeholder="Staff secret"
+            type="password"
+            value={secret}
+          />
+          <button className="chip-btn justify-center whitespace-nowrap" disabled={busy || !secret} type="submit">
+            {busy ? "Opening…" : "Sign in"}
+          </button>
+        </form>
+      )}
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
       {house ? (
         <p className="mt-4 text-sm text-zinc-300">
@@ -157,8 +250,9 @@ export function StaffConsole() {
             : " · fund this address on BNB Chain with BEP-20 USDT and a little BNB"}
         </p>
       ) : null}
+      {signedIn ? (
       <div className="mt-6 flex flex-wrap gap-2">
-        {(["payouts", "players", "tables", "ledger", "reports"] as Tab[]).map((item) => (
+        {(["payouts", "players", "tables", "ledger", "reports", "log"] as Tab[]).map((item) => (
           <button
             className={`chip-btn ${tab === item ? "" : "chip-btn-ghost"}`}
             key={item}
@@ -169,8 +263,9 @@ export function StaffConsole() {
           </button>
         ))}
       </div>
+      ) : null}
 
-      {tab === "payouts" ? (
+      {signedIn && tab === "payouts" ? (
         <ul className="mt-8 space-y-2">
           {withdrawals.map((row) => (
             <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.id}>
@@ -215,7 +310,7 @@ export function StaffConsole() {
         </ul>
       ) : null}
 
-      {tab === "players" ? (
+      {signedIn && tab === "players" ? (
         <section className="mt-8">
           <div className="flex gap-3">
             <input
@@ -272,7 +367,7 @@ export function StaffConsole() {
         </section>
       ) : null}
 
-      {tab === "tables" ? (
+      {signedIn && tab === "tables" ? (
         <ul className="mt-8 space-y-2">
           {rooms.map((room) => (
             <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={room.slug}>
@@ -301,7 +396,7 @@ export function StaffConsole() {
         </ul>
       ) : null}
 
-      {tab === "ledger" ? (
+      {signedIn && tab === "ledger" ? (
         <ul className="mt-8 space-y-2">
           {txs.map((tx) => (
             <li className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={tx.id}>
@@ -314,7 +409,27 @@ export function StaffConsole() {
         </ul>
       ) : null}
 
-      {tab === "reports" ? (
+      {signedIn && tab === "log" ? (
+        <ul className="mt-8 space-y-2">
+          {logs.length === 0 ? (
+            <li className="text-sm text-zinc-500">No staff actions yet.</li>
+          ) : (
+            logs.map((row) => (
+              <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.id}>
+                <p className="text-zinc-200">
+                  {row.operator} · {row.action} · {row.target}
+                </p>
+                <p className="mt-1 text-xs">
+                  {new Date(row.at).toLocaleString()} · {row.ip}
+                  {row.note ? ` · ${row.note}` : ""}
+                </p>
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
+
+      {signedIn && tab === "reports" ? (
         <ul className="mt-8 space-y-2">
           {reports.map((row) => (
             <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.id}>

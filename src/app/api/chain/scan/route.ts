@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { scanChain, startChainWatcher } from "@/lib/chain";
 import { adminSecret, chainWatchEnabled, productMode } from "@/lib/config";
 import { jsonError } from "@/lib/http";
+import { currentStaff, matchesAdminSecret, requestIp, staffIpAllowed } from "@/lib/staff-auth";
 
 export const runtime = "nodejs";
 
-function allowScan(request: Request) {
-  const secret = adminSecret();
+async function allowScan(request: Request) {
+  if (!staffIpAllowed(requestIp(request))) return false;
+  if (await currentStaff(request)) return true;
   const header = request.headers.get("x-admin-secret") ?? "";
-  if (!secret) return !productMode() && process.env.NODE_ENV !== "production";
-  return header === secret;
+  if (matchesAdminSecret(header)) return true;
+  if (adminSecret()) return false;
+  return !productMode() && process.env.NODE_ENV !== "production";
 }
 
 export async function POST(request: Request) {
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    if (!allowScan(request)) {
+    if (!(await allowScan(request))) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
     startChainWatcher();

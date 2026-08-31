@@ -21,7 +21,8 @@ import {
   staffFreezeUser,
   staffRoomRows,
 } from "@/lib/staff";
-import { requireAdmin } from "@/lib/staff-auth";
+import { listStaffLogs, writeStaffLog } from "@/lib/staff-log";
+import { requireStaff } from "@/lib/staff-auth";
 import { withStore, withStoreRead } from "@/lib/store";
 import type { Tx } from "@/lib/types";
 
@@ -29,7 +30,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    requireAdmin(request);
+    const actor = await requireStaff(request);
     const url = new URL(request.url);
     const tab = url.searchParams.get("tab") ?? "players";
     const q = url.searchParams.get("q") ?? "";
@@ -41,20 +42,25 @@ export async function GET(request: Request) {
         percent: rakePercentLabel(),
       };
     });
+    const you = { operator: actor.operator, ip: actor.ip };
+    if (tab === "log") {
+      return NextResponse.json({ logs: await listStaffLogs(), house, you });
+    }
     if (tab === "payouts") {
       return NextResponse.json({
         withdrawals: await listWithdrawals(),
         house,
         treasury: await houseWalletStatus(),
         canSend: withdrawSendEnabled(),
+        you,
       });
     }
     if (tab === "tables") {
       const rooms = await withStoreRead((store) => staffRoomRows(store));
-      return NextResponse.json({ rooms, house });
+      return NextResponse.json({ rooms, house, you });
     }
     if (tab === "reports") {
-      return NextResponse.json({ reports: await listReports(), house });
+      return NextResponse.json({ reports: await listReports(), house, you });
     }
     if (tab === "ledger") {
       const txs = await withStoreRead((store) =>
@@ -64,10 +70,10 @@ export async function GET(request: Request) {
           username: store.users[tx.playerId]?.username,
         })),
       );
-      return NextResponse.json({ txs, house });
+      return NextResponse.json({ txs, house, you });
     }
     const users = await withStoreRead((store) => searchStaffUsers(store, q));
-    return NextResponse.json({ users, house });
+    return NextResponse.json({ users, house, you });
   } catch (error) {
     return jsonError(error);
   }
@@ -75,7 +81,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    requireAdmin(request);
+    const actor = await requireStaff(request);
     const body = (await request.json()) as {
       action?: string;
       userId?: string;
@@ -87,11 +93,13 @@ export async function POST(request: Request) {
     if (body.action === "send") {
       if (!body.id) throw new Error("Pick a payout.");
       await sendQueuedWithdrawal(body.id);
+      await writeStaffLog(actor, "send", body.id, "On-chain USDT send");
       return NextResponse.json({ withdrawals: await listWithdrawals() });
     }
     if (body.action === "paid" || body.action === "rejected") {
       if (!body.id) throw new Error("Pick a payout.");
       await resolveWithdrawal(body.id, body.action);
+      await writeStaffLog(actor, body.action, body.id, body.action === "paid" ? "Marked paid" : "Rejected and refunded");
       return NextResponse.json({ withdrawals: await listWithdrawals() });
     }
     if (body.action === "freeze" || body.action === "unfreeze") {
@@ -101,6 +109,7 @@ export async function POST(request: Request) {
         const user = store.users[body.userId!];
         return searchStaffUsers(store, user?.username ?? body.userId!);
       });
+      await writeStaffLog(actor, body.action, body.userId, body.note ?? "");
       return NextResponse.json({ users });
     }
     if (body.action === "adjust") {
@@ -110,6 +119,7 @@ export async function POST(request: Request) {
         const user = store.users[body.userId!];
         return searchStaffUsers(store, user?.username ?? body.userId!);
       });
+      await writeStaffLog(actor, "adjust", body.userId, `${body.amount} · ${body.note ?? ""}`);
       return NextResponse.json({ users });
     }
     if (body.action === "hide-report" || body.action === "dismiss-report") {
@@ -125,6 +135,7 @@ export async function POST(request: Request) {
       } else {
         await setReportStatus(row.id, "dismissed");
       }
+      await writeStaffLog(actor, body.action, body.id, `/${row.roomSlug}`);
       return NextResponse.json({ reports: await listReports() });
     }
     if (body.action === "kill") {
@@ -133,6 +144,7 @@ export async function POST(request: Request) {
         staffKillRound(store, body.slug!);
         return staffRoomRows(store);
       });
+      await writeStaffLog(actor, "kill", body.slug, "Voided live round");
       return NextResponse.json({ rooms });
     }
     throw new Error("Pick a staff action.");

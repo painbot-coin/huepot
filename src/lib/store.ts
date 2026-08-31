@@ -1086,11 +1086,13 @@ async function ensureDb() {
       const { ensureReportTables } = await import("@/lib/reports");
       const { ensureFriendTables } = await import("@/lib/friends");
       const { ensureSocialTables } = await import("@/lib/social");
+      const { ensureStaffTables } = await import("@/lib/staff-auth");
       await ensureChainTables();
       await ensureFairTables();
       await ensureReportTables();
       await ensureFriendTables();
       await ensureSocialTables();
+      await ensureStaffTables();
       await migrateMoneyToCents();
       const { warmPlayLoss } = await import("@/lib/limits");
       const { warmInviteTotals } = await import("@/lib/referrals");
