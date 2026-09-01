@@ -38,6 +38,7 @@ import { REVEAL_SECONDS } from "@/lib/config";
 import { shortHash } from "@/lib/fairness";
 import { emitFx } from "@/lib/fx";
 import { classicHourClock } from "@/lib/classic-hour";
+import { fogCupClock } from "@/lib/fog-cup";
 import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
 import { formatTakeLine } from "@/lib/take-copy";
 import type { GameState, PublicRound } from "@/lib/types";
@@ -313,6 +314,7 @@ export function GameClient({ slug }: { slug: string }) {
   const rooms = state.rooms ?? [];
   const seats = state.seats ?? [];
   const hour = state.classicHour;
+  const cup = state.fogCup;
   const table = round.buttonIds.map((id) => colorById(id));
   const liveLeft = room.closesAt ? room.closesAt - now : null;
   const revealing = round.status === "revealing";
@@ -346,7 +348,9 @@ export function GameClient({ slug }: { slug: string }) {
               const when =
                 slug === "classic" && hour
                   ? `Classic sits ${classicHourClock(hour.hour)}. `
-                  : "";
+                  : slug === "fog" && cup
+                    ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}. `
+                    : "";
               const text = user.inviteCode
                 ? `${when}Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`
                 : url;
@@ -487,7 +491,11 @@ export function GameClient({ slug }: { slug: string }) {
               ? hour.live
                 ? " · hour on"
                 : ` · hour ${classicHourClock(hour.hour)}`
-              : ""}
+              : slug === "fog" && cup
+                ? cup.live
+                  ? " · cup on"
+                  : ` · cup ${fogCupClock(cup.weekday, cup.hour)}`
+                : ""}
           </span>
         )}
         <span>

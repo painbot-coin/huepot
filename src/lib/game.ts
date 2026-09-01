@@ -29,6 +29,7 @@ import {
 } from "./money";
 import { ensureUserWallets } from "./wallets";
 import { classicHourAt } from "./classic-hour";
+import { fogCupAt } from "./fog-cup";
 import type {
   GameState,
   LobbyState,
@@ -537,6 +538,7 @@ export function getLobbyState(store: StoreData, userId: string | null): LobbySta
     user: publicUserFor(store, userId),
     rooms: listRoomCards(store),
     classicHour: classicHourAt(),
+    fogCup: fogCupAt(),
   };
 }
 
@@ -561,6 +563,7 @@ export function getRoomState(
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),
+    fogCup: fogCupAt(),
   };
 }
 
@@ -584,6 +587,7 @@ export function snapshotRoomState(
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),
+    fogCup: fogCupAt(),
   };
 }
 

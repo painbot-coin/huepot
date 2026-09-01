@@ -16,8 +16,9 @@ export default function HowItWorksPage() {
         <li>
           Join a basic room for free — Classic, Lightning, Duo, High Table, or
           Fog Pit — or create a custom room with 2–8 coins, click price, round
-          length, and a live timer. Classic hour is 20:00 UTC. Fog Pit (and
-          custom tables with fog on) hide public click counts in the last 12
+          length, and a live timer. Classic hour is 20:00 UTC. Fog cup is
+          Sunday 21:00 UTC. Fog Pit (and custom tables with fog on) hide public
+          click counts in the last 12
           seconds. When that live time ends, the custom table is deleted. No
           create fee.
         </li>

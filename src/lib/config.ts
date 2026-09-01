@@ -25,6 +25,8 @@ export const SUPPORT_EMAIL = "support@huepot.net";
 export const INVITE_RAKE_SHARE_BPS = 2_000;
 export const INVITE_DAILY_CAP = 10;
 export const CLASSIC_HOUR_UTC = 20;
+export const FOG_CUP_WEEKDAY = 0;
+export const FOG_CUP_HOUR_UTC = 21;
 
 export function appUrl() {
   const raw = (process.env.APP_URL || "").replace(/\/$/, "");

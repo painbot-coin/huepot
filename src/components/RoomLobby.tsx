@@ -9,8 +9,9 @@ import { PublicTakes } from "@/components/PublicTakes";
 import { SearchDock } from "@/components/SearchDock";
 import { BASIC_ROOMS } from "@/lib/rooms";
 import { classicHourClock } from "@/lib/classic-hour";
+import { fogCupClock } from "@/lib/fog-cup";
 import { formatClock, formatUsdt, formatWait } from "@/lib/money";
-import type { ClassicHour, LobbyState, PublicRoomCard } from "@/lib/types";
+import type { ClassicHour, FogCup, LobbyState, PublicRoomCard } from "@/lib/types";
 
 function blurbFor(room: PublicRoomCard) {
   const base =
@@ -59,6 +60,22 @@ function ClassicHourLine({ hour, now }: { hour?: ClassicHour; now: number }) {
   return (
     <p className="lobby-hour">
       Next hour {classicHourClock(hour.hour)} · in {formatWait(hour.startAt - now)}
+    </p>
+  );
+}
+
+function FogCupLine({ cup, now }: { cup?: FogCup; now: number }) {
+  if (!cup) return null;
+  if (cup.live) {
+    return (
+      <p className="lobby-hour">
+        <Link href="/rooms/fog">Fog cup</Link> is on · sit Fog
+      </p>
+    );
+  }
+  return (
+    <p className="lobby-hour">
+      Next Fog cup {fogCupClock(cup.weekday, cup.hour)} · in {formatWait(cup.startAt - now)}
     </p>
   );
 }
@@ -133,6 +150,7 @@ export function RoomLobby() {
         <h1 className="font-display">Huepot tables</h1>
         <ClassicLine rooms={basic} />
         <ClassicHourLine hour={state?.classicHour} now={now} />
+        <FogCupLine cup={state?.fogCup} now={now} />
         <div className="lobby-hero-tools">
           <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
           {state?.user?.inviteCode ? (
@@ -157,6 +175,7 @@ export function RoomLobby() {
               room={room}
               blurb={blurbFor(room)}
               hourOn={room.slug === "classic" && Boolean(state?.classicHour?.live)}
+              cupOn={room.slug === "fog" && Boolean(state?.fogCup?.live)}
             />
           ))}
         </div>
@@ -185,11 +204,13 @@ function RoomCard({
   blurb,
   now,
   hourOn,
+  cupOn,
 }: {
   room: PublicRoomCard;
   blurb: string;
   now: number;
   hourOn?: boolean;
+  cupOn?: boolean;
 }) {
   return (
     <Link className="room-card" href={`/rooms/${room.slug}`}>
@@ -223,6 +244,7 @@ function RoomCard({
         #{room.roundNumber || 1} · {sittingLine(room)}
         {` · ${room.paused ? "paused" : room.status}`}
         {hourOn ? " · hour on" : ""}
+        {cupOn ? " · cup on" : ""}
         {room.closesAt ? ` · ${formatClock(room.closesAt - now)}` : ""}
       </p>
     </Link>

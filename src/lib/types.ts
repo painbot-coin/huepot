@@ -304,6 +304,14 @@ export type ClassicHour = {
   live: boolean;
 };
 
+export type FogCup = {
+  weekday: number;
+  hour: number;
+  startAt: number;
+  endsAt: number;
+  live: boolean;
+};
+
 export type GameState = {
   now: number;
   user: PublicUser | null;
@@ -313,6 +321,7 @@ export type GameState = {
   rooms: PublicRoomCard[];
   seats: PublicSeat[];
   classicHour: ClassicHour;
+  fogCup: FogCup;
 };
 
 export type PublicTake = {
@@ -334,6 +343,7 @@ export type LobbyState = {
   user: PublicUser | null;
   rooms: PublicRoomCard[];
   classicHour: ClassicHour;
+  fogCup: FogCup;
 };
 
 export type Friendship = {
