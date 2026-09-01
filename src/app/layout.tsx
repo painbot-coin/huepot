@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SoundBus } from "@/components/SoundBus";
 import { getHeaderUser } from "@/lib/auth";
+import { appUrl } from "@/lib/config";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -23,6 +24,7 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl()),
   title: "Huepot — color take",
   description:
     "Same-price color buttons. Biggest color splits the rest of the pot.",
