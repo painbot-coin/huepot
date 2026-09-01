@@ -12,7 +12,7 @@ import type { GameState, Withdrawal } from "@/lib/types";
 const EXPLORER = "https://bscscan.com";
 
 function statusLabel(status: Withdrawal["status"]) {
-  if (status === "queued") return "Queued — staff will send";
+  if (status === "queued" || status === "sending") return "Sending";
   if (status === "paid") return "Sent";
   return "Rejected — bank refunded";
 }
@@ -77,10 +77,14 @@ export function WithdrawClient() {
           networkId: wallet?.id ?? networkId,
         }),
       });
-      const data = (await response.json()) as GameState & { error?: string };
+      const data = (await response.json()) as GameState & {
+        error?: string;
+        payoutError?: string;
+      };
       if (!response.ok) throw new Error(data.error || "Withdraw failed");
       setState(data);
       setAmount("");
+      if (data.payoutError) setError(data.payoutError);
       void loadQueue();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Withdraw failed");
@@ -100,8 +104,9 @@ export function WithdrawClient() {
       <h1 className="font-display text-4xl text-white">Withdraw</h1>
       <p className="mt-2 text-zinc-400">
         Cash out USDT on BNB Chain. Minimum {MIN_WITHDRAW} USDT, max {MAX_WITHDRAW}{" "}
-        USDT per send, {MAX_DAILY_WITHDRAW} USDT per day. Staff send from the house
-        wallet; queued means it has not left yet.
+        USDT per send, {MAX_DAILY_WITHDRAW} USDT per day. Huepot sends from the
+        house wallet when you confirm. If the house is short, it stays queued and
+        retries.
       </p>
 
       <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -157,7 +162,7 @@ export function WithdrawClient() {
           onClick={() => void send()}
           type="button"
         >
-          {busy ? "Sending…" : "Queue withdraw"}
+          {busy ? "Sending…" : "Withdraw"}
         </button>
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
       </section>
@@ -165,7 +170,7 @@ export function WithdrawClient() {
       <ul className="mt-8 space-y-2">
         {withdrawals.length === 0 ? (
           <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-500">
-            No cash-outs yet. Queued sends show here until staff pay them.
+            No cash-outs yet. Sends land here.
           </li>
         ) : (
           withdrawals.map((item) => (

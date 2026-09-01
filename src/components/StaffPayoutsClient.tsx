@@ -72,8 +72,8 @@ export function StaffPayoutsClient() {
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
       <h1 className="font-display text-4xl text-white">Staff payouts</h1>
       <p className="mt-2 text-zinc-400">
-        Send BNB Chain USDT from WITHDRAW_KEY, or mark Paid after a send you
-        already made. Reject puts the USDT back in the player bank.
+        Cash-outs send themselves. Send retries a queued payout. Paid marks a
+        send you already made. Reject puts the USDT back in the player bank.
       </p>
 
       <div className="mt-6 flex gap-3">

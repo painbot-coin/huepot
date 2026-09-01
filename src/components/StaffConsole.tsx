@@ -198,7 +198,7 @@ export function StaffConsole() {
           ? `Signed in as ${operator}. Session lasts 4 hours and stays on this network.`
           : "Sign in once. The secret is not kept in the page after that."}
         {signedIn && canSend
-          ? " Send broadcasts BNB Chain USDT from the house wallet. Paid is for a send you already made outside the pit."
+          ? " Cash-outs send themselves. Send retries a queued payout if the house was short. Paid is for a send you already made outside the pit."
           : signedIn
             ? " Set WITHDRAW_KEY to send on-chain. Paid still marks a manual send."
             : ""}

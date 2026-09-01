@@ -448,9 +448,9 @@ export function withdrawFromNetwork(
   store.txs = store.txs.slice(0, 400);
   notify(store, user.id, {
     kind: "withdraw",
-    title: live ? "Withdraw queued" : "Withdraw sent",
+    title: live ? "Withdraw sending" : "Withdraw sent",
     body: live
-      ? `${formatCents(debit)} USDT is waiting to be sent on ${network.name}.`
+      ? `${formatCents(debit)} USDT is leaving on ${network.name}.`
       : `${formatCents(debit)} USDT to ${network.name}.`,
     href: "/withdraw",
   });

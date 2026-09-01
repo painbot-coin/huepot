@@ -5,11 +5,18 @@ import {
   requireVerified,
   withdrawFromNetwork,
 } from "@/lib/auth";
-import { dailyWithdrawTotal, deleteWithdrawal, insertWithdrawal, listWithdrawalsForUser } from "@/lib/chain";
+import {
+  dailyWithdrawTotal,
+  deleteWithdrawal,
+  insertWithdrawal,
+  listWithdrawalsForUser,
+  sendQueuedWithdrawal,
+} from "@/lib/chain";
 import {
   LIVE_CHAIN_ID,
   MAX_DAILY_WITHDRAW,
   liveWithdrawalsEnabled,
+  withdrawSendEnabled,
 } from "@/lib/config";
 import { getGameState } from "@/lib/game";
 import { jsonError } from "@/lib/http";
@@ -79,7 +86,19 @@ export async function POST(request: Request) {
         }
         return { state: getGameState(store, user.id), result };
       });
-      return NextResponse.json(packed.state);
+      let payoutError = "";
+      if (queuedId && withdrawSendEnabled()) {
+        try {
+          await sendQueuedWithdrawal(queuedId);
+        } catch (error) {
+          payoutError = error instanceof Error ? error.message : "House could not send yet.";
+        }
+      }
+      const userId = packed.state.user?.id ?? null;
+      const state = userId
+        ? await withStoreRead((store) => getGameState(store, userId))
+        : packed.state;
+      return NextResponse.json(payoutError ? { ...state, payoutError } : state);
     } catch (error) {
       if (queuedId) {
         await deleteWithdrawal(queuedId).catch(() => undefined);

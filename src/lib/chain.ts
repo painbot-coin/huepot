@@ -187,6 +187,7 @@ export function startChainWatcher() {
         lastError = shortScanError(error);
         nextDelayMs = isRpcLimit(error) ? 60_000 : 20_000;
       })
+      .then(() => drainQueuedWithdrawals().catch(() => undefined))
       .finally(() => {
         setTimeout(tick, nextDelayMs);
       });
@@ -586,6 +587,18 @@ const USDT_ABI = [
   "function transfer(address to, uint256 value)",
   "function balanceOf(address owner) view returns (uint256)",
 ];
+
+export async function drainQueuedWithdrawals() {
+  if (!withdrawSendEnabled()) return;
+  const rows = await listWithdrawals("queued");
+  for (const row of [...rows].reverse()) {
+    try {
+      await sendQueuedWithdrawal(row.id);
+    } catch {
+      break;
+    }
+  }
+}
 
 export async function sendQueuedWithdrawal(id: string) {
   if (!withdrawSendEnabled()) {

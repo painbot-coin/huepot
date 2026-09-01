@@ -10,7 +10,7 @@ export default function TermsPage() {
       <p>
         Play balances are custodial. Deposit addresses are generated for your
         account. Live credit is BNB Chain USDT after confirms. Cash-out is
-        queued and sent on BNB Chain by the house.
+        sent on BNB Chain from the house wallet.
       </p>
       <p>
         Rounds are settled by click count at the server clock. On a take, the
