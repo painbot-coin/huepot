@@ -40,11 +40,11 @@ export default async function TakeImage({
           HUEPOT
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 28, color: "#c9c9d4" }}>{room}</div>
-          <div style={{ fontSize: 84, fontWeight: 700, lineHeight: 1.05, marginTop: 12 }}>
-            {names} took
+          <div style={{ display: "flex", fontSize: 28, color: "#c9c9d4" }}>{room}</div>
+          <div style={{ display: "flex", fontSize: 84, fontWeight: 700, lineHeight: 1.05, marginTop: 12 }}>
+            {`${names} took`}
           </div>
-          <div style={{ fontSize: 64, color: "#ffd27a", marginTop: 8 }}>{amount}</div>
+          <div style={{ display: "flex", fontSize: 64, color: "#ffd27a", marginTop: 8 }}>{amount}</div>
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "#d8d8e2" }}>
           {foot}
