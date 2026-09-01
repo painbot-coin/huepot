@@ -40,7 +40,7 @@ import { emitFx } from "@/lib/fx";
 import { classicHourClock } from "@/lib/classic-hour";
 import { fogCupClock } from "@/lib/fog-cup";
 import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
-import { formatTakeLine } from "@/lib/take-copy";
+import { formatTakeLine, withSitWhen } from "@/lib/take-copy";
 import type { GameState, PublicRound } from "@/lib/types";
 
 type Burst = { id: number; x: number; y: number; color: string };
@@ -347,7 +347,7 @@ export function GameClient({ slug }: { slug: string }) {
                 : window.location.href;
               const when =
                 slug === "classic" && hour
-                  ? `Classic sits ${classicHourClock(hour.hour)}. `
+                  ? `Classic sits ${classicHourClock(hour.hour)}.${cup ? ` Fog cup ${fogCupClock(cup.weekday, cup.hour)}.` : ""} `
                   : slug === "fog" && cup
                     ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}. `
                     : "";
@@ -620,6 +620,7 @@ export function GameClient({ slug }: { slug: string }) {
           buttonCount={room.buttonCount}
           clickPrice={round.clickPrice}
           roundSeconds={room.roundSeconds}
+          sitWhen={cup ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}` : ""}
           wash={winnerColor?.hex}
         />
       ) : null}
@@ -832,8 +833,8 @@ function CountUsdt({ value }: { value: number }) {
   return <>{formatUsdt(shown)}</>;
 }
 
-function takeLine(names: string, take: number, roomName: string) {
-  return formatTakeLine(names, take, roomName);
+function takeLine(names: string, take: number, roomName: string, when?: string) {
+  return withSitWhen(formatTakeLine(names, take, roomName), when);
 }
 
 function ShareTake({
@@ -949,6 +950,7 @@ function ResultCard({
   buttonCount,
   clickPrice,
   roundSeconds,
+  sitWhen,
   wash,
 }: {
   result: NonNullable<PublicRound["result"]>;
@@ -961,6 +963,7 @@ function ResultCard({
   buttonCount: number;
   clickPrice: number;
   roundSeconds: number;
+  sitWhen?: string;
   wash?: string;
 }) {
   const yours = result.payouts.find((payout) => payout.playerId === playerId);
@@ -1036,6 +1039,7 @@ function ResultCard({
           names,
           result.payouts.reduce((sum, payout) => sum + payout.amount, 0),
           roomName,
+          sitWhen,
         )}
         path={sharePath}
         roundSeconds={roundSeconds}

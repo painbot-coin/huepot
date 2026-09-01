@@ -80,13 +80,27 @@ function FogCupLine({ cup, now }: { cup?: FogCup; now: number }) {
   );
 }
 
-function ClassicInvite({ code, hour }: { code: string; hour?: number }) {
+function ClassicInvite({
+  code,
+  hour,
+  cup,
+}: {
+  code: string;
+  hour?: number;
+  cup?: FogCup;
+}) {
   const [copied, setCopied] = useState(false);
 
   function copy() {
     const url = `${window.location.origin}/rooms/classic?ref=${code}`;
-    const when = hour != null ? `Classic sits ${classicHourClock(hour)}. ` : "";
-    const text = `${when}Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
+    const when = [
+      hour != null ? `Classic sits ${classicHourClock(hour)}.` : "",
+      cup ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}.` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const lead = when ? `${when} ` : "";
+    const text = `${lead}Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
@@ -154,7 +168,11 @@ export function RoomLobby() {
         <div className="lobby-hero-tools">
           <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
           {state?.user?.inviteCode ? (
-            <ClassicInvite code={state.user.inviteCode} hour={state.classicHour?.hour} />
+            <ClassicInvite
+              code={state.user.inviteCode}
+              cup={state.fogCup}
+              hour={state.classicHour?.hour}
+            />
           ) : null}
           <Link aria-label="Create room" className="pit-create" href="/rooms/new">
             <IconPlus />

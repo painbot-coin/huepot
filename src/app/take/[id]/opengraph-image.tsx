@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { fogCupAt, fogCupClock } from "@/lib/fog-cup";
 import { formatUsdt } from "@/lib/money";
 import { withStoreRead } from "@/lib/store";
 import { getPublicTake } from "@/lib/takes";
@@ -18,6 +19,8 @@ export default async function TakeImage({
   const names = take?.names ?? "Huepot";
   const room = take?.roomName ?? "Classic Pit";
   const amount = take ? `${formatUsdt(take.amount)} USDT` : "Sit the next round";
+  const cup = fogCupAt();
+  const foot = `Same price every coin. Fog cup ${fogCupClock(cup.weekday, cup.hour)}.`;
 
   return new ImageResponse(
     (
@@ -44,7 +47,7 @@ export default async function TakeImage({
           <div style={{ fontSize: 64, color: "#ffd27a", marginTop: 8 }}>{amount}</div>
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "#d8d8e2" }}>
-          Same price every coin. Sit the next round.
+          {foot}
         </div>
       </div>
     ),
