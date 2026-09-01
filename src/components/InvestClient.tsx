@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MIN_DEPOSIT } from "@/lib/config";
 import { formatUsdt } from "@/lib/money";
 import type { GameState, PublicWallet } from "@/lib/types";
@@ -39,6 +39,8 @@ export function InvestClient() {
   const [demoMoney, setDemoMoney] = useState(false);
   const [chain, setChain] = useState<ChainStatus | null>(null);
   const [pending, setPending] = useState<PendingDeposit[]>([]);
+  const [landed, setLanded] = useState("");
+  const seenDeposits = useRef(new Set<string>());
 
   async function load() {
     const response = await fetch("/api/state");
@@ -46,7 +48,15 @@ export function InvestClient() {
     setState(data);
     if (!data.user) {
       window.location.href = "/signin";
+      return;
     }
+    const deposits = data.user.txs.filter((tx) => tx.type === "deposit");
+    const fresh = deposits.filter((tx) => !seenDeposits.current.has(tx.id));
+    if (seenDeposits.current.size > 0 && fresh.length) {
+      const newest = fresh[0];
+      setLanded(`Credited ${formatUsdt(newest.amount)} USDT. Sit a table or cash out.`);
+    }
+    for (const tx of deposits) seenDeposits.current.add(tx.id);
   }
 
   async function loadPending() {
@@ -74,6 +84,8 @@ export function InvestClient() {
       .catch(() => undefined);
   }, []);
 
+  const waiting = pending.length > 0;
+
   useEffect(() => {
     const poll = window.setInterval(() => {
       void load();
@@ -82,9 +94,9 @@ export function InvestClient() {
         .then((response) => response.json() as Promise<ChainStatus>)
         .then((data) => setChain(data))
         .catch(() => undefined);
-    }, 8_000);
+    }, waiting ? 3_000 : 8_000);
     return () => window.clearInterval(poll);
-  }, []);
+  }, [waiting]);
 
   const liveWallet: PublicWallet | undefined = state?.user?.wallets.find(
     (item) => item.live,
@@ -131,8 +143,8 @@ export function InvestClient() {
       <h1 className="font-display text-4xl text-white">Add USDT</h1>
       <p className="mt-2 text-zinc-400">
         One address. Send at least {MIN_DEPOSIT} USDT on BNB Chain (BEP-20).
-        Credit lands after {confirms} confirms. Any other chain is gone — Huepot
-        does not watch it.
+        Credit lands after {confirms} confirms. This page watches until it
+        posts. Any other chain is gone — Huepot does not watch it.
       </p>
 
       <p className="mt-6 font-display text-3xl text-white">
@@ -189,6 +201,12 @@ export function InvestClient() {
             </>
           ) : null}
           {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+          {landed ? <p className="mt-3 text-sm text-zinc-300">{landed}</p> : null}
+          {waiting && !landed ? (
+            <p className="mt-3 text-sm text-zinc-500">
+              Waiting on chain. This list updates when credit lands.
+            </p>
+          ) : null}
         </section>
       ) : (
         <p className="mt-8 text-sm text-zinc-400">No live BNB Chain address yet. Sign in again.</p>

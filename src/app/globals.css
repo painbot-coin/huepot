@@ -1941,6 +1941,13 @@ select.field {
   font-weight: 600;
 }
 
+.payout-strip a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.2);
+  text-underline-offset: 3px;
+}
+
 .take-strip a {
   display: flex;
   flex-wrap: wrap;

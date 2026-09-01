@@ -33,7 +33,8 @@ export default function HowItWorksPage() {
         <li>
           If every color ties, clicks are refunded. Withdraw to a BNB Chain
           address; Huepot sends USDT from the house wallet. If the house is
-          short, the cash-out stays queued and retries. Share your Account
+          short, the cash-out stays queued and retries. Paid sends show on the
+          lobby with a BscScan link. Share your Account
           invite link: a new Google player from that link can earn you a slice
           of house rake only, capped per day. Copy Classic invite from the lobby
           when you are signed in.

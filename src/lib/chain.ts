@@ -438,6 +438,7 @@ export type PendingDeposit = {
 export type PublicPayout = {
   amount: number;
   at: number;
+  txHash: string;
 };
 
 export async function pendingDepositsForUser(userId: string): Promise<PendingDeposit[]> {
@@ -500,6 +501,7 @@ export async function listPublicPayouts(limit = 8): Promise<PublicPayout[]> {
   return rows.slice(0, limit).map((row) => ({
     amount: row.amount,
     at: row.resolvedAt ?? row.createdAt,
+    txHash: (row.txHash ?? "").trim(),
   }));
 }
 

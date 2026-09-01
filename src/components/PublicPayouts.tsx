@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { formatUsdt } from "@/lib/money";
 
-type PublicPayout = { amount: number; at: number };
+const EXPLORER = "https://bscscan.com";
+
+type PublicPayout = { amount: number; at: number; txHash?: string };
 
 function ageLabel(at: number, now: number) {
   const delta = Math.max(0, now - at);
@@ -51,6 +53,15 @@ export function PublicPayouts() {
             <li key={`${item.at}-${index}`}>
               <strong>{formatUsdt(item.amount)} USDT</strong>
               <span>{ageLabel(item.at, now)}</span>
+              {item.txHash ? (
+                <a
+                  href={`${EXPLORER}/tx/${item.txHash}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  BscScan
+                </a>
+              ) : null}
             </li>
           ))}
         </ul>
