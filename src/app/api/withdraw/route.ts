@@ -8,6 +8,7 @@ import {
 import {
   dailyWithdrawTotal,
   deleteWithdrawal,
+  houseWalletStatus,
   insertWithdrawal,
   listWithdrawalsForUser,
   sendQueuedWithdrawal,
@@ -25,6 +26,23 @@ import { withStore, withStoreRead } from "@/lib/store";
 
 export const runtime = "nodejs";
 
+function publicPayoutError(error: unknown) {
+  const raw = error instanceof Error ? error.message : "House could not send yet.";
+  if (/USDT is short|needs BNB|House is short/i.test(raw)) {
+    return "House is short. Your cash-out is queued and will send when the pot is topped.";
+  }
+  if (/already sending/i.test(raw)) return "";
+  return "House could not send yet. Your cash-out is queued and will retry.";
+}
+
+async function withdrawPack(userId: string) {
+  const [withdrawals, house] = await Promise.all([
+    listWithdrawalsForUser(userId),
+    houseWalletStatus(),
+  ]);
+  return { withdrawals, houseReady: house.ready };
+}
+
 export async function GET() {
   try {
     const token = await getSessionToken();
@@ -33,8 +51,7 @@ export async function GET() {
       requireVerified(user);
       return user.id;
     });
-    const withdrawals = await listWithdrawalsForUser(userId);
-    return NextResponse.json({ withdrawals });
+    return NextResponse.json(await withdrawPack(userId));
   } catch (error) {
     return jsonError(error);
   }
@@ -91,14 +108,15 @@ export async function POST(request: Request) {
         try {
           await sendQueuedWithdrawal(queuedId);
         } catch (error) {
-          payoutError = error instanceof Error ? error.message : "House could not send yet.";
+          payoutError = publicPayoutError(error);
         }
       }
       const userId = packed.state.user?.id ?? null;
       const state = userId
         ? await withStoreRead((store) => getGameState(store, userId))
         : packed.state;
-      return NextResponse.json(payoutError ? { ...state, payoutError } : state);
+      const extras = userId ? await withdrawPack(userId) : { withdrawals: [], houseReady: false };
+      return NextResponse.json(payoutError ? { ...state, ...extras, payoutError } : { ...state, ...extras });
     } catch (error) {
       if (queuedId) {
         await deleteWithdrawal(queuedId).catch(() => undefined);

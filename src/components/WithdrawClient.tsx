@@ -17,6 +17,10 @@ function statusLabel(status: Withdrawal["status"]) {
   return "Rejected — bank refunded";
 }
 
+function isOpen(item: Withdrawal) {
+  return item.status === "queued" || item.status === "sending";
+}
+
 export function WithdrawClient() {
   const [state, setState] = useState<GameState | null>(null);
   const [networkId, setNetworkId] = useState("");
@@ -25,6 +29,7 @@ export function WithdrawClient() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [live, setLive] = useState(false);
+  const [houseReady, setHouseReady] = useState<boolean | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
 
   async function load() {
@@ -43,8 +48,20 @@ export function WithdrawClient() {
   async function loadQueue() {
     try {
       const response = await fetch("/api/withdraw");
-      const data = (await response.json()) as { withdrawals?: Withdrawal[] };
-      if (response.ok && Array.isArray(data.withdrawals)) setWithdrawals(data.withdrawals);
+      const data = (await response.json()) as {
+        withdrawals?: Withdrawal[];
+        houseReady?: boolean;
+      };
+      if (!response.ok) return;
+      if (Array.isArray(data.withdrawals)) {
+        setWithdrawals(data.withdrawals);
+        if (data.withdrawals.some((item) => item.status === "paid" && item.txHash)) {
+          setError((current) =>
+            /short|queued and will/i.test(current) ? "" : current,
+          );
+        }
+      }
+      if (typeof data.houseReady === "boolean") setHouseReady(data.houseReady);
     } catch {
       /* keep last */
     }
@@ -58,6 +75,14 @@ export function WithdrawClient() {
       .then((data) => setLive(Boolean(data.liveWithdrawals)))
       .catch(() => undefined);
   }, []);
+
+  const pending = withdrawals.some(isOpen);
+
+  useEffect(() => {
+    if (!pending) return;
+    const poll = window.setInterval(() => void loadQueue(), 3000);
+    return () => window.clearInterval(poll);
+  }, [pending]);
 
   const wallets = live
     ? state?.user?.wallets.filter((item) => item.live) ?? []
@@ -80,11 +105,16 @@ export function WithdrawClient() {
       const data = (await response.json()) as GameState & {
         error?: string;
         payoutError?: string;
+        withdrawals?: Withdrawal[];
+        houseReady?: boolean;
       };
       if (!response.ok) throw new Error(data.error || "Withdraw failed");
       setState(data);
       setAmount("");
+      if (Array.isArray(data.withdrawals)) setWithdrawals(data.withdrawals);
+      if (typeof data.houseReady === "boolean") setHouseReady(data.houseReady);
       if (data.payoutError) setError(data.payoutError);
+      void load();
       void loadQueue();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Withdraw failed");
@@ -106,7 +136,7 @@ export function WithdrawClient() {
         Cash out USDT on BNB Chain. Minimum {MIN_WITHDRAW} USDT, max {MAX_WITHDRAW}{" "}
         USDT per send, {MAX_DAILY_WITHDRAW} USDT per day. Huepot sends from the
         house wallet when you confirm. If the house is short, it stays queued and
-        retries.
+        retries. This page watches until BscScan lands.
       </p>
 
       <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -165,6 +195,15 @@ export function WithdrawClient() {
           {busy ? "Sending…" : "Withdraw"}
         </button>
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+        {houseReady === false ? (
+          <p className="mt-3 text-sm text-zinc-500">
+            House is topping the pot. Queued cash-outs retry on their own.
+          </p>
+        ) : pending ? (
+          <p className="mt-3 text-sm text-zinc-500">
+            Sending. This list updates when the tx lands.
+          </p>
+        ) : null}
       </section>
 
       <ul className="mt-8 space-y-2">
@@ -192,6 +231,8 @@ export function WithdrawClient() {
                       BscScan
                     </a>
                   </>
+                ) : isOpen(item) ? (
+                  " · watching"
                 ) : null}
               </span>
               <span className="text-zinc-200">{formatUsdt(item.amount)} USDT</span>

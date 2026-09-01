@@ -231,7 +231,19 @@ export function houseWalletAddress() {
   }
 }
 
+let houseStatusAt = 0;
+let houseStatusCache: HouseWalletStatus | null = null;
+const HOUSE_STATUS_TTL = 15_000;
+
+export function clearHouseWalletStatus() {
+  houseStatusAt = 0;
+  houseStatusCache = null;
+}
+
 export async function houseWalletStatus(): Promise<HouseWalletStatus> {
+  if (houseStatusCache && Date.now() - houseStatusAt < HOUSE_STATUS_TTL) {
+    return houseStatusCache;
+  }
   const address = houseWalletAddress();
   const empty: HouseWalletStatus = {
     canSend: withdrawSendEnabled(),
@@ -240,7 +252,11 @@ export async function houseWalletStatus(): Promise<HouseWalletStatus> {
     bnb: 0,
     ready: false,
   };
-  if (!address || !chainRpcUrl()) return empty;
+  if (!address || !chainRpcUrl()) {
+    houseStatusCache = empty;
+    houseStatusAt = Date.now();
+    return empty;
+  }
   try {
     const provider = new JsonRpcProvider(chainRpcUrl(), 56, { staticNetwork: true });
     const token = new Contract(LIVE_USDT, ["function balanceOf(address owner) view returns (uint256)"], provider);
@@ -250,14 +266,19 @@ export async function houseWalletStatus(): Promise<HouseWalletStatus> {
     ]);
     const usdt = Number(formatUnits(tokenBal, LIVE_USDT_DECIMALS));
     const bnb = Number(formatUnits(gasBal, 18));
-    return {
+    const status: HouseWalletStatus = {
       canSend: true,
       address,
       usdt,
       bnb,
       ready: tokenBal > BigInt(0) && gasBal > BigInt(0),
     };
+    houseStatusCache = status;
+    houseStatusAt = Date.now();
+    return status;
   } catch {
+    houseStatusCache = empty;
+    houseStatusAt = Date.now();
     return empty;
   }
 }
@@ -680,6 +701,7 @@ export async function sendQueuedWithdrawal(id: string) {
     throw error;
   } finally {
     sending.delete(id);
+    clearHouseWalletStatus();
   }
 }
 
