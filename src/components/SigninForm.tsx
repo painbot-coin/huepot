@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { GoogleButton } from "@/components/GoogleButton";
+import { CLASSIC_HOUR_UTC, FOG_CUP_HOUR_UTC, FOG_CUP_WEEKDAY } from "@/lib/config";
+import { classicHourClock } from "@/lib/classic-hour";
+import { fogCupClock } from "@/lib/fog-cup";
 
 export function SigninForm() {
   const [error, setError] = useState("");
@@ -35,6 +38,10 @@ export function SigninForm() {
       <p className="mt-2 text-zinc-400">
         Huepot uses Google only. Tick 18+, then continue with the same Gmail you
         play with.
+      </p>
+      <p className="mt-3 text-sm text-zinc-500">
+        Classic sits {classicHourClock(CLASSIC_HOUR_UTC)}. Fog cup{" "}
+        {fogCupClock(FOG_CUP_WEEKDAY, FOG_CUP_HOUR_UTC)}.
       </p>
       <label className="mt-5 flex items-start gap-2 text-sm text-zinc-400">
         <input

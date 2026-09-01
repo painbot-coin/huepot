@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
 import { COOL_OFF_HOURS, SELF_EXCLUDE_DAYS } from "@/lib/limits";
+import { inviteSitLead, inviteText } from "@/lib/invite-copy";
 import { formatUsdt } from "@/lib/money";
-import type { PublicSession, PublicUser, Tx } from "@/lib/types";
+import type { ClassicHour, FogCup, PublicSession, PublicUser, Tx } from "@/lib/types";
 
 const TX_LABEL: Record<Tx["type"], string> = {
   deposit: "In",
@@ -20,6 +21,8 @@ const TX_LABEL: Record<Tx["type"], string> = {
 
 export function AccountClient() {
   const [user, setUser] = useState<PublicUser | null>(null);
+  const [hour, setHour] = useState<ClassicHour | null>(null);
+  const [cup, setCup] = useState<FogCup | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -31,6 +34,13 @@ export function AccountClient() {
       }
       setUser(data.user);
     })();
+    void fetch("/api/rooms")
+      .then((response) => response.json() as Promise<{ classicHour?: ClassicHour; fogCup?: FogCup }>)
+      .then((data) => {
+        if (data.classicHour) setHour(data.classicHour);
+        if (data.fogCup) setCup(data.fogCup);
+      })
+      .catch(() => undefined);
   }, []);
 
   if (!user) {
@@ -81,7 +91,7 @@ export function AccountClient() {
         <LogoutButton />
       </div>
 
-      <InviteCard user={user} />
+      <InviteCard cup={cup} hour={hour} user={user} />
       <ProfileCard user={user} onUser={setUser} />
       <LimitsCard user={user} onUser={setUser} />
       <SecurityCard user={user} />
@@ -136,12 +146,21 @@ function withRunning(txs: Tx[]) {
   return rows.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-function InviteCard({ user }: { user: PublicUser }) {
+function InviteCard({
+  user,
+  hour,
+  cup,
+}: {
+  user: PublicUser;
+  hour: ClassicHour | null;
+  cup: FogCup | null;
+}) {
   const [copied, setCopied] = useState(false);
   const link =
     typeof window === "undefined"
       ? `/signin?ref=${user.inviteCode}`
       : `${window.location.origin}/signin?ref=${user.inviteCode}`;
+  const sit = inviteSitLead({ hour: hour?.hour, cup });
 
   return (
     <section className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -152,6 +171,7 @@ function InviteCard({ user }: { user: PublicUser }) {
         rake — not their stake, not a bank bonus. Cap {formatUsdt(user.inviteEarnedToday + user.inviteDailyLeft)} USDT
         per UTC day.
       </p>
+      {sit ? <p className="mt-3 text-sm text-zinc-300">{sit}</p> : null}
       <p className="mt-5 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         Your code
       </p>
@@ -160,13 +180,13 @@ function InviteCard({ user }: { user: PublicUser }) {
         className="chip-btn mt-4"
         disabled={!user.inviteCode}
         onClick={() => {
-          void navigator.clipboard.writeText(link);
+          void navigator.clipboard.writeText(inviteText(link, { hour: hour?.hour, cup }));
           setCopied(true);
           window.setTimeout(() => setCopied(false), 1600);
         }}
         type="button"
       >
-        {copied ? "Link copied" : "Copy invite link"}
+        {copied ? "Invite copied" : "Copy invite"}
       </button>
       <p className="mt-4 text-sm text-zinc-400">
         Today {formatUsdt(user.inviteEarnedToday)} USDT · {formatUsdt(user.inviteDailyLeft)} USDT left

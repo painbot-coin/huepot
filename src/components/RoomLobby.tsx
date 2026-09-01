@@ -10,6 +10,7 @@ import { SearchDock } from "@/components/SearchDock";
 import { BASIC_ROOMS } from "@/lib/rooms";
 import { classicHourClock } from "@/lib/classic-hour";
 import { fogCupClock } from "@/lib/fog-cup";
+import { inviteText } from "@/lib/invite-copy";
 import { formatClock, formatUsdt, formatWait } from "@/lib/money";
 import type { ClassicHour, FogCup, LobbyState, PublicRoomCard } from "@/lib/types";
 
@@ -93,14 +94,7 @@ function ClassicInvite({
 
   function copy() {
     const url = `${window.location.origin}/rooms/classic?ref=${code}`;
-    const when = [
-      hour != null ? `Classic sits ${classicHourClock(hour)}.` : "",
-      cup ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}.` : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    const lead = when ? `${when} ` : "";
-    const text = `${lead}Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
+    const text = inviteText(url, { hour, cup });
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);

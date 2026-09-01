@@ -39,6 +39,7 @@ import { shortHash } from "@/lib/fairness";
 import { emitFx } from "@/lib/fx";
 import { classicHourClock } from "@/lib/classic-hour";
 import { fogCupClock } from "@/lib/fog-cup";
+import { inviteText } from "@/lib/invite-copy";
 import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
 import { formatTakeLine, withSitWhen } from "@/lib/take-copy";
 import type { GameState, PublicRound } from "@/lib/types";
@@ -345,14 +346,11 @@ export function GameClient({ slug }: { slug: string }) {
               const url = user.inviteCode
                 ? `${window.location.origin}/rooms/${slug}?ref=${user.inviteCode}`
                 : window.location.href;
-              const when =
-                slug === "classic" && hour
-                  ? `Classic sits ${classicHourClock(hour.hour)}.${cup ? ` Fog cup ${fogCupClock(cup.weekday, cup.hour)}.` : ""} `
-                  : slug === "fog" && cup
-                    ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}. `
-                    : "";
               const text = user.inviteCode
-                ? `${when}Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`
+                ? inviteText(url, {
+                    hour: slug === "fog" ? null : hour?.hour,
+                    cup,
+                  })
                 : url;
               void navigator.clipboard.writeText(text);
             }}

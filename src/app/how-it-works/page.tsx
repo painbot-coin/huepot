@@ -37,8 +37,8 @@ export default function HowItWorksPage() {
           short, the cash-out stays queued and retries. Paid sends show on the
           lobby with a BscScan link. Share your Account
           invite link: a new Google player from that link can earn you a slice
-          of house rake only, capped per day. Copy Classic invite from the lobby
-          when you are signed in.
+          of house rake only, capped per day. Copy invite from Account or the
+          lobby — both name Classic hour and Fog cup.
         </li>
       </ol>
       <p>
