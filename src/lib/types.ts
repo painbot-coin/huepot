@@ -315,6 +315,15 @@ export type GameState = {
   classicHour: ClassicHour;
 };
 
+export type PublicTake = {
+  id: string;
+  slug: string;
+  roomName: string;
+  names: string;
+  amount: number;
+  at: number;
+};
+
 export type SearchHit = {
   rooms: PublicRoomCard[];
   users: { username: string; rooms: { slug: string; name: string }[] }[];

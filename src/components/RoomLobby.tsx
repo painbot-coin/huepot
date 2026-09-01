@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { IconPlus } from "@/components/Icons";
 import { PublicPayouts } from "@/components/PublicPayouts";
+import { PublicTakes } from "@/components/PublicTakes";
 import { SearchDock } from "@/components/SearchDock";
 import { BASIC_ROOMS } from "@/lib/rooms";
 import { classicHourClock } from "@/lib/classic-hour";
@@ -142,6 +143,7 @@ export function RoomLobby() {
           </Link>
         </div>
       </header>
+      <PublicTakes />
       <PublicPayouts />
       {error ? <p className="error-toast">{error}</p> : null}
 

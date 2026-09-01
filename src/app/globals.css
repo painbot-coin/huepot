@@ -1941,6 +1941,24 @@ select.field {
   font-weight: 600;
 }
 
+.take-strip a {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: baseline;
+  color: inherit;
+  text-decoration: none;
+}
+
+.take-strip a strong {
+  color: #ffd27a;
+}
+
+.take-page-pot {
+  font-size: 2rem;
+  color: #ffd27a;
+}
+
 .lobby-hero-tools {
   display: flex;
   flex-wrap: wrap;

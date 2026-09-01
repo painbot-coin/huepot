@@ -27,7 +27,8 @@ export default function HowItWorksPage() {
           split the money from the other colors, by click. Winning clicks also
           come back. The room feed posts earnings, refunds, and table talk.
           Each round publishes a hashed seed at open and reveals it at settle —
-          check any round on the fairness sheet.
+          check any round on the fairness sheet. Recent takes show on the lobby.
+          Share a take to sit the next round.
         </li>
         <li>
           If every color ties, clicks are refunded. Withdraw to a BNB Chain

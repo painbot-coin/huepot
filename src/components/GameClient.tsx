@@ -39,6 +39,7 @@ import { shortHash } from "@/lib/fairness";
 import { emitFx } from "@/lib/fx";
 import { classicHourClock } from "@/lib/classic-hour";
 import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
+import { formatTakeLine } from "@/lib/take-copy";
 import type { GameState, PublicRound } from "@/lib/types";
 
 type Burst = { id: number; x: number; y: number; color: string };
@@ -603,8 +604,8 @@ export function GameClient({ slug }: { slug: string }) {
           roomName={room.name}
           sharePath={
             user?.inviteCode
-              ? `/rooms/${slug}?ref=${user.inviteCode}`
-              : `/rooms/${slug}`
+              ? `/take/${round.id}?ref=${user.inviteCode}`
+              : `/take/${round.id}`
           }
           canOpenFog={Boolean(user?.emailVerified) && !user?.blocked}
           inviteCode={user?.inviteCode ?? ""}
@@ -824,7 +825,7 @@ function CountUsdt({ value }: { value: number }) {
 }
 
 function takeLine(names: string, take: number, roomName: string) {
-  return `${names} took ${formatUsdt(take)} USDT on ${roomName} — sit the next round`;
+  return formatTakeLine(names, take, roomName);
 }
 
 function ShareTake({

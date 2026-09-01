@@ -101,13 +101,22 @@ export async function flushSettledRounds() {
   }
 }
 
+export function listPendingSettled() {
+  return pending.slice();
+}
+
+const SETTLED_SELECT = `id, roomSlug, roomName, number,
+  CAST(startedAt AS TEXT) AS startedAt, CAST(settledAt AS TEXT) AS settledAt,
+  clickPrice, buttonIds, totals, seedCommit, serverSeed, fairHash, kind, winners,
+  losingPot, winningClicks, payoutPerWinningClick, paidCount, moneyCents, rake`;
+
 export async function listSettledRounds(slug?: string, take = 40) {
   await ensureFairTables();
   const limit = Math.max(1, Math.min(80, take));
   const rows = await prisma.$queryRawUnsafe<RawSettled[]>(
     slug
-      ? `SELECT * FROM SettledRound WHERE roomSlug = '${esc(slug)}' ORDER BY settledAt DESC LIMIT ${limit}`
-      : `SELECT * FROM SettledRound ORDER BY settledAt DESC LIMIT ${limit}`,
+      ? `SELECT ${SETTLED_SELECT} FROM SettledRound WHERE roomSlug = '${esc(slug)}' ORDER BY settledAt DESC LIMIT ${limit}`
+      : `SELECT ${SETTLED_SELECT} FROM SettledRound ORDER BY settledAt DESC LIMIT ${limit}`,
   );
   return rows.map(fromRow);
 }
@@ -115,7 +124,7 @@ export async function listSettledRounds(slug?: string, take = 40) {
 export async function getSettledRound(id: string) {
   await ensureFairTables();
   const rows = await prisma.$queryRawUnsafe<RawSettled[]>(
-    `SELECT * FROM SettledRound WHERE id = '${esc(id)}' LIMIT 1`,
+    `SELECT ${SETTLED_SELECT} FROM SettledRound WHERE id = '${esc(id)}' LIMIT 1`,
   );
   return rows[0] ? fromRow(rows[0]) : null;
 }
@@ -155,8 +164,8 @@ type RawSettled = {
   roomSlug: string;
   roomName: string;
   number: number;
-  startedAt: number;
-  settledAt: number;
+  startedAt: number | string;
+  settledAt: number | string;
   clickPrice: number;
   buttonIds: string;
   totals: string;
@@ -179,8 +188,8 @@ function fromRow(row: RawSettled): PublicSettledRound {
     roomSlug: row.roomSlug,
     roomName: row.roomName,
     number: row.number,
-    startedAt: row.startedAt,
-    settledAt: row.settledAt,
+    startedAt: Number(row.startedAt),
+    settledAt: Number(row.settledAt),
     clickPrice: row.clickPrice,
     buttonIds: JSON.parse(row.buttonIds) as ColorId[],
     totals: JSON.parse(row.totals) as Record<ColorId, number>,
