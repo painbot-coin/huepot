@@ -10,17 +10,14 @@ export const LazySigninForm = dynamic(
 
 export const LazyAccountClient = dynamic(
   () => import("@/components/AccountClient").then((mod) => mod.AccountClient),
-  { loading: () => <PitLoader label="Opening account…" /> },
 );
 
 export const LazyInvestClient = dynamic(
   () => import("@/components/InvestClient").then((mod) => mod.InvestClient),
-  { loading: () => <PitLoader label="Opening add USDT…" /> },
 );
 
 export const LazyWithdrawClient = dynamic(
   () => import("@/components/WithdrawClient").then((mod) => mod.WithdrawClient),
-  { loading: () => <PitLoader label="Opening withdraw…" /> },
 );
 
 export const LazyFairnessClient = dynamic(
@@ -56,7 +53,6 @@ export const LazyNetworkClient = dynamic(
 
 export const LazyNetworkMessages = dynamic(
   () => import("@/components/NetworkMessages").then((mod) => mod.NetworkMessages),
-  { loading: () => <PitLoader label="Opening messages…" /> },
 );
 
 export const LazyNetworkProfile = dynamic(

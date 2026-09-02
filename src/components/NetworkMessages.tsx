@@ -18,6 +18,7 @@ export function NetworkMessages() {
   const [error, setError] = useState("");
   const [needSignIn, setNeedSignIn] = useState(false);
   const [booted, setBooted] = useState(false);
+  const [busy, setBusy] = useState(false);
   const { scroller, onScroll, pinBottom } = useChatScroll<HTMLUListElement>(
     `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
   );
@@ -56,8 +57,9 @@ export function NetworkMessages() {
   }, [withUser]);
 
   async function send() {
-    if (!peer || !draft.trim()) return;
+    if (!peer || !draft.trim() || busy) return;
     setError("");
+    setBusy(true);
     try {
       const response = await fetch("/api/network/messages", {
         method: "POST",
@@ -78,13 +80,23 @@ export function NetworkMessages() {
       setMessages(data.messages ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send");
+    } finally {
+      setBusy(false);
     }
   }
 
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening messages…</p>
+        <main className="li-main is-wide">
+          <aside className="li-card li-inbox">
+            <p className="lobby-label">Messaging</p>
+            <p className="mt-3 text-sm text-zinc-500">Opening inbox…</p>
+          </aside>
+          <section className="li-card li-chat">
+            <p className="text-sm text-zinc-500">Opening this chat…</p>
+          </section>
+        </main>
       </NetworkChrome>
     );
   }
@@ -125,12 +137,17 @@ export function NetworkMessages() {
                 <Link href={`/network/u/${encodeURIComponent(peer)}`}>@{peer}</Link>
               </p>
               <ul className="li-bubbles" onScroll={onScroll} ref={scroller}>
-                {messages.map((item) => (
-                  <li className={item.fromYou ? "is-you" : ""} key={item.id}>
-                    {item.body}
-                  </li>
-                ))}
+                {messages.length === 0 ? (
+                  <li className="text-sm text-zinc-500">Say hello to @{peer}.</li>
+                ) : (
+                  messages.map((item) => (
+                    <li className={item.fromYou ? "is-you" : ""} key={item.id}>
+                      {item.body}
+                    </li>
+                  ))
+                )}
               </ul>
+              {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
               <form
                 className="li-compose"
                 onSubmit={(event) => {
@@ -145,15 +162,15 @@ export function NetworkMessages() {
                   placeholder={`Message @${peer}`}
                   value={draft}
                 />
-                <button className="chip-btn" type="submit">
-                  Send
+                <button className="chip-btn" disabled={busy || !draft.trim()} type="submit">
+                  {busy ? "Sending…" : "Send"}
                 </button>
               </form>
             </>
           ) : (
             <p className="text-sm text-zinc-500">Pick a conversation or open a profile and hit Message.</p>
           )}
-          {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+          {error && !peer ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
         </section>
       </main>
     </NetworkChrome>

@@ -45,7 +45,10 @@ export function AccountClient() {
 
   if (!user) {
     return (
-      <p className="px-4 py-16 text-center text-zinc-400">Loading account…</p>
+      <main className="mx-auto w-full max-w-2xl px-4 py-10">
+        <h1 className="font-display text-4xl text-white">Account</h1>
+        <p className="mt-2 text-zinc-400">Opening your account…</p>
+      </main>
     );
   }
 
@@ -232,10 +235,17 @@ function ProfileCard({
       <p className="mt-1 text-sm text-zinc-500">
         Name shows on the table. Email comes from Google and stays with that account.
       </p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (busy || username === user.username) return;
+          void save({ action: "username", username });
+        }}
+      >
       <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         Username
       </label>
-      <div className="mt-2 flex gap-3">
+      <div className="mt-2 flex flex-wrap gap-3">
         <input
           className="field"
           maxLength={20}
@@ -245,12 +255,12 @@ function ProfileCard({
         <button
           className="chip-btn"
           disabled={busy || username === user.username}
-          onClick={() => void save({ action: "username", username })}
-          type="button"
+          type="submit"
         >
-          Save
+          {busy ? "Saving…" : "Save"}
         </button>
       </div>
+      </form>
       <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         Email
       </label>
@@ -415,25 +425,28 @@ function LimitsCard({
         Today’s play loss {formatUsdt(user.playLossToday)} USDT. Cool-off and
         self-exclude cannot be shortened once they start.
       </p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (busy) return;
+          void save({ dailyLossCap: Number(cap || 0) });
+        }}
+      >
       <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         Daily loss cap
       </label>
-      <div className="mt-2 flex gap-3">
+      <div className="mt-2 flex flex-wrap gap-3">
         <input
           className="field"
           onChange={(event) => setCap(event.target.value)}
           placeholder="0 = no cap"
           value={cap}
         />
-        <button
-          className="chip-btn"
-          disabled={busy}
-          onClick={() => void save({ dailyLossCap: Number(cap || 0) })}
-          type="button"
-        >
-          Save
+        <button className="chip-btn" disabled={busy} type="submit">
+          {busy ? "Saving…" : "Save"}
         </button>
       </div>
+      </form>
       <p className="mt-5 text-[10px] uppercase tracking-[0.22em] text-zinc-500">Cool-off</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {COOL_OFF_HOURS.map((hours) => (

@@ -113,9 +113,18 @@ export function WithdrawClient() {
     }
   }
 
+  const canSend =
+    Boolean(address.trim()) &&
+    Number(amount) >= MIN_WITHDRAW &&
+    !busy &&
+    !pending;
+
   if (!state?.user) {
     return (
-      <p className="px-4 py-16 text-center text-zinc-400">Loading account…</p>
+      <main className="mx-auto w-full max-w-xl px-4 py-10">
+        <h1 className="font-display text-4xl text-white">Withdraw</h1>
+        <p className="mt-2 text-zinc-400">Opening your bank…</p>
+      </main>
     );
   }
 
@@ -142,6 +151,12 @@ export function WithdrawClient() {
         </p>
         <p className="mt-2 text-sm text-zinc-300">BNB Smart Chain · BEP-20 USDT</p>
 
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (canSend) void send();
+          }}
+        >
         <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
           Destination address
         </label>
@@ -168,12 +183,12 @@ export function WithdrawClient() {
 
         <button
           className="chip-btn mt-4 w-full justify-center"
-          disabled={busy}
-          onClick={() => void send()}
-          type="button"
+          disabled={!canSend}
+          type="submit"
         >
-          {busy ? "Sending…" : "Withdraw"}
+          {busy ? "Sending…" : pending ? "Already sending" : "Withdraw"}
         </button>
+        </form>
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
         {houseReady === false ? (
           <p className="mt-3 text-sm text-zinc-500">

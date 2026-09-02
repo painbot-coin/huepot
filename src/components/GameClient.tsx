@@ -165,7 +165,6 @@ export function GameClient({ slug }: { slug: string }) {
     lastRound.current = 0;
     urgentSent.current = false;
     fogSent.current = false;
-    setState(null);
   }, [slug]);
 
   useEffect(() => {

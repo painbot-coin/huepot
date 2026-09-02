@@ -61,6 +61,7 @@ export function MessageDock() {
   const [hits, setHits] = useState<string[]>([]);
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const { scroller, onScroll, pinBottom } = useChatScroll<HTMLUListElement>(
     `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
   );
@@ -144,8 +145,9 @@ export function MessageDock() {
   }, [compose, query]);
 
   async function send() {
-    if (!peer || !draft.trim()) return;
+    if (!peer || !draft.trim() || busy) return;
     setError("");
+    setBusy(true);
     try {
       const response = await fetch("/api/network/messages", {
         method: "POST",
@@ -166,6 +168,8 @@ export function MessageDock() {
       setUnread(data.you?.unreadMessages ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -215,7 +219,9 @@ export function MessageDock() {
               placeholder={`Message @${peer}`}
               value={draft}
             />
-            <button type="submit">Send</button>
+            <button disabled={busy || !draft.trim()} type="submit">
+              {busy ? "Sending…" : "Send"}
+            </button>
           </form>
           {error ? <p className="msg-error">{error}</p> : null}
         </section>

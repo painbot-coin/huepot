@@ -2,7 +2,7 @@
 
 Huepot is live at https://huepot.net. Getting many users with almost no money is possible, but it will not come from ads. For a custodial USDT pot, people leave because they do not trust the cashier, not because they never saw the logo.
 
-**How to run it this month:** `NETWORK.md` — seed a small player network, sit Classic hour (20:00 UTC), use the rake invite. Live product is v1.3.31. This file is the constraints.
+**How to run it this month:** `NETWORK.md` — seed a small player network, sit Classic hour (20:00 UTC), use the rake invite. Live product is v1.3.32. This file is the constraints.
 
 **The real job:** get a few people to deposit, get paid out once, and tell two friends. Empty tables kill growth faster than no marketing.
 
@@ -75,4 +75,4 @@ Do not spend money until same-day payouts are routine and Classic is busy withou
 
 ## Next useful build
 
-Do not build more product for growth. Run `NETWORK.md`. v1.3.31 is live. Sit Classic, pay the first cash-out, open one Telegram, send invite links to people you already know.
+Do not build more product for growth. Run `NETWORK.md`. v1.3.32 is live. Sit Classic, pay the first cash-out, open one Telegram, send invite links to people you already know.

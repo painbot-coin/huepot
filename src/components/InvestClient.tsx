@@ -132,7 +132,10 @@ export function InvestClient() {
 
   if (!state?.user) {
     return (
-      <p className="px-4 py-16 text-center text-zinc-400">Loading wallets…</p>
+      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+        <h1 className="font-display text-4xl text-white">Add USDT</h1>
+        <p className="mt-2 text-zinc-400">Opening your deposit address…</p>
+      </main>
     );
   }
 
@@ -178,7 +181,12 @@ export function InvestClient() {
               : `Send BEP-20 USDT only. Minimum ${MIN_DEPOSIT} USDT. Wrong network is not refunded.`}
           </p>
           {demoMoney ? (
-            <>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!busy && Number(amount) >= MIN_DEPOSIT) void credit();
+              }}
+            >
               <label className="mt-6 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
                 Amount in USDT
               </label>
@@ -192,13 +200,12 @@ export function InvestClient() {
               />
               <button
                 className="chip-btn mt-4 w-full justify-center"
-                disabled={busy}
-                onClick={() => void credit()}
-                type="button"
+                disabled={busy || Number(amount) < MIN_DEPOSIT}
+                type="submit"
               >
                 {busy ? "Crediting…" : `Demo credit ${amount || "0"} USDT`}
               </button>
-            </>
+            </form>
           ) : null}
           {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
           {landed ? <p className="mt-3 text-sm text-zinc-300">{landed}</p> : null}

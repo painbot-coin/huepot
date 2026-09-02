@@ -3416,7 +3416,7 @@ body:has(.pit-app) .page-stage {
 .msg-dock {
   position: fixed;
   right: 1rem;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
   z-index: 50;
   display: flex;
   align-items: flex-end;
@@ -3631,12 +3631,22 @@ body:has(.pit-app) .page-stage {
   cursor: pointer;
 }
 
+.msg-compose button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 @media (max-width: 720px) {
   .msg-dock {
     right: 0;
     left: 0;
+    bottom: env(safe-area-inset-bottom, 0px);
     flex-direction: column-reverse;
     align-items: stretch;
+  }
+
+  .msg-compose {
+    padding-bottom: max(0.7rem, env(safe-area-inset-bottom, 0px));
   }
 
   .msg-tab,

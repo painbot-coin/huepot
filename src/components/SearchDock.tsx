@@ -19,6 +19,10 @@ export function SearchDock({
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (q.trim().length < 2) {
+      setHits({ rooms: [], users: [] });
+      return;
+    }
     const id = window.setTimeout(async () => {
       const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       if (!response.ok) return;
@@ -48,6 +52,10 @@ export function SearchDock({
         value={q}
       />
       <Fade className="search-pop" show={open}>
+          {q.trim().length < 2 ? (
+            <span>Type a room or player name.</span>
+          ) : (
+            <>
           <p aria-label="Rooms">
             <IconSearch />
           </p>
@@ -86,6 +94,8 @@ export function SearchDock({
               <em>Player</em>
             </button>
           ))}
+            </>
+          )}
       </Fade>
     </div>
   );
