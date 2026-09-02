@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { useChatScroll } from "@/components/useChatScroll";
 import {
   IconBell,
   IconBolt,
@@ -56,13 +57,9 @@ export function RoomFeed({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [reported, setReported] = useState<Record<string, boolean>>({});
-  const scroller = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const node = scroller.current;
-    if (!node) return;
-    node.scrollTop = node.scrollHeight;
-  }, [feed.length, feed.at(-1)?.id]);
+  const { scroller, onScroll, pinBottom } = useChatScroll(
+    `${slug}:${feed.at(-1)?.id ?? ""}:${feed.length}`,
+  );
 
   async function report(eventId: string) {
     setError("");
@@ -93,6 +90,7 @@ export function RoomFeed({
       });
       const data = (await response.json()) as GameState & { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not send");
+      pinBottom();
       setText("");
       onState(data);
     } catch (err) {
@@ -116,7 +114,7 @@ export function RoomFeed({
           </button>
         ) : null}
       </div>
-      <div className="room-feed-list" ref={scroller}>
+      <div className="room-feed-list" onScroll={onScroll} ref={scroller}>
         {visible.map((item) =>
           item.kind === "chat" ? (
             <article className="news-chat" key={item.id}>

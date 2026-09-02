@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NetworkChrome, SignInGate, initials } from "@/components/NetworkChrome";
+import { useChatScroll } from "@/components/useChatScroll";
 import type { NetworkMessage, NetworkThread, NetworkYou } from "@/lib/types";
 
 export function NetworkMessages() {
@@ -17,6 +18,9 @@ export function NetworkMessages() {
   const [error, setError] = useState("");
   const [needSignIn, setNeedSignIn] = useState(false);
   const [booted, setBooted] = useState(false);
+  const { scroller, onScroll, pinBottom } = useChatScroll(
+    `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
+  );
 
   async function load(name = peer) {
     const search = name ? `?with=${encodeURIComponent(name)}` : "";
@@ -41,6 +45,7 @@ export function NetworkMessages() {
   }
 
   useEffect(() => {
+    pinBottom();
     setPeer(withUser);
     void load(withUser)
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load"))
@@ -66,6 +71,7 @@ export function NetworkMessages() {
         error?: string;
       };
       if (!response.ok) throw new Error(data.error || "Could not send");
+      pinBottom();
       setDraft("");
       setYou(data.you ?? null);
       setInbox(data.inbox ?? []);
@@ -118,7 +124,7 @@ export function NetworkMessages() {
               <p className="li-chat-top">
                 <Link href={`/network/u/${encodeURIComponent(peer)}`}>@{peer}</Link>
               </p>
-              <ul className="li-bubbles">
+              <ul className="li-bubbles" onScroll={onScroll} ref={scroller}>
                 {messages.map((item) => (
                   <li className={item.fromYou ? "is-you" : ""} key={item.id}>
                     {item.body}

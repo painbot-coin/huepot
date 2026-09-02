@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { initials } from "@/components/NetworkChrome";
+import { useChatScroll } from "@/components/useChatScroll";
 import { MESSAGE_OPEN, openMessageDock } from "@/lib/message-dock";
 import type { NetworkMessage, NetworkThread } from "@/lib/types";
 
@@ -60,6 +61,9 @@ export function MessageDock() {
   const [hits, setHits] = useState<string[]>([]);
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState("");
+  const { scroller, onScroll, pinBottom } = useChatScroll(
+    `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
+  );
 
   async function loadInbox() {
     const response = await fetch("/api/network/messages");
@@ -95,6 +99,7 @@ export function MessageDock() {
   function openChat(name: string) {
     const who = name.trim();
     if (!who) return;
+    pinBottom();
     setPeer(who);
     setChatOpen(true);
     setOpen(true);
@@ -154,6 +159,7 @@ export function MessageDock() {
         you?: { unreadMessages?: number };
       };
       if (!response.ok) throw new Error(data.error || "Could not send");
+      pinBottom();
       setDraft("");
       setInbox(data.inbox ?? []);
       setMessages(data.messages ?? []);
@@ -185,7 +191,7 @@ export function MessageDock() {
               ×
             </button>
           </header>
-          <ul className="msg-bubbles">
+          <ul className="msg-bubbles" onScroll={onScroll} ref={scroller}>
             {messages.length === 0 ? (
               <li className="msg-empty">Say hello to @{peer}.</li>
             ) : (

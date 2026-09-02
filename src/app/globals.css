@@ -2277,6 +2277,7 @@ select.field {
 
 .room-feed-list {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 0.55rem 0.6rem 0.7rem;
   display: flex;
@@ -3579,6 +3580,7 @@ body:has(.pit-app) .page-stage {
 
 .msg-bubbles {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
