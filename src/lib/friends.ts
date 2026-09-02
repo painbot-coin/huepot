@@ -115,7 +115,13 @@ async function deleteRow(id: string) {
 }
 
 function seatedRoom(store: StoreData, userId: string) {
-  const room = Object.values(store.rooms).find((item) => item.playerIds.includes(userId));
+  const room = Object.values(store.rooms).find((item) => {
+    const round = item.round;
+    if (!round) return false;
+    const clicks = round.clicks[userId];
+    if (!clicks) return false;
+    return round.buttonIds.some((id) => (clicks[id] ?? 0) > 0);
+  });
   return room ? { slug: room.slug, name: room.name } : null;
 }
 

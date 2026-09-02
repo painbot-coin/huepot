@@ -399,10 +399,22 @@ function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound
   };
 }
 
+function liveSitterIds(room: Room) {
+  const round = room.round;
+  if (!round) return [];
+  const ids: string[] = [];
+  for (const userId of Object.keys(round.clicks)) {
+    const clicks = playerClicksOn(round, userId);
+    const total = round.buttonIds.reduce((sum, id) => sum + (clicks[id] ?? 0), 0);
+    if (total > 0) ids.push(userId);
+  }
+  return ids;
+}
+
 function sittingNames(store: StoreData, room: Room) {
   if (room.round && isLiveFog(room, room.round, nowMs() - pauseShift(room))) return [];
   const names: string[] = [];
-  for (const id of room.playerIds) {
+  for (const id of liveSitterIds(room)) {
     const user = store.users[id];
     if (!user || isHouseUser(user)) continue;
     names.push(user.username);
@@ -428,7 +440,10 @@ function toPublicRoomCard(store: StoreData, room: Room): PublicRoomCard {
     fogSeconds: room.fogSeconds ?? null,
     status: round?.status ?? "live",
     pot: fromCents(totalClicks * room.clickPrice),
-    players: room.playerIds.length,
+    players: liveSitterIds(room).filter((id) => {
+      const user = store.users[id];
+      return Boolean(user && !isHouseUser(user));
+    }).length,
     roundNumber: room.roundNumber,
     liveMinutes: room.liveMinutes ?? null,
     closesAt: room.closesAt ? room.closesAt + pauseShift(room) : null,
@@ -461,7 +476,7 @@ function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicS
   const round = room.round;
   if (!round) return [];
   const fog = isLiveFog(room, round, nowMs() - pauseShift(room));
-  const ids = new Set([...room.playerIds, ...Object.keys(round.clicks)]);
+  const ids = new Set(liveSitterIds(room));
   const seats: PublicSeat[] = [];
   for (const userId of ids) {
     const user = store.users[userId];
