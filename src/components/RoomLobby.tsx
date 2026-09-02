@@ -35,20 +35,29 @@ function sittingLine(room: PublicRoomCard) {
   return "empty";
 }
 
+function prefetchTable() {
+  void import("@/components/GameClient");
+}
+
 function ClassicLine({ rooms }: { rooms: PublicRoomCard[] }) {
   const classic = rooms.find((room) => room.slug === "classic");
   const names = classic?.sitting ?? [];
   if (names.length) {
     return (
       <p>
-        <Link href="/rooms/classic">Classic</Link>
+        <Link href="/rooms/classic" onFocus={prefetchTable} onMouseEnter={prefetchTable}>
+          Classic
+        </Link>
         {` is sat · ${names.map((name) => `@${name}`).join(" · ")}`}
       </p>
     );
   }
   return (
     <p>
-      <Link href="/rooms/classic">Classic</Link> is the public pit.
+      <Link href="/rooms/classic" onFocus={prefetchTable} onMouseEnter={prefetchTable}>
+        Classic
+      </Link>{" "}
+      is the public pit.
     </p>
   );
 }
@@ -58,7 +67,10 @@ function ClassicHourLine({ hour, now }: { hour?: ClassicHour; now: number }) {
   if (hour.live) {
     return (
       <p className="lobby-hour">
-        <Link href="/rooms/classic">Classic hour</Link> is on · sit now
+        <Link href="/rooms/classic" onFocus={prefetchTable} onMouseEnter={prefetchTable}>
+          Classic hour
+        </Link>{" "}
+        is on · sit now
       </p>
     );
   }
@@ -74,7 +86,10 @@ function FogCupLine({ cup, now }: { cup?: FogCup; now: number }) {
   if (cup.live) {
     return (
       <p className="lobby-hour">
-        <Link href="/rooms/fog">Fog cup</Link> is on · sit Fog
+        <Link href="/rooms/fog" onFocus={prefetchTable} onMouseEnter={prefetchTable}>
+          Fog cup
+        </Link>{" "}
+        is on · sit Fog
       </p>
     );
   }
@@ -232,7 +247,12 @@ function RoomCard({
   cupOn?: boolean;
 }) {
   return (
-    <Link className="room-card" href={`/rooms/${room.slug}`}>
+    <Link
+      className="room-card"
+      href={`/rooms/${room.slug}`}
+      onFocus={prefetchTable}
+      onMouseEnter={prefetchTable}
+    >
       <div className="room-card-art">
         <RoomMark fog={Boolean(room.fogSeconds)} slug={room.slug} />
         <div>
