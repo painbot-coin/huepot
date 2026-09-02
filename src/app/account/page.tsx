@@ -1,5 +1,7 @@
 import { LazyAccountClient } from "@/components/LazyViews";
+import { requirePageUser } from "@/lib/auth";
 
-export default function AccountPage() {
+export default async function AccountPage() {
+  await requirePageUser();
   return <LazyAccountClient />;
 }

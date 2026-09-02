@@ -1,6 +1,6 @@
 # Huepot v1.3.22 review and v1.4 update plan
 
-**Live now:** https://huepot.net — product **v1.3.29** (`withdrawSend:true`, `canSend:true`).
+**Live now:** https://huepot.net — product **v1.3.30** (`withdrawSend:true`, `canSend:true`).
 **Read with:** `GROWTH.md`, `NETWORK.md`.
 
 The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live. Empty Classic and empty proof strips are the remaining growth problem — not missing features.
@@ -58,6 +58,7 @@ Same deploy recipe as 1.3.22 (temp clone, tarball, keep `WALLET_SECRET`, `pm2 st
 | **1.3.27 pit marks** | Original room marks, mini-coins, and pot icon on lobby, header, and empty strips. |
 | **1.3.28 lazy pit JS** | Lobby and table load after first paint. Guests do not wait on GameClient. |
 | **1.3.29 guest header** | Signed-in nav widgets stay out of the guest bundle. Hovering a room prefetches the table. |
+| **1.3.30 guest doors** | Footer Account / Notifications are signed-in only. Unsigned /account, /notifications, /invest, /withdraw, and Network go to Sign in. |
 
 Then stop building.
 

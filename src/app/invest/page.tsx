@@ -1,5 +1,7 @@
 import { LazyInvestClient } from "@/components/LazyViews";
+import { requirePageUser } from "@/lib/auth";
 
-export default function InvestPage() {
+export default async function InvestPage() {
+  await requirePageUser();
   return <LazyInvestClient />;
 }

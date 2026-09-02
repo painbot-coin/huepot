@@ -16,8 +16,12 @@ export function SiteFooter({ user }: { user?: PublicUser | null }) {
         <Link href="/fairness">Fairness</Link>
         <Link href="/terms">Terms</Link>
         <Link href="/privacy">Privacy</Link>
-        <Link href="/notifications">Notifications</Link>
-        <Link href="/account">Account</Link>
+        {user ? (
+          <>
+            <Link href="/notifications">Notifications</Link>
+            <Link href="/account">Account</Link>
+          </>
+        ) : null}
         <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
       </div>
     </footer>

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { randomBytes } from "crypto";
 import {
   LIVE_CHAIN_ID,
@@ -328,6 +329,12 @@ export async function getHeaderUser() {
     if (!user) return null;
     return toPublicUser(user, [], store);
   });
+}
+
+export async function requirePageUser() {
+  const user = await getHeaderUser();
+  if (!user) redirect("/signin");
+  return user;
 }
 
 export function userFromToken(store: StoreData, token: string | undefined) {
