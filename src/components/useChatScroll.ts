@@ -4,8 +4,8 @@ import { useLayoutEffect, useRef } from "react";
 
 const NEAR = 72;
 
-export function useChatScroll(key: string) {
-  const scroller = useRef<HTMLElement | null>(null);
+export function useChatScroll<T extends HTMLElement>(key: string) {
+  const scroller = useRef<T | null>(null);
   const stick = useRef(true);
 
   function onScroll() {

@@ -18,7 +18,7 @@ export function NetworkMessages() {
   const [error, setError] = useState("");
   const [needSignIn, setNeedSignIn] = useState(false);
   const [booted, setBooted] = useState(false);
-  const { scroller, onScroll, pinBottom } = useChatScroll(
+  const { scroller, onScroll, pinBottom } = useChatScroll<HTMLUListElement>(
     `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
   );
 

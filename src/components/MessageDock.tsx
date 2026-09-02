@@ -61,7 +61,7 @@ export function MessageDock() {
   const [hits, setHits] = useState<string[]>([]);
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState("");
-  const { scroller, onScroll, pinBottom } = useChatScroll(
+  const { scroller, onScroll, pinBottom } = useChatScroll<HTMLUListElement>(
     `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
   );
 

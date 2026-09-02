@@ -57,7 +57,7 @@ export function RoomFeed({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [reported, setReported] = useState<Record<string, boolean>>({});
-  const { scroller, onScroll, pinBottom } = useChatScroll(
+  const { scroller, onScroll, pinBottom } = useChatScroll<HTMLDivElement>(
     `${slug}:${feed.at(-1)?.id ?? ""}:${feed.length}`,
   );
 
