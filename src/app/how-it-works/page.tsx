@@ -24,7 +24,11 @@ export default function HowItWorksPage() {
           seconds. When that live time ends, the custom table is deleted. No
           create fee.
         </li>
-        <li>During a live round, click any coin. Each click spends that room’s price from your play balance.</li>
+        <li>
+          During a live round, click any coin. Each click spends that room’s
+          price from your play balance. After your first click, one notice
+          asks you to copy invite for Classic 20:00 UTC.
+        </li>
         <li>
           When time is up, the color with the most clicks wins. Those clickers
           split the money from the other colors, by click. Winning clicks also

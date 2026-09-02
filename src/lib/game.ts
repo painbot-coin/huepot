@@ -20,7 +20,7 @@ import { ensureRoundSeed } from "./fairness";
 import { queueSettledRound } from "./fairness-db";
 import { assertCanPlay, notePlayTx } from "./limits";
 import { HOUSE_USER_ID, ensureHouseUser, isHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
-import { payInviteRake, ensureInviteCode } from "./referrals";
+import { payInviteRake, ensureInviteCode, hadClickTx, nudgeFirstClickInvite } from "./referrals";
 import {
   floorPayoutPerClick,
   formatCents,
@@ -599,12 +599,12 @@ export function getGameState(store: StoreData, userId: string | null): GameState
   return getRoomState(store, "classic", userId);
 }
 
-export function clickColor(
+export async function clickColor(
   store: StoreData,
   userId: string,
   colorId: ColorId,
   slug = "classic",
-): GameState {
+): Promise<GameState> {
   const room = findRoom(store, slug);
   tickRoom(store, room);
   const round = room.round!;
@@ -632,6 +632,7 @@ export function clickColor(
   assertCanPlay(store, user, round.clickPrice);
 
   const firstSit = !room.playerIds.includes(userId);
+  const firstClick = !(await hadClickTx(store, userId));
   user.balance -= round.clickPrice;
   round.totals[colorId] += 1;
   const current = playerClicksOn(round, userId);
@@ -653,6 +654,7 @@ export function clickColor(
       body: `${user.username} sat at the table.`,
     });
   }
+  if (firstClick) nudgeFirstClickInvite(store, userId);
   return getRoomState(store, slug, userId);
 }
 

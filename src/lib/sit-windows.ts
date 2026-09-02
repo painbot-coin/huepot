@@ -1,4 +1,5 @@
 import { classicHourAt } from "./classic-hour";
+import { prisma } from "./db";
 import { fogCupAt, fogCupClock } from "./fog-cup";
 import { HOUSE_USER_ID, isHouseUser } from "./house";
 import { notify } from "./notifications";
@@ -7,9 +8,19 @@ import type { StoreData } from "./types";
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 let classicAnnounced = 0;
 let fogAnnounced = 0;
+let cachedSitters: string[] = [];
+
+async function loadRecentSitters(now: number) {
+  const since = now - WEEK;
+  const rows = await prisma.$queryRaw<{ playerId: string }[]>`
+    SELECT DISTINCT playerId FROM Tx
+    WHERE type = 'click' AND createdAt >= ${since}
+  `;
+  cachedSitters = rows.map((row) => row.playerId);
+}
 
 function recentSitters(store: StoreData, now: number) {
-  const ids = new Set<string>();
+  const ids = new Set(cachedSitters);
   for (const tx of store.txs) {
     if (tx.type !== "click") continue;
     if (now - tx.createdAt > WEEK) continue;
@@ -54,6 +65,7 @@ let watching = false;
 export function startSitWindowWatcher() {
   if (watching) return;
   watching = true;
+  void loadRecentSitters(Date.now()).catch(() => undefined);
   const tick = () => {
     const now = Date.now();
     const hour = classicHourAt(now);
@@ -61,12 +73,14 @@ export function startSitWindowWatcher() {
     const pending =
       (hour.live && classicAnnounced !== hour.startAt) ||
       (cup.live && fogAnnounced !== cup.startAt);
-    if (!pending) {
-      setTimeout(tick, 30_000);
-      return;
-    }
-    void import("./store")
-      .then(({ withStore }) => withStore((store) => announceSitWindows(store)))
+    void loadRecentSitters(now)
+      .catch(() => undefined)
+      .then(() => {
+        if (!pending) return;
+        return import("./store").then(({ withStore }) =>
+          withStore((store) => announceSitWindows(store)),
+        );
+      })
       .catch(() => undefined)
       .finally(() => {
         setTimeout(tick, 30_000);

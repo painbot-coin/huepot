@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { classicHourClock, classicHourUtc } from "./classic-hour";
 import { INVITE_DAILY_CAP, INVITE_RAKE_SHARE_BPS } from "./config";
 import { prisma } from "./db";
 import { isHouseUser } from "./house";
@@ -6,6 +7,8 @@ import { formatCents, toCents } from "./money";
 import { notify } from "./notifications";
 import type { ColorId } from "./colors";
 import type { StoreData, Tx, User } from "./types";
+
+export const FIRST_CLICK_INVITE_TITLE = "Bring someone";
 
 const inviteToday = new Map<string, { day: number; cents: number }>();
 const inviteLife = new Map<string, number>();
@@ -97,6 +100,33 @@ export async function warmInviteTotals() {
   for (const row of life) {
     inviteLife.set(row.playerId, Math.round(Number(row.total)));
   }
+}
+
+export async function hadClickTx(store: StoreData, userId: string) {
+  if (store.txs.some((tx) => tx.playerId === userId && tx.type === "click")) {
+    return true;
+  }
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM Tx WHERE playerId = ${userId} AND type = 'click' LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+export function nudgeFirstClickInvite(store: StoreData, userId: string) {
+  if (inviteEarnedCents(store, userId) > 0) return;
+  if (
+    store.notifications.some(
+      (item) => item.userId === userId && item.title === FIRST_CLICK_INVITE_TITLE,
+    )
+  ) {
+    return;
+  }
+  notify(store, userId, {
+    kind: "system",
+    title: FIRST_CLICK_INVITE_TITLE,
+    body: `Copy invite on Account. Classic sits ${classicHourClock(classicHourUtc())}.`,
+    href: "/account",
+  });
 }
 
 export function inviteTxsFor(store: StoreData, userId: string) {

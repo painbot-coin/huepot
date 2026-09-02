@@ -19,7 +19,7 @@ export async function POST(
     if (!colorId || !isColorId(colorId)) {
       return NextResponse.json({ error: "Pick a color." }, { status: 400 });
     }
-    const state = await withStore((store) => {
+    const state = await withStore(async (store) => {
       const user = requireUser(store, token);
       requireVerified(user);
       return clickColor(store, user.id, colorId, slug);

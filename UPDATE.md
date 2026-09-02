@@ -1,6 +1,6 @@
 # Huepot v1.3.22 review and v1.4 update plan
 
-**Live now:** https://huepot.net — product **v1.3.24** (`withdrawSend:true`, `canSend:true`).
+**Live now:** https://huepot.net — product **v1.3.25** (`withdrawSend:true`, `canSend:true`).
 **Read with:** `GROWTH.md`, `NETWORK.md`.
 
 The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live. Empty Classic and empty proof strips are the remaining growth problem — not missing features.
@@ -29,12 +29,8 @@ Checked on this plan: `/api/takes` and `/api/payouts` are still `[]`.
 These are leftover, not missing loops.
 
 1. **Proof trail is empty.** Lobby says “Takes land here” and “Cash-outs land here.” Code is fine. No contested pot and no paid withdraw have landed. That is ops.
-2. **Network looks like the product.** Header is Rooms + Network. Unsigned `/network` is a feed shell that then asks for sign-in. A first visit should stay on the pit.
-3. **Dead password doors.** `/signup`, `/forgot-password`, `/reset-password`, `/verify-email` 307 to `/signin?notice=google`. Password APIs are already gone. Schema still has `passwordHash` / `verifyToken` — leave the columns; do not `prisma migrate deploy`.
-4. **Unused-chain code is still in the tree.** New users only mint BSC. `networks.ts` still lists ETH / Tron / Polygon / Arbitrum / Sol / BTC. Old Wallet rows may still sit in SQLite. They must never show as live.
-5. **Orphan staff/click surfaces.** `StaffPayoutsClient.tsx` is unused. `/api/staff/payouts` and `/api/click` have no client.
 
-Classic showing `@devguru13580 · @bill · @danny` is presence, not a live pot. Lightning / Duo / High / Fog stay empty unless you sit them.
+Chrome, leftover auth doors, unused-chain catalog, and orphan staff/click files were cleaned in 1.3.23–1.3.24. Classic showing `@devguru13580 · @bill · @danny` is presence, not a live pot. Lightning / Duo / High / Fog stay empty unless you sit them.
 
 ---
 
@@ -52,12 +48,12 @@ Same deploy recipe as 1.3.22 (temp clone, tarball, keep `WALLET_SECRET`, `pm2 st
 | **Drop dead password helpers** | `hashPassword` / `verifyPassword` / `hasPassword` are unused. Keep `newSessionToken`. | `password.ts`, `public-user.ts` |
 | **Drop orphan staff/click files** | Console already has Send. | `StaffPayoutsClient.tsx`, `/api/staff/payouts`, `/api/click` |
 
-### Should ship next if you still say “next step”
+### Should ship (done)
 
 | Item | Why |
 |------|-----|
 | **1.3.24 unused-chain debris** | Public wallet list stays BSC-only. Do not delete old Wallet rows. |
-| **1.3.25 first-click invite nudge** | After a player’s first click, one notice: copy invite + next Classic 20:00 UTC. Also read hour-ping sitters from SQLite, not the 400-tx memory slice. |
+| **1.3.25 first-click invite nudge** | After a player’s first click, one notice: copy invite + Classic 20:00 UTC. Hour-ping sitters come from SQLite, not the 400-tx memory slice. |
 
 Then stop building.
 
@@ -89,7 +85,7 @@ Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-**Build status:** v1.3.23 chrome/auth cleanup and v1.3.24 BSC-only rails are shipped. Proof rows still wait on you sitting and paying.
+**Build status:** v1.3.23–1.3.25 are shipped. First-click invite nudge and SQLite sitters are live. Proof rows still wait on you sitting and paying.
 
 Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 
