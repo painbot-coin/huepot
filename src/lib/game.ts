@@ -263,7 +263,7 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
     notify(store, playerId, {
       kind: "payout",
       title: `${room.name} · wager earned`,
-      body: `${names} took the pot. You received ${formatCents(amount)} USDT.`,
+      body: `${names} took the pot. You received ${formatCents(amount)} USDT. Copy invite on the card.`,
       href,
     });
     postRoomEvent(room, {

@@ -32,6 +32,7 @@ export default function HowItWorksPage() {
           Each round publishes a hashed seed at open and reveals it at settle —
           check any round on the fairness sheet. Recent takes show on the lobby.
           Share a take to sit the next round — the line names Fog cup.
+          After a take, copy invite from the card.
         </li>
         <li>
           If every color ties, clicks are refunded. Withdraw to a BNB Chain

@@ -18,15 +18,28 @@ function recentSitters(store: StoreData, now: number) {
   return [...ids];
 }
 
+function alreadyPinged(
+  store: StoreData,
+  userId: string,
+  title: string,
+  since: number,
+) {
+  return store.notifications.some(
+    (item) =>
+      item.userId === userId && item.title === title && item.createdAt >= since,
+  );
+}
+
 function pingSitters(
   store: StoreData,
   now: number,
-  input: { title: string; body: string; href: string },
+  input: { title: string; body: string; href: string; since: number },
 ) {
   for (const id of recentSitters(store, now)) {
     if (id === HOUSE_USER_ID) continue;
     const user = store.users[id];
     if (!user || !user.emailVerified || isHouseUser(user)) continue;
+    if (alreadyPinged(store, id, input.title, input.since)) continue;
     notify(store, id, {
       kind: "system",
       title: input.title,
@@ -70,6 +83,7 @@ export function announceSitWindows(store: StoreData, now = Date.now()) {
       title: "Classic hour is on",
       body: "Sit Classic. The named hour just opened.",
       href: "/rooms/classic",
+      since: hour.startAt,
     });
   }
   const cup = fogCupAt(now);
@@ -79,6 +93,7 @@ export function announceSitWindows(store: StoreData, now = Date.now()) {
       title: "Fog cup is on",
       body: `Sit Fog. ${fogCupClock(cup.weekday, cup.hour)}.`,
       href: "/rooms/fog",
+      since: cup.startAt,
     });
   }
 }

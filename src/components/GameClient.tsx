@@ -615,6 +615,9 @@ export function GameClient({ slug }: { slug: string }) {
           }
           canOpenFog={Boolean(user?.emailVerified) && !user?.blocked}
           inviteCode={user?.inviteCode ?? ""}
+          slug={slug}
+          hour={hour?.hour}
+          cup={cup}
           buttonCount={room.buttonCount}
           clickPrice={round.clickPrice}
           roundSeconds={room.roundSeconds}
@@ -841,6 +844,9 @@ function ShareTake({
   fogName,
   canOpenFog,
   inviteCode,
+  slug,
+  hour,
+  cup,
   buttonCount,
   clickPrice,
   roundSeconds,
@@ -850,11 +856,15 @@ function ShareTake({
   fogName: string;
   canOpenFog: boolean;
   inviteCode: string;
+  slug: string;
+  hour?: number | null;
+  cup?: { weekday: number; hour: number } | null;
   buttonCount: number;
   clickPrice: number;
   roundSeconds: number;
 }) {
   const [status, setStatus] = useState<"idle" | "copied" | "shared">("idle");
+  const [inviteStatus, setInviteStatus] = useState<"idle" | "copied">("idle");
   const [fogBusy, setFogBusy] = useState(false);
   const [fogError, setFogError] = useState("");
 
@@ -879,6 +889,22 @@ function ShareTake({
       }
     }
     window.setTimeout(() => setStatus("idle"), 1800);
+  }
+
+  async function copyInvite() {
+    const url = inviteCode
+      ? `${window.location.origin}/rooms/${slug}?ref=${inviteCode}`
+      : `${window.location.origin}/rooms/${slug}`;
+    const text = inviteCode
+      ? inviteText(url, { hour: slug === "fog" ? null : hour, cup })
+      : url;
+    try {
+      await navigator.clipboard.writeText(text);
+      setInviteStatus("copied");
+    } catch {
+      /* ignore */
+    }
+    window.setTimeout(() => setInviteStatus("idle"), 1800);
   }
 
   async function openFog() {
@@ -924,6 +950,10 @@ function ShareTake({
           {label}
         </button>
         {" · "}
+        <button className="take-share-btn" onClick={() => void copyInvite()} type="button">
+          {inviteStatus === "copied" ? "Invite copied" : "Copy invite"}
+        </button>
+        {" · "}
         {canOpenFog ? (
           <button className="take-share-btn" disabled={fogBusy} onClick={() => void openFog()} type="button">
             {fogBusy ? "Opening Fog…" : "Open a 30-min Fog table"}
@@ -945,6 +975,9 @@ function ResultCard({
   sharePath,
   canOpenFog,
   inviteCode,
+  slug,
+  hour,
+  cup,
   buttonCount,
   clickPrice,
   roundSeconds,
@@ -958,6 +991,9 @@ function ResultCard({
   sharePath: string;
   canOpenFog: boolean;
   inviteCode: string;
+  slug: string;
+  hour?: number | null;
+  cup?: { weekday: number; hour: number } | null;
   buttonCount: number;
   clickPrice: number;
   roundSeconds: number;
@@ -1033,6 +1069,9 @@ function ResultCard({
         clickPrice={clickPrice}
         fogName={`${names.split(" & ")[0]} Fog`.slice(0, 28)}
         inviteCode={inviteCode}
+        slug={slug}
+        hour={hour}
+        cup={cup}
         line={takeLine(
           names,
           result.payouts.reduce((sum, payout) => sum + payout.amount, 0),
