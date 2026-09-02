@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { IconPlus } from "@/components/Icons";
+import { BrandMark } from "@/components/BrandMark";
+import { IconCash, IconClock, IconCoin, IconPlus, IconPot } from "@/components/Icons";
+import { MiniCoin } from "@/components/MiniCoin";
 import { PublicPayouts } from "@/components/PublicPayouts";
 import { PublicTakes } from "@/components/PublicTakes";
+import { RoomMark } from "@/components/RoomMark";
 import { SearchDock } from "@/components/SearchDock";
+import { colorsForCount } from "@/lib/colors";
 import { BASIC_ROOMS } from "@/lib/rooms";
 import { classicHourClock } from "@/lib/classic-hour";
 import { fogCupClock } from "@/lib/fog-cup";
@@ -154,6 +158,9 @@ export function RoomLobby() {
   return (
     <div className="lobby-stage">
       <header className="lobby-hero">
+        <div className="lobby-hero-art">
+          <BrandMark className="brand-mark is-hero" />
+        </div>
         <p className="lobby-kicker">Sit. Pick a color. Watch the pot.</p>
         <h1 className="font-display">Huepot tables</h1>
         <ClassicLine rooms={basic} />
@@ -226,29 +233,47 @@ function RoomCard({
 }) {
   return (
     <Link className="room-card" href={`/rooms/${room.slug}`}>
-      <div className="room-card-top">
-        <strong>
-          {room.name}
-          {room.fogSeconds ? <em className="fog-chip">Fog</em> : null}
-        </strong>
-        <em className={`pit-kind is-${room.kind}`} title={room.kind === "basic" ? "House" : "Custom"} />
+      <div className="room-card-art">
+        <RoomMark fog={Boolean(room.fogSeconds)} slug={room.slug} />
+        <div>
+          <div className="room-card-top">
+            <strong>
+              {room.name}
+              {room.fogSeconds ? <em className="fog-chip">Fog</em> : null}
+            </strong>
+            <em className={`pit-kind is-${room.kind}`} title={room.kind === "basic" ? "House" : "Custom"} />
+          </div>
+          <p>{blurb}</p>
+        </div>
       </div>
-      <p>{blurb}</p>
+      <div className="room-coin-row" aria-hidden="true">
+        {colorsForCount(room.buttonCount).map((color) => (
+          <MiniCoin id={color.id} key={color.id} />
+        ))}
+      </div>
       <dl>
         <div>
-          <dt>Coins</dt>
+          <dt>
+            <IconCoin /> Coins
+          </dt>
           <dd>{room.buttonCount}</dd>
         </div>
         <div>
-          <dt>Click</dt>
+          <dt>
+            <IconCash /> Click
+          </dt>
           <dd>{formatUsdt(room.clickPrice)}</dd>
         </div>
         <div>
-          <dt>Round</dt>
+          <dt>
+            <IconClock /> Round
+          </dt>
           <dd>{room.roundSeconds}s</dd>
         </div>
         <div>
-          <dt>Pot</dt>
+          <dt>
+            <IconPot /> Pot
+          </dt>
           <dd>{formatUsdt(room.pot)}</dd>
         </div>
       </dl>

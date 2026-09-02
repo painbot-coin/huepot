@@ -210,6 +210,23 @@ export function IconPlay() {
   );
 }
 
+export function IconPot() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path
+        d="M6 10 C6 8 9 6.5 12 6.5 S18 8 18 10 L17 18 C16.6 19.6 14.6 20.5 12 20.5 S7.4 19.6 7 18 Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="9.2" cy="11.2" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="10.4" r="1.6" fill="currentColor" />
+      <circle cx="14.8" cy="11.2" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconSlow() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">

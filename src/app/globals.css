@@ -1140,18 +1140,35 @@ select.field {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font-family: var(--font-cinzel), serif;
   font-weight: 800;
   font-size: 1.55rem;
   color: #fff;
   text-decoration: none;
   letter-spacing: 0.04em;
+}
+
+.brand-word {
   background: linear-gradient(90deg, var(--rainbow));
   background-size: 240% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   animation: brand-shift 7s linear infinite;
+}
+
+.brand-mark {
+  width: 1.7rem;
+  height: 1.7rem;
+  flex-shrink: 0;
+}
+
+.brand-mark.is-hero {
+  width: 4.6rem;
+  height: 4.6rem;
 }
 
 .site-nav {
@@ -1854,7 +1871,7 @@ select.field {
 .room-back {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.65rem 1rem;
   margin: 0;
   color: #ececf2;
@@ -1884,6 +1901,10 @@ select.field {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 1.5rem;
   padding: 1.5rem 1.3rem 1.4rem;
+}
+
+.lobby-hero-art {
+  margin-bottom: 0.4rem;
 }
 
 .lobby-hero h1 {
@@ -2003,11 +2024,129 @@ select.field {
   gap: 0.7rem;
   padding: 1.1rem 1.1rem 1rem;
   border-radius: 1.3rem;
-  background: #16131f;
+  background:
+    linear-gradient(180deg, rgba(27, 58, 40, 0.28), transparent 46%),
+    #16131f;
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: inherit;
   text-decoration: none;
   transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.room-card-art {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.room-mark {
+  width: 4.4rem;
+  height: 4.4rem;
+  flex-shrink: 0;
+  border-radius: 1.2rem;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.28);
+}
+
+.room-mark.is-table {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.75rem;
+}
+
+.room-mark.is-rail {
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-right: 0.4rem;
+  border-radius: 0.5rem;
+}
+
+.room-coin-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+}
+
+.mini-coin {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 38%),
+    var(--pad);
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--pad) 50%, #1a1208 50%),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.mini-coin-rune {
+  width: 58%;
+  height: 58%;
+  opacity: 0.4;
+}
+
+.room-card dt {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.room-card dt svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.strip-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.55rem 0 0;
+  color: #9a9aa8;
+  font-size: 0.9rem;
+}
+
+.strip-empty svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: #ffd27a;
+}
+
+.guide-marks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 0.8rem;
+  margin: 1.2rem 0 1rem;
+}
+
+.guide-marks figure {
+  margin: 0;
+  text-align: center;
+}
+
+.guide-marks .room-mark {
+  width: 4.6rem;
+  height: 4.6rem;
+  margin: 0 auto;
+}
+
+.guide-marks figcaption {
+  margin-top: 0.4rem;
+  color: #c9c9d4;
+  font-size: 0.75rem;
+}
+
+.guide-coins {
+  margin-bottom: 1.4rem;
+}
+
+.auth-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin-bottom: 1rem;
 }
 
 .room-card:hover {
@@ -2882,7 +3021,7 @@ body:has(.pit-app) .page-stage {
   .pad-rays,
   .pad-twirl,
   .coin-reeds,
-  .brand,
+  .brand-word,
   .timer-fill,
   .color-pad.is-leading,
   .loader-ring,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IconCash } from "@/components/Icons";
 import { formatUsdt } from "@/lib/money";
 
 const EXPLORER = "https://bscscan.com";
@@ -46,7 +47,10 @@ export function PublicPayouts() {
     <section className="payout-strip" aria-label="Recent cash-outs">
       <p className="lobby-label">Paid out</p>
       {payouts.length === 0 ? (
-        <p className="text-sm text-zinc-500">Cash-outs land here.</p>
+        <p className="strip-empty">
+          <IconCash />
+          Cash-outs land here.
+        </p>
       ) : (
         <ul>
           {payouts.map((item, index) => (

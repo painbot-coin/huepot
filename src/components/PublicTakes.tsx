@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { IconPot } from "@/components/Icons";
 import { formatUsdt } from "@/lib/money";
 import type { PublicTake } from "@/lib/types";
 
@@ -44,7 +45,10 @@ export function PublicTakes() {
     <section className="payout-strip take-strip" aria-label="Recent takes">
       <p className="lobby-label">Last takes</p>
       {takes.length === 0 ? (
-        <p className="text-sm text-zinc-500">Takes land here.</p>
+        <p className="strip-empty">
+          <IconPot />
+          Takes land here.
+        </p>
       ) : (
         <ul>
           {takes.map((item) => (

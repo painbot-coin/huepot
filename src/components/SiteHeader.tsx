@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/BrandMark";
 import { LogoutButton } from "@/components/LogoutButton";
 import { MessageLaunch } from "@/components/MessageDock";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -13,7 +14,8 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
     <header className="site-header">
       <div className="site-header-inner">
       <Link className="brand" href="/">
-        Huepot
+        <BrandMark />
+        <span className="brand-word">Huepot</span>
       </Link>
       <nav className="site-nav">
         <Link className="nav-link" href="/">

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BrandMark } from "@/components/BrandMark";
+import { MiniCoin } from "@/components/MiniCoin";
 import { GoogleButton } from "@/components/GoogleButton";
 import { CLASSIC_HOUR_UTC, FOG_CUP_HOUR_UTC, FOG_CUP_WEEKDAY } from "@/lib/config";
 import { classicHourClock } from "@/lib/classic-hour";
@@ -34,6 +36,15 @@ export function SigninForm() {
 
   return (
     <div className="auth-card">
+      <div className="auth-mark">
+        <BrandMark className="brand-mark is-hero" />
+        <div className="room-coin-row" aria-hidden="true">
+          <MiniCoin id="crimson" />
+          <MiniCoin id="azure" />
+          <MiniCoin id="volt" />
+          <MiniCoin id="amber" />
+        </div>
+      </div>
       <h1 className="font-display text-4xl text-white">Sign in</h1>
       <p className="mt-2 text-zinc-400">
         Huepot uses Google only. Tick 18+, then continue with the same Gmail you

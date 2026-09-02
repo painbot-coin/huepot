@@ -1,6 +1,6 @@
 # Huepot v1.3.22 review and v1.4 update plan
 
-**Live now:** https://huepot.net — product **v1.3.26** (`withdrawSend:true`, `canSend:true`).
+**Live now:** https://huepot.net — product **v1.3.27** (`withdrawSend:true`, `canSend:true`).
 **Read with:** `GROWTH.md`, `NETWORK.md`.
 
 The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live. Empty Classic and empty proof strips are the remaining growth problem — not missing features.
@@ -55,6 +55,7 @@ Same deploy recipe as 1.3.22 (temp clone, tarball, keep `WALLET_SECRET`, `pm2 st
 | **1.3.24 unused-chain debris** | Public wallet list stays BSC-only. Do not delete old Wallet rows. |
 | **1.3.25 first-click invite nudge** | After a player’s first click, one notice: copy invite + Classic 20:00 UTC. Hour-ping sitters come from SQLite, not the 400-tx memory slice. |
 | **1.3.26 live sitting only** | Lobby “Classic is sat” and seat lists use this round’s clicks, not leftover RoomSeat rows. |
+| **1.3.27 pit marks** | Original room marks, mini-coins, and pot icon on lobby, header, and empty strips. |
 
 Then stop building.
 
@@ -86,7 +87,7 @@ Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-**Build status:** v1.3.23–1.3.26 are shipped. Lobby sitting is this-round only. Proof rows still wait on you sitting and paying.
+**Build status:** v1.3.23–1.3.27 are shipped. Lobby sitting is this-round only. Proof rows still wait on you sitting and paying.
 
 Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 

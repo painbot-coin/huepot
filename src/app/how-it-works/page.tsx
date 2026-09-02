@@ -1,7 +1,25 @@
+import { MiniCoin } from "@/components/MiniCoin";
+import { RoomMark } from "@/components/RoomMark";
+import { BASIC_ROOMS } from "@/lib/rooms";
+import { COLORS } from "@/lib/colors";
+
 export default function HowItWorksPage() {
   return (
     <main className="prose-page">
       <h1 className="font-display text-4xl text-white">How it works</h1>
+      <div className="guide-marks" aria-hidden="true">
+        {BASIC_ROOMS.map((room) => (
+          <figure key={room.slug}>
+            <RoomMark fog={Boolean(room.fogSeconds)} slug={room.slug} />
+            <figcaption>{room.name}</figcaption>
+          </figure>
+        ))}
+      </div>
+      <div className="room-coin-row guide-coins" aria-hidden="true">
+        {COLORS.map((color) => (
+          <MiniCoin id={color.id} key={color.id} size={32} />
+        ))}
+      </div>
       <p>
         Huepot is a timed color pot played in rooms. Each room has its own coins,
         click price, round clock, and a live feed for takes and table talk.

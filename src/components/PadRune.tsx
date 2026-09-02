@@ -11,9 +11,15 @@ const paths: Record<ColorId, string> = {
   frost: "M12 2 L13.5 10 L22 12 L13.5 14 L12 22 L10.5 14 L2 12 L10.5 10 Z",
 };
 
-export function PadRune({ id }: { id: ColorId }) {
+export function PadRune({
+  id,
+  className = "pad-rune",
+}: {
+  id: ColorId;
+  className?: string;
+}) {
   return (
-    <svg aria-hidden="true" className="pad-rune" viewBox="0 0 24 24">
+    <svg aria-hidden="true" className={className} viewBox="0 0 24 24">
       <path d={paths[id]} fill="currentColor" />
     </svg>
   );

@@ -28,6 +28,7 @@ import {
   IconUsers,
 } from "@/components/Icons";
 import { PadRune } from "@/components/PadRune";
+import { RoomMark } from "@/components/RoomMark";
 import { PitHint } from "@/components/PitHint";
 import { PlayerBoard } from "@/components/PlayerBoard";
 import { RoomFeed } from "@/components/RoomFeed";
@@ -436,6 +437,7 @@ export function GameClient({ slug }: { slug: string }) {
                 type="button"
               >
                 <strong>
+                  <RoomMark className="room-mark is-rail" fog={Boolean(item.fogSeconds)} slug={item.slug} />
                   {item.name}
                   <em className={`pit-kind is-${item.kind}`} title={item.kind === "basic" ? "No fee" : "Custom"} />
                 </strong>
@@ -451,6 +453,7 @@ export function GameClient({ slug }: { slug: string }) {
         <div className={`pit-main ${pane === "play" ? "is-open" : ""}`}>
     <div className="game-stage">
       <div className="room-back">
+        <RoomMark className="room-mark is-table" fog={Boolean(room.fogSeconds)} slug={slug} />
         {room.host && renaming ? (
           <form
             className="flex items-center gap-2"
