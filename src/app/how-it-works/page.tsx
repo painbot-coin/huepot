@@ -18,7 +18,8 @@ export default function HowItWorksPage() {
           Fog Pit — or create a custom room with 2–8 coins, click price, round
           length, and a live timer. Classic hour is 20:00 UTC. Fog cup is
           Sunday 21:00 UTC. When those windows open, recent sitters get a
-          notice. Fog Pit (and custom tables with fog on) hide public
+          notice, even if the lobby is empty. Fog Pit (and custom tables with
+          fog on) hide public
           click counts in the last 12
           seconds. When that live time ends, the custom table is deleted. No
           create fee.

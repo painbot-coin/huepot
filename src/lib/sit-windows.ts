@@ -36,6 +36,32 @@ function pingSitters(
   }
 }
 
+let watching = false;
+
+export function startSitWindowWatcher() {
+  if (watching) return;
+  watching = true;
+  const tick = () => {
+    const now = Date.now();
+    const hour = classicHourAt(now);
+    const cup = fogCupAt(now);
+    const pending =
+      (hour.live && classicAnnounced !== hour.startAt) ||
+      (cup.live && fogAnnounced !== cup.startAt);
+    if (!pending) {
+      setTimeout(tick, 30_000);
+      return;
+    }
+    void import("./store")
+      .then(({ withStore }) => withStore((store) => announceSitWindows(store)))
+      .catch(() => undefined)
+      .finally(() => {
+        setTimeout(tick, 30_000);
+      });
+  };
+  setTimeout(tick, 2_000);
+}
+
 export function announceSitWindows(store: StoreData, now = Date.now()) {
   const hour = classicHourAt(now);
   if (hour.live && classicAnnounced !== hour.startAt) {

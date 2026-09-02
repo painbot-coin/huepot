@@ -1098,7 +1098,9 @@ async function ensureDb() {
       const { warmInviteTotals } = await import("@/lib/referrals");
       await warmPlayLoss();
       await warmInviteTotals();
+      const { startSitWindowWatcher } = await import("@/lib/sit-windows");
       startChainWatcher();
+      startSitWindowWatcher();
     })().catch((error) => {
       boot = null;
       throw error;
