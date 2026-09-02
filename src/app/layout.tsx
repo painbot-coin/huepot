@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {user && !user.ageConfirmed ? <AgeBanner /> : null}
         {user?.blocked && user.blockKind !== "age" ? <PlayBlockBanner user={user} /> : null}
         <div className="page-stage flex-1">{children}</div>
-        <SiteFooter />
+        <SiteFooter user={user} />
       </body>
     </html>
   );

@@ -6,6 +6,14 @@ const chainEdge = path.join(process.cwd(), "src/lib/chain.edge.ts");
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma"],
+  async redirects() {
+    return [
+      { source: "/signup", destination: "/signin", permanent: true },
+      { source: "/forgot-password", destination: "/signin", permanent: true },
+      { source: "/reset-password", destination: "/signin", permanent: true },
+      { source: "/verify-email", destination: "/signin", permanent: true },
+    ];
+  },
   webpack: (config, { nextRuntime }) => {
     if (nextRuntime !== "nodejs") {
       config.resolve = config.resolve ?? {};

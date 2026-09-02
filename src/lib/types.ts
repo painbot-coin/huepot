@@ -213,7 +213,6 @@ export type PublicUser = {
   createdAt: number;
   emailVerified: boolean;
   hasGoogle: boolean;
-  hasPassword: boolean;
   unreadCount: number;
   wallets: PublicWallet[];
   txs: Tx[];

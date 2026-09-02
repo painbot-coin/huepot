@@ -2,7 +2,7 @@
 
 **Live:** https://huepot.net  
 **Read with:** `GROWTH.md` (what not to do) and `UPDATE.md` (product).  
-**Live product:** v1.2.0 invite loop is on https://huepot.net. Open Account for your code before you ask strangers to share.
+**Live product:** v1.3.23 is on https://huepot.net (invite, cashier, Classic hour, Fog cup). Open Account for your code before you ask strangers to share.
 
 Huepot does not grow from a logo. It grows from a **small network of people who sit the same table, get paid, and send one link**. Empty Classic kills every other tactic.
 
@@ -31,7 +31,7 @@ If these are not true, do not post. You will burn the few people who try.
 
 | Gate | Why | Done when |
 |------|-----|-----------|
-| **v1.2 is live** | Account has a copyable `?ref=` link. New Google users get tagged. Inviter sees a rake line after a settle. | Footer says v1.2.0. You tested with a second Gmail. |
+| **Invite is live** | Account has a copyable `?ref=` link. New Google users get tagged. Inviter sees a rake line after a settle. | Footer says v1.3.23+. You tested with a second Gmail. |
 | **Classic is sat** | A friend’s first click must land on a living table. | You or one regular is on Classic during the hours you promote. |
 | **One withdrawal is paid** | The lobby strip is empty until staff mark a payout **paid**. | `/api/payouts` has a row. BscScan link exists. You can screenshot it. |
 | **Same-day cash-out habit** | One slow send kills ten sign-ups. | You check the staff queue every day you ask anyone to deposit. |
@@ -105,7 +105,7 @@ If Classic stays busy **without** you for a few sessions:
 - One English-speaking BNB micro-influencer, paid as a **posted table buy-in you can afford** (you sit with them), not a $500 tweet.
 - One listing on a free play-to-earn / on-chain directory. One. Read their rules. No fake TVL.
 
-Weekly Fog cup stays later: a posted start time only after 10+ people have shown up to a named Classic hour at least twice.
+Fog cup is already named (Sunday 21:00 UTC). Use it after Classic hour already has people, not instead of Classic.
 
 ---
 
@@ -155,15 +155,15 @@ Also note: invite credits paid (rake share only). If that number is high and the
 - Multi-chain deposits.
 - A marketing site, blog, or second domain.
 - Discord + Telegram + X + TikTok at once.
-- Weekly Fog cup before a named Classic hour already works.
+- More sit windows, RSVP, or a second hangout before Classic hour already works.
 
-The invite loop is already in v1.2. The missing piece is **people in the pit at the same time**.
+The invite loop is already live. The missing piece is **people in the pit at the same time**.
 
 ---
 
 ## This week’s checklist (print this)
 
-- [ ] Deploy v1.2. Confirm Account invite link and a test rake credit.
+- [ ] Confirm Account invite link and a test rake credit (already on v1.3.23).
 - [ ] Pay one real withdrawal. Confirm it shows on the lobby strip.
 - [ ] Open one Telegram. Pin Classic + invite + same-day cash-out.
 - [ ] Sit Classic daily. Name one public hour and keep it.

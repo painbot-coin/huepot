@@ -1,140 +1,102 @@
-# Huepot v1.1 review and v1.2 update plan
+# Huepot v1.3.22 review and v1.4 update plan
 
-**Live now:** https://huepot.net — product v1.3.3  
-**Read with:** `GROWTH.md`
+**Live now:** https://huepot.net — product **v1.3.23** (`withdrawSend:true`, `canSend:true`).
+**Read with:** `GROWTH.md`, `NETWORK.md`.
 
-v1.1 made the cashier safer: BSC-only Invest, min 10 USDT, pending confirms, withdraw queue copy, a public paid-out strip, a zero-balance pit CTA, and a support address. A stranger can send the first 10 USDT without guessing the chain.
+The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live. Empty Classic and empty proof strips are the remaining growth problem — not missing features.
 
-They still have no reason to tell a friend. There is no invite code, no `?ref=`, and no rake split. House rooms are empty except whoever is sitting Classic. The paid-out strip is in the code but hidden until staff marks a withdrawal **paid** — live `/api/payouts` is `[]`.
-
-The next update is **v1.2 — invite that pays itself**. Not more rooms. Not more atmosphere. Not ads.
+The next update is **v1.4 — finish the house**. Not more rooms. Not more hours. Not ads.
 
 ---
 
-## What v1.1 already does well
+## What is already live (do not rebuild)
 
-- Timed same-price color pots, ties refund, empty rounds skip, Fog hides public counts in the last 12 seconds.
-- Classic / Lightning / Duo / High Table / Fog Pit, plus custom rooms with optional fog.
+- Same-price timed pots, ties refund, Fog last-12s, custom rooms with a live timer.
+- House rooms: Classic, Lightning, Duo, High Table, Fog Pit. Classic hour **20:00 UTC**. Fog cup **Sunday 21:00 UTC**.
 - Google-only sign-in, 18+ gate, loss cap / cool-off / self-exclude.
-- Live BSC USDT deposits (12 confirms), pending-tx list, staff withdrawal queue with on-chain send.
-- Withdraw page: queued / sent / rejected, BscScan when `txHash` exists, min/max/daily caps.
-- Fairness sheet: seed committed at open, revealed at settle.
-- Host pause, mute, slow chat, close; staff freeze, void, ledger, reports.
-- After a take: copy table link, open a Fog table.
-- Footer + privacy: `support@huepot.net`.
+- BSC USDT deposit watch (12 confirms), auto-withdraw with queue + retry, BscScan on paid rows, house-short copy without leaking the house address.
+- Fairness commit/reveal. Staff freeze / void / ledger / queue Send (retry).
+- Invite: Account code, `?ref=` through Google, 20% of house rake, 10 USDT/day cap, invite line on Account.
+- Take share card + OG. Copy invite on the take card. Sit-window pings from a 30s tick (skip house, unverified, and anyone already pinged this window).
+- Welcome / deposit / sign-in copy already name Classic hour and Fog cup.
 
-Do not reopen those in v1.2 unless something is broken.
-
----
-
-## What v1.1 still gets wrong
-
-These are the reasons a visitor will sit once and not come back with a friend.
-
-1. **No invite loop.** Account has no code. Google callback ignores `?ref=`. Settle puts 100% of house rake on the house user. Sharing a table link does not pay anyone.
-2. **Paid-out strip is invisible.** `PublicPayouts` returns `null` when the list is empty. Strangers still cannot see that money leaves. That is now an ops job first (pay the first real withdrawal same day), then a small empty-state if you want the slot to exist before the first send.
-3. **Unused wallets are still minted.** Every account still gets ETH, Tron, Polygon, Arbitrum, Solana, and Bitcoin addresses. They sit under “More networks (not live).” A curious player who sends there still loses the money. Welcome copy still says “Your wallets are ready.”
-4. **Dead password doors.** `/signup`, `/forgot-password`, `/reset-password`, `/verify-email` redirect to sign-in. The 410 APIs (`/api/auth/signup`, `signin`, `forgot`, `reset`, `verify`, `resend`) are still on the public map. Google-only is the product; leftover doors look unfinished.
-5. **Share is clipboard only.** After a take you can copy the room URL. House rooms have no `?ref=`. Host “copy invite” is custom-table only.
-6. **Tables look dead.** Live lobby: Classic has one seat; Lightning, Duo, High, Fog, and the open custom table are empty pots. That is not a code bug. Sit Classic. Empty rooms kill the invite loop before it starts.
-
-Growth items from `GROWTH.md` that are still not in the code: rake invite codes, weekly Fog cup. The payout strip exists; it has no paid rows yet.
+Checked on this plan: `/api/takes` and `/api/payouts` are still `[]`.
 
 ---
 
-## v1.2 scope (one update)
+## What a stranger still gets wrong
 
-Ship one release. Keep it small enough to deploy in a few sittings. Order is the product: **invite attribution → rake split that stays solvent → stop unused wallets from looking live**.
+These are leftover, not missing loops.
+
+1. **Proof trail is empty.** Lobby says “Takes land here” and “Cash-outs land here.” Code is fine. No contested pot and no paid withdraw have landed. That is ops.
+2. **Network looks like the product.** Header is Rooms + Network. Unsigned `/network` is a feed shell that then asks for sign-in. A first visit should stay on the pit.
+3. **Dead password doors.** `/signup`, `/forgot-password`, `/reset-password`, `/verify-email` 307 to `/signin?notice=google`. Password APIs are already gone. Schema still has `passwordHash` / `verifyToken` — leave the columns; do not `prisma migrate deploy`.
+4. **Unused-chain code is still in the tree.** New users only mint BSC. `networks.ts` still lists ETH / Tron / Polygon / Arbitrum / Sol / BTC. Old Wallet rows may still sit in SQLite. They must never show as live.
+5. **Orphan staff/click surfaces.** `StaffPayoutsClient.tsx` is unused. `/api/staff/payouts` and `/api/click` have no client.
+
+Classic showing `@devguru13580 · @bill · @danny` is presence, not a live pot. Lightning / Duo / High / Fog stay empty unless you sit them.
+
+---
+
+## v1.4 scope (small, in this order)
+
+Same deploy recipe as 1.3.22 (temp clone, tarball, keep `WALLET_SECRET`, `pm2 startOrReload`). No `prisma migrate deploy`. One PM2 fork.
 
 ### Must ship
 
 | Item | Why | Where |
 |------|-----|--------|
-| **Invite code on Account** | Every Google user gets a short code they can copy. | New `referrals.ts`, `AccountClient.tsx` |
-| **`?ref=` on sign-in** | New Google user from a friend’s link is tagged once. Cookie or oauth state carries the code through the Google callback. Existing accounts are not retagged. | `SigninForm.tsx`, `auth.ts` `loginWithGoogle`, `google/callback` |
-| **Rake share on settle** | When a referred player’s clicks create house rake, a **fraction of that rake** (not stake, not treasury) goes to the inviter. House keeps the rest. | `game.ts` settle, `house.ts`, new tx type or `adjust`/`rake` note |
-| **Daily inviter cap** | One whale referrer cannot drain the house wallet. Hard stop per UTC day. | `referrals.ts`, settle |
-| **Inviter ledger line** | Inviter sees “Invite · N USDT from @name” in Account history, not a mystery credit. | `AccountClient.tsx`, `addTx` |
+| **Docs match live** | UPDATE / GROWTH / NETWORK still say v1.2. | This file, `GROWTH.md`, `NETWORK.md` |
+| **1.3.23 pit-first chrome** | Strangers should not land in an empty feed. | `SiteHeader.tsx`, `SiteFooter.tsx` |
+| **Kill leftover auth pages** | Google-only is the product. | Delete signup / forgot / reset / verify pages; redirect leftovers to `/signin` |
+| **Drop dead password helpers** | `hashPassword` / `verifyPassword` / `hasPassword` are unused. Keep `newSessionToken`. | `password.ts`, `public-user.ts` |
+| **Drop orphan staff/click files** | Console already has Send. | `StaffPayoutsClient.tsx`, `/api/staff/payouts`, `/api/click` |
 
-### Should ship in the same update if time
+### Should ship next if you still say “next step”
 
-| Item | Why | Where |
-|------|-----|--------|
-| **BSC-only wallets for new users** | Stop minting unused-chain addresses. Existing unused addresses stay in the DB but stay hidden unless already shown. | `wallets.ts`, `networks.ts`, Invest “More networks” |
-| **Kill leftover auth doors** | Delete or 404 the 410 password APIs and leftover pages. Redirects can stay as one `/signin` hop if bookmarks exist. | `app/signup`, `forgot-password`, `reset-password`, `verify-email`, `api/auth/*` stubs |
-| **Paid-out empty state** | If no paid withdrawals yet, show one quiet line (“Cash-outs land here”) instead of hiding the strip. After the first paid send, keep time + amount only. | `PublicPayouts.tsx` |
-| **Welcome / README copy** | One live BNB Chain address, not “wallets.” | `auth.ts` welcome notice, `README.md` |
+| Item | Why |
+|------|-----|
+| **1.3.24 unused-chain debris** | Public wallet list stays BSC-only. Do not delete old Wallet rows. |
+| **1.3.25 first-click invite nudge** | After a player’s first click, one notice: copy invite + next Classic 20:00 UTC. Also read hour-ping sitters from SQLite, not the 400-tx memory slice. |
 
-### Do not put in v1.2
+Then stop building.
 
-- New house rooms, more FX, leaderboards, achievements.
-- Multi-chain deposits.
-- Weekly Fog cup (`GROWTH.md` Phase 4 — after payouts are boring and Classic is busy).
-- Deposit bonuses, free play money, or “both people get a cut of stake.”
-- Sportsbook, odds, or anything copied from another casino.
-- Paid ads or bot traffic.
-- Postgres / multi-process rewrite (one PM2 fork is still fine).
+### Do not put in v1.4
 
----
-
-## Invite economics (keep it solvent)
-
-- House already takes about **5% of the losing pot** (`HOUSE_RAKE_BPS`, default 500).
-- Inviter reward = a **fraction of that rake only**, e.g. **20% of rake** created by the referred player’s clicks in that settle — never a bonus from treasury, never a cut of winning payouts.
-- Example: losing pot 20 USDT → rake 1.00 → inviter 0.20 → house 0.80. If two referred players sat that round, split the 0.20 by each referred player’s share of the clicks that created rake (or pay only for the referred player’s own losing/winning clicks that contributed to rake — pick one rule and document it on Account).
-- **Cap** per inviter per UTC day (start at **10 USDT**). Overflow stays with the house.
-- Self-invite, same Google account, and house user are rejected.
-- No “deposit 10 get 5 free.” You cannot afford that.
-
-If the settle math feels fuzzy, ship attribution + Account code first and add the split in a follow-up tag **v1.2.1**. A code that does nothing is still better than a bonus that empties the hot wallet.
-
----
-
-## How to build it (sequence)
-
-Work in this order so the site is safer after each merge.
-
-1. **Schema + code** — persist `invitedBy` (user id) and a stable `inviteCode` on User. Additive `ALTER TABLE` on live SQLite; do not `migrate deploy` over the existing DB. Prisma `migrate deploy` already failed once on this VPS (P3005).
-2. **Sign-in carry** — `?ref=CODE` → cookie / oauth state → `loginWithGoogle` sets `invitedBy` only on **new** users.
-3. **Account** — show code, copy link (`https://huepot.net/signin?ref=CODE`), lifetime invite credit, daily remaining cap.
-4. **Settle split** — after house rake is computed, peel the inviter slice, credit inviter, leave remainder on house, write both txs. Test with two Google accounts and a 1 USDT click.
-5. **Stop unused wallets** — new users get BSC only. Deploy this even if you pause before settle.
-6. **Delete leftover auth stubs** — last, because it does not make money.
-
-Each step should be playable on huepot.net the same day: copy a code, create a second Google account from the link, sit one click, see a rake line on the inviter.
+- New house rooms, more FX, leaderboards, achievements, Telegram bot, RSVP.
+- Multi-chain deposits, sportsbook, odds, deposit bonuses.
+- Postgres / multi-process rewrite.
+- Growing Network (posts, people, DMs) until Classic is busy without you.
+- Fake takes or fake paid-out rows.
 
 ---
 
 ## Ops that are not code (do these in parallel)
 
-v1.2 does not replace Phase 1 in `GROWTH.md`.
+v1.4 does not replace `NETWORK.md`.
 
-1. **Sit Classic.** Live pots are empty. A friend’s invite lands on a dead table and they leave.
-2. **Pay the first withdrawal same day** and mark it **paid** so the public strip has a real row. Until that happens, the v1.1 trust feature is invisible.
-3. **Post proof**, not hype: one take, one fairness seed, one paid BscScan. No private keys.
+1. Sit Classic at **20:00 UTC** with at least one other real click so `/api/takes` gets a row.
+2. Cash out once (min 5 USDT) so `/api/payouts` has a BscScan row. Top the house wallet if the queue waits.
+3. Sit Classic once yourself so you are in the 7-day sitter set and get the hour ping.
+4. One Telegram. Pin: one-sentence rule, Classic link, your `?ref=` invite, “cash-out is same day.”
+5. Send that invite to 3 people you know. 18+ only. No ads, no bots.
 
-Do not spend money on traffic until a referred player has been credited from rake and a stranger can see at least one paid cash-out.
+Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 ---
 
 ## Done when
 
-v1.2 is done when a new person can:
+A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-1. Copy an invite link from Account.
-2. Open that link, tick 18+, sign in with a **different** Google account, and land tagged.
-3. Sit one click; after settle the inviter sees a rake-share credit, not a mystery bonus.
-4. Hit the daily cap and see further rake stay with the house.
-5. (If wallet cleanup shipped) never be shown a Tron/Sol/BTC address as if it were live.
+**Build status:** v1.3.23 ships the chrome/auth cleanup. Proof rows still wait on you sitting and paying.
 
-**Build status:** v1.2.0 is live on huepot.net. Sit Classic and pay the first cash-out so the strip has a real row.
-
-Then go back to `GROWTH.md` Phase 1–2: sit Classic, pay same-day, post proof, live in one hangout. Weekly Fog cup stays later.
+Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 
 ---
 
 ## Suggested name
 
-**Huepot v1.2 — Invite that pays itself**
+**Huepot v1.4 — Finish the house**
 
-Same pit. One loop funded from house rake only.
+Same pit. Leftover doors gone. Proof still has to be earned.

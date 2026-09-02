@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { SUPPORT_EMAIL } from "@/lib/config";
 import { APP_VERSION } from "@/lib/version";
+import type { PublicUser } from "@/lib/types";
 
-export function SiteFooter() {
+export function SiteFooter({ user }: { user?: PublicUser | null }) {
   return (
     <footer className="site-footer">
       <p>
@@ -10,7 +11,7 @@ export function SiteFooter() {
         can afford.
       </p>
       <div className="footer-links">
-        <Link href="/network">Network</Link>
+        {user ? <Link href="/network">Network</Link> : null}
         <Link href="/how-it-works">How it works</Link>
         <Link href="/fairness">Fairness</Link>
         <Link href="/terms">Terms</Link>

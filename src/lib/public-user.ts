@@ -25,7 +25,6 @@ export function toPublicUser(user: User, txs: PublicUser["txs"], store?: StoreDa
     createdAt: user.createdAt,
     emailVerified: user.emailVerified,
     hasGoogle: Boolean(user.googleId),
-    hasPassword: Boolean(user.passwordHash),
     unreadCount: store ? unreadCount(store, user.id) : 0,
     wallets: publicWallets(user),
     txs: txs.map((tx) => ({ ...tx, amount: fromCents(tx.amount) })),

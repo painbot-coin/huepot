@@ -19,9 +19,15 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
         <Link className="nav-link" href="/">
           Rooms
         </Link>
-        <Link className="nav-link" href="/network">
-          Network
-        </Link>
+        {user ? (
+          <Link className="nav-link" href="/network">
+            Network
+          </Link>
+        ) : (
+          <Link className="nav-link" href="/how-it-works">
+            How it works
+          </Link>
+        )}
         {user ? (
           <>
             <Link className="nav-link" href="/invest">
