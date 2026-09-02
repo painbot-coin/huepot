@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import {
   houseWalletStatus,
+  inboxHoldings,
+  listSweeps,
   listWithdrawals,
   resolveWithdrawal,
   sendQueuedWithdrawal,
+  sweepDueInboxes,
 } from "@/lib/chain";
 import {
   hideReportedChat,
@@ -51,6 +54,8 @@ export async function GET(request: Request) {
         withdrawals: await listWithdrawals(),
         house,
         treasury: await houseWalletStatus(),
+        inboxes: await inboxHoldings(),
+        sweeps: await listSweeps(),
         canSend: withdrawSendEnabled(),
         you,
       });
@@ -90,6 +95,17 @@ export async function POST(request: Request) {
       note?: string;
       id?: string;
     };
+    if (body.action === "sweep") {
+      const sweeps = await sweepDueInboxes();
+      const moved = sweeps.filter((item) => item.ok).length;
+      await writeStaffLog(actor, "sweep", "inboxes", moved ? `Moved ${moved} inbox${moved === 1 ? "" : "es"}` : "No inbox USDT to move");
+      return NextResponse.json({
+        withdrawals: await listWithdrawals(),
+        treasury: await houseWalletStatus(),
+        inboxes: await inboxHoldings(),
+        sweeps: await listSweeps(),
+      });
+    }
     if (body.action === "send") {
       if (!body.id) throw new Error("Pick a payout.");
       await sendQueuedWithdrawal(body.id);

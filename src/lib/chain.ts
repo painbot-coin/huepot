@@ -4,9 +4,11 @@ import {
   Wallet,
   formatUnits,
   id,
+  parseEther,
   zeroPadValue,
   type Log,
 } from "ethers";
+import { decryptSecret } from "@/lib/secret";
 import {
   chainConfirms,
   chainRpcUrl,
@@ -85,6 +87,16 @@ export async function ensureChainTables() {
   } catch {
     /* column already exists */
   }
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS ChainSweep (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL,
+      address TEXT NOT NULL,
+      amount REAL NOT NULL,
+      txHash TEXT NOT NULL,
+      createdAt INTEGER NOT NULL
+    )
+  `);
 }
 
 function usesPublicSeed() {
@@ -188,6 +200,7 @@ export function startChainWatcher() {
         nextDelayMs = isRpcLimit(error) ? 60_000 : 20_000;
       })
       .then(() => drainQueuedWithdrawals().catch(() => undefined))
+      .then(() => sweepDueInboxes().catch(() => undefined))
       .finally(() => {
         setTimeout(tick, nextDelayMs);
       });
@@ -606,10 +619,140 @@ export async function resolveWithdrawal(
 }
 
 const sending = new Set<string>();
+const sweeping = { busy: false };
 const USDT_ABI = [
   "function transfer(address to, uint256 value)",
   "function balanceOf(address owner) view returns (uint256)",
 ];
+const SWEEP_GAS_TOPUP = parseEther("0.0001");
+const SWEEP_GAS_MIN = parseEther("0.00004");
+const SWEEP_MIN_USDT = BigInt(10) ** BigInt(LIVE_USDT_DECIMALS - 2);
+
+export type InboxHolding = {
+  usdt: number;
+  count: number;
+};
+
+export type InboxSweep = {
+  address: string;
+  amount: number;
+  txHash: string;
+  ok: boolean;
+  error?: string;
+};
+
+export async function inboxHoldings(): Promise<InboxHolding> {
+  const empty = { usdt: 0, count: 0 };
+  if (!chainRpcUrl()) return empty;
+  const house = houseWalletAddress().toLowerCase();
+  try {
+    const provider = new JsonRpcProvider(chainRpcUrl(), 56, { staticNetwork: true });
+    const token = new Contract(LIVE_USDT, USDT_ABI, provider);
+    const wallets = await prisma.wallet.findMany({
+      where: { network: LIVE_CHAIN_ID },
+      select: { address: true },
+    });
+    let usdt = 0;
+    let count = 0;
+    for (const row of wallets) {
+      if (row.address.toLowerCase() === house) continue;
+      const bal = (await token.balanceOf(row.address)) as bigint;
+      if (bal < SWEEP_MIN_USDT) continue;
+      usdt += Number(formatUnits(bal, LIVE_USDT_DECIMALS));
+      count += 1;
+    }
+    return { usdt, count };
+  } catch {
+    return empty;
+  }
+}
+
+export async function listSweeps(take = 12) {
+  await ensureChainTables();
+  const rows = await prisma.$queryRawUnsafe<
+    { address: string; amount: number; txHash: string; createdAt: number | bigint | string }[]
+  >(
+    `SELECT address, amount, txHash, CAST(createdAt AS TEXT) as createdAt FROM ChainSweep ORDER BY createdAt DESC LIMIT ${Math.max(1, Math.min(40, take))}`,
+  );
+  return rows.map((row) => ({
+    address: row.address,
+    amount: fromCents(row.amount),
+    txHash: row.txHash,
+    at: Number(row.createdAt),
+  }));
+}
+
+async function recordSweep(userId: string, address: string, cents: number, txHash: string) {
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO ChainSweep (id, userId, address, amount, txHash, createdAt)
+     VALUES ('${esc(crypto.randomUUID())}', '${esc(userId)}', '${esc(address)}', ${cents}, '${esc(txHash)}', ${Date.now()})`,
+  );
+}
+
+async function sweepOneInbox(
+  provider: JsonRpcProvider,
+  house: string,
+  row: { userId: string; address: string; secretEnc: string },
+): Promise<InboxSweep | null> {
+  if (row.address.toLowerCase() === house.toLowerCase()) return null;
+  const tokenView = new Contract(LIVE_USDT, USDT_ABI, provider);
+  const bal = (await tokenView.balanceOf(row.address)) as bigint;
+  if (bal < SWEEP_MIN_USDT) return null;
+  const inbox = new Wallet(decryptSecret(row.secretEnc), provider);
+  if (inbox.address.toLowerCase() !== row.address.toLowerCase()) {
+    throw new Error("Inbox key does not match the address.");
+  }
+  const gasBal = await provider.getBalance(inbox.address);
+  if (gasBal < SWEEP_GAS_MIN) {
+    const funder = new Wallet(withdrawKey(), provider);
+    const fundGas = await provider.getBalance(funder.address);
+    if (fundGas < SWEEP_GAS_TOPUP * BigInt(2)) {
+      throw new Error("House wallet needs more BNB to move inbox USDT.");
+    }
+    const top = await funder.sendTransaction({ to: inbox.address, value: SWEEP_GAS_TOPUP });
+    await top.wait(1);
+  }
+  const usdt = new Contract(LIVE_USDT, USDT_ABI, inbox);
+  const sent = await usdt.getFunction("transfer").send(house, bal);
+  await sent.wait(1);
+  const cents = Math.round(Number(formatUnits(bal, LIVE_USDT_DECIMALS)) * 100);
+  await recordSweep(row.userId, row.address, cents, sent.hash);
+  return { address: row.address, amount: fromCents(cents), txHash: sent.hash, ok: true };
+}
+
+export async function sweepDueInboxes(): Promise<InboxSweep[]> {
+  if (!withdrawSendEnabled() || sweeping.busy) return [];
+  sweeping.busy = true;
+  const results: InboxSweep[] = [];
+  try {
+    await ensureChainTables();
+    const house = houseWalletAddress();
+    if (!house) return [];
+    const provider = new JsonRpcProvider(chainRpcUrl(), 56, { staticNetwork: true });
+    const wallets = await prisma.wallet.findMany({
+      where: { network: LIVE_CHAIN_ID },
+      select: { userId: true, address: true, secretEnc: true },
+    });
+    for (const row of wallets) {
+      try {
+        const item = await sweepOneInbox(provider, house, row);
+        if (item) results.push(item);
+      } catch (error) {
+        results.push({
+          address: row.address,
+          amount: 0,
+          txHash: "",
+          ok: false,
+          error: error instanceof Error ? error.message.split("\n")[0] ?? "Sweep failed" : "Sweep failed",
+        });
+      }
+    }
+    clearHouseWalletStatus();
+    return results;
+  } finally {
+    sweeping.busy = false;
+  }
+}
 
 export async function drainQueuedWithdrawals() {
   if (!withdrawSendEnabled()) return;

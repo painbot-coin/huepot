@@ -41,6 +41,8 @@ type Treasury = {
   bnb: number;
   ready: boolean;
 };
+type InboxHold = { usdt: number; count: number };
+type SweepRow = { address: string; amount: number; txHash: string; at: number };
 
 export function StaffConsole() {
   const [secret, setSecret] = useState("");
@@ -54,6 +56,8 @@ export function StaffConsole() {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [canSend, setCanSend] = useState(false);
   const [treasury, setTreasury] = useState<Treasury | null>(null);
+  const [inboxes, setInboxes] = useState<InboxHold | null>(null);
+  const [sweeps, setSweeps] = useState<SweepRow[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [users, setUsers] = useState<StaffUserRow[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
@@ -126,6 +130,8 @@ export function StaffConsole() {
         house?: { balance: number; percent: string };
         canSend?: boolean;
         treasury?: Treasury;
+        inboxes?: InboxHold;
+        sweeps?: SweepRow[];
         you?: { operator?: string };
       };
       if (response.status === 401) {
@@ -142,6 +148,8 @@ export function StaffConsole() {
       if (data.house) setHouse(data.house);
       if (typeof data.canSend === "boolean") setCanSend(data.canSend);
       if (data.treasury) setTreasury(data.treasury);
+      if (data.inboxes) setInboxes(data.inboxes);
+      if (data.sweeps) setSweeps(data.sweeps);
       if (data.you?.operator) setOperator(data.you.operator);
       setSignedIn(true);
       setTab(next);
@@ -167,6 +175,9 @@ export function StaffConsole() {
         users?: StaffUserRow[];
         rooms?: RoomRow[];
         reports?: ReportRow[];
+        treasury?: Treasury;
+        inboxes?: InboxHold;
+        sweeps?: SweepRow[];
       };
       if (response.status === 401) {
         setSignedIn(false);
@@ -177,6 +188,9 @@ export function StaffConsole() {
       if (data.users) setUsers(data.users);
       if (data.rooms) setRooms(data.rooms);
       if (data.reports) setReports(data.reports);
+      if (data.treasury) setTreasury(data.treasury);
+      if (data.inboxes) setInboxes(data.inboxes);
+      if (data.sweeps) setSweeps(data.sweeps);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update");
     } finally {
@@ -250,6 +264,13 @@ export function StaffConsole() {
             : " · fund this address on BNB Chain with BEP-20 USDT and a little BNB"}
         </p>
       ) : null}
+      {inboxes ? (
+        <p className="mt-2 text-sm text-zinc-300">
+          Player inboxes {formatUsdt(inboxes.usdt)} USDT
+          {inboxes.count ? ` · ${inboxes.count} address${inboxes.count === 1 ? "" : "es"}` : ""}
+          . Deposits sit there until swept. After a sweep, house take stays in the send wallet.
+        </p>
+      ) : null}
       {signedIn ? (
       <div className="mt-6 flex flex-wrap gap-2">
         {(["payouts", "players", "tables", "ledger", "reports", "log"] as Tab[]).map((item) => (
@@ -266,7 +287,35 @@ export function StaffConsole() {
       ) : null}
 
       {signedIn && tab === "payouts" ? (
-        <ul className="mt-8 space-y-2">
+        <div className="mt-8 space-y-4">
+        {canSend ? (
+          <button
+            className="chip-btn"
+            disabled={busy || !inboxes?.count}
+            onClick={() => void act({ action: "sweep" })}
+            type="button"
+          >
+            {busy ? "Sweeping…" : "Sweep inboxes to send wallet"}
+          </button>
+        ) : null}
+        {sweeps.length ? (
+          <ul className="space-y-2">
+            {sweeps.map((row) => (
+              <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.txHash || `${row.address}-${row.at}`}>
+                <p className="text-zinc-200">Swept {formatUsdt(row.amount)} USDT</p>
+                <a
+                  className="mt-1 inline-block break-all font-mono text-xs text-amber-200/80"
+                  href={`https://bscscan.com/tx/${row.txHash}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {row.txHash.slice(0, 10)}…{row.txHash.slice(-6)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <ul className="space-y-2">
           {withdrawals.map((row) => (
             <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.id}>
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -308,6 +357,7 @@ export function StaffConsole() {
             </li>
           ))}
         </ul>
+        </div>
       ) : null}
 
       {signedIn && tab === "players" ? (
