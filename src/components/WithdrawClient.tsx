@@ -23,12 +23,10 @@ function isOpen(item: Withdrawal) {
 
 export function WithdrawClient() {
   const [state, setState] = useState<GameState | null>(null);
-  const [networkId, setNetworkId] = useState("");
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [live, setLive] = useState(false);
   const [houseReady, setHouseReady] = useState<boolean | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
 
@@ -40,8 +38,6 @@ export function WithdrawClient() {
       window.location.href = "/signin";
       return;
     }
-    const liveId = data.user.wallets.find((item) => item.live)?.id;
-    setNetworkId((current) => current || liveId || data.user!.wallets[0]?.id || "");
     setAddress(data.user.withdrawAddress || "");
   }
 
@@ -70,10 +66,6 @@ export function WithdrawClient() {
   useEffect(() => {
     void load();
     void loadQueue();
-    void fetch("/api/auth/providers")
-      .then((response) => response.json() as Promise<{ liveWithdrawals?: boolean }>)
-      .then((data) => setLive(Boolean(data.liveWithdrawals)))
-      .catch(() => undefined);
   }, []);
 
   const pending = withdrawals.some(isOpen);
@@ -84,10 +76,8 @@ export function WithdrawClient() {
     return () => window.clearInterval(poll);
   }, [pending]);
 
-  const wallets = live
-    ? state?.user?.wallets.filter((item) => item.live) ?? []
-    : state?.user?.wallets ?? [];
-  const wallet = wallets.find((item) => item.id === networkId) ?? wallets[0];
+  const wallet =
+    state?.user?.wallets.find((item) => item.live) ?? state?.user?.wallets[0];
 
   async function send() {
     setBusy(true);
@@ -99,7 +89,7 @@ export function WithdrawClient() {
         body: JSON.stringify({
           amount: Number(amount),
           address,
-          networkId: wallet?.id ?? networkId,
+          networkId: wallet?.id ?? "bsc",
         }),
       });
       const data = (await response.json()) as GameState & {
@@ -147,20 +137,10 @@ export function WithdrawClient() {
           {formatUsdt(state.user.balance)} USDT
         </p>
 
-        <label className="mt-6 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        <p className="mt-6 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
           Network
-        </label>
-        <select
-          className="field"
-          onChange={(event) => setNetworkId(event.target.value)}
-          value={wallet?.id ?? networkId}
-        >
-          {wallets.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name} · {item.standard} {item.asset}
-            </option>
-          ))}
-        </select>
+        </p>
+        <p className="mt-2 text-sm text-zinc-300">BNB Smart Chain · BEP-20 USDT</p>
 
         <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
           Destination address

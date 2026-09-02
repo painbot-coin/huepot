@@ -1,6 +1,6 @@
 # Huepot v1.3.22 review and v1.4 update plan
 
-**Live now:** https://huepot.net — product **v1.3.23** (`withdrawSend:true`, `canSend:true`).
+**Live now:** https://huepot.net — product **v1.3.24** (`withdrawSend:true`, `canSend:true`).
 **Read with:** `GROWTH.md`, `NETWORK.md`.
 
 The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live. Empty Classic and empty proof strips are the remaining growth problem — not missing features.
@@ -89,7 +89,7 @@ Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-**Build status:** v1.3.23 ships the chrome/auth cleanup. Proof rows still wait on you sitting and paying.
+**Build status:** v1.3.23 chrome/auth cleanup and v1.3.24 BSC-only rails are shipped. Proof rows still wait on you sitting and paying.
 
 Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 

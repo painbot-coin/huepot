@@ -374,13 +374,13 @@ export function depositToNetwork(
         : "Live deposits are not open yet. Send USDT to your BNB Chain address and wait for credit.",
     );
   }
-  if (!isNetworkId(networkId)) {
-    throw new Error("Pick a deposit network.");
+  if (networkId && !isNetworkId(networkId)) {
+    throw new Error("Demo credit is BNB Chain USDT only.");
   }
   if (!Number.isFinite(amount) || amount < MIN_DEPOSIT) {
     throw new Error(`Minimum deposit is ${MIN_DEPOSIT} USDT.`);
   }
-  const network = networkById(networkId);
+  const network = networkById(LIVE_CHAIN_ID);
   const credit = toCents(amount);
   user.balance += credit;
   store.txs.unshift({
@@ -409,14 +409,11 @@ export function withdrawFromNetwork(
   queuedId?: string,
 ) {
   assertCanCash(user);
-  if (!isNetworkId(networkId)) {
-    throw new Error("Pick a withdraw network.");
-  }
-  const live = liveWithdrawalsEnabled();
-  if (live && networkId !== LIVE_CHAIN_ID) {
+  if (networkId && !isNetworkId(networkId)) {
     throw new Error("Cash-out is BNB Chain USDT only.");
   }
-  const network = networkById(networkId);
+  const live = liveWithdrawalsEnabled();
+  const network = networkById(LIVE_CHAIN_ID);
   const cleaned = address.trim();
   if (!validateAddress(network.family, cleaned)) {
     throw new Error(`Enter a valid ${network.name} address.`);

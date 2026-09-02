@@ -14,7 +14,6 @@ import type {
   Tx,
   User,
 } from "@/lib/types";
-import type { NetworkId } from "@/lib/networks";
 
 const JSON_STORE_PATH = path.join(process.cwd(), "data", "store.json");
 
@@ -84,7 +83,7 @@ function userFromRow(
 ): User {
   const wallets: User["wallets"] = {};
   for (const wallet of row.wallets) {
-    wallets[wallet.network as NetworkId] = {
+    wallets[wallet.network] = {
       address: wallet.address,
       secretEnc: wallet.secretEnc,
     };

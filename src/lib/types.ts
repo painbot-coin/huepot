@@ -119,7 +119,7 @@ export type User = {
   createdAt: number;
   balance: number;
   withdrawAddress: string;
-  wallets: Partial<Record<NetworkId, StoredWallet>>;
+  wallets: Partial<Record<string, StoredWallet>>;
   limits: PlayLimits;
   ageConfirmedAt: number | null;
   resetToken: string | null;

@@ -1,83 +1,28 @@
-import { createHash } from "crypto";
-import { getBytes, sha256, SigningKey, Wallet } from "ethers";
-import nacl from "tweetnacl";
-import { encodeBase58 } from "./base58";
+import { Wallet } from "ethers";
 import { LIVE_CHAIN_ID } from "./config";
-import { NETWORKS, type NetworkId } from "./networks";
+import { liveNetwork, type NetworkId } from "./networks";
 import { encryptSecret } from "./secret";
 import type { StoredWallet, User } from "./types";
 
-function doubleSha256(bytes: Uint8Array) {
-  return getBytes(sha256(getBytes(sha256(bytes))));
-}
-
-function encodeBase58Check(payload: Uint8Array) {
-  const checksum = doubleSha256(payload).slice(0, 4);
-  const combined = new Uint8Array(payload.length + 4);
-  combined.set(payload);
-  combined.set(checksum, payload.length);
-  return encodeBase58(combined);
-}
-
-function ethHexToTron(ethAddress: string) {
-  const payload = new Uint8Array(21);
-  payload[0] = 0x41;
-  payload.set(getBytes(ethAddress), 1);
-  return encodeBase58Check(payload);
-}
-
-function p2pkhAddress(compressedPubKey: Uint8Array) {
-  const sha = createHash("sha256").update(compressedPubKey).digest();
-  const hash160 = createHash("ripemd160").update(sha).digest();
-  const payload = Buffer.concat([Buffer.from([0x00]), hash160]);
-  return encodeBase58Check(payload);
-}
-
-function generateOne(family: (typeof NETWORKS)[number]["family"]): StoredWallet {
-  if (family === "sol") {
-    const pair = nacl.sign.keyPair();
-    return {
-      address: encodeBase58(pair.publicKey),
-      secretEnc: encryptSecret(Buffer.from(pair.secretKey).toString("hex")),
-    };
-  }
-
+function generateBsc(): StoredWallet {
   const wallet = Wallet.createRandom();
-  if (family === "evm") {
-    return {
-      address: wallet.address,
-      secretEnc: encryptSecret(wallet.privateKey),
-    };
-  }
-  if (family === "tron") {
-    return {
-      address: ethHexToTron(wallet.address),
-      secretEnc: encryptSecret(wallet.privateKey),
-    };
-  }
-
-  const compressed = getBytes(
-    SigningKey.computePublicKey(wallet.privateKey, true),
-  );
   return {
-    address: p2pkhAddress(compressed),
+    address: wallet.address,
     secretEnc: encryptSecret(wallet.privateKey),
   };
 }
 
 export function ensureUserWallets(user: User) {
   user.wallets ??= {};
-  const live = NETWORKS.find((network) => network.id === LIVE_CHAIN_ID);
-  if (live && !user.wallets[live.id]) {
-    user.wallets[live.id] = generateOne(live.family);
+  if (!user.wallets[LIVE_CHAIN_ID]) {
+    user.wallets[LIVE_CHAIN_ID] = generateBsc();
   }
 }
 
 export function publicWallets(user: User) {
   ensureUserWallets(user);
-  const live = NETWORKS.find((network) => network.id === LIVE_CHAIN_ID);
-  if (!live) return [];
-  const stored = user.wallets[live.id];
+  const live = liveNetwork();
+  const stored = user.wallets[LIVE_CHAIN_ID];
   if (!stored) return [];
   return [
     {
