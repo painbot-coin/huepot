@@ -10,6 +10,8 @@ import { getHeaderUser } from "@/lib/auth";
 import { appUrl } from "@/lib/config";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],

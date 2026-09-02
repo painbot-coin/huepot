@@ -12,13 +12,15 @@ import type { Tx } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const lite = new URL(request.url).searchParams.get("lite") === "1";
     const token = await getSessionToken();
     const payload = await withStore(async (store) => {
       const user = userFromToken(store, token);
       if (!user) return { user: null };
       ensureInviteCode(store, user);
+      if (lite) return { user: toPublicUser(user, [], store) };
       const rows = await prisma.$queryRawUnsafe<
         {
           id: string;

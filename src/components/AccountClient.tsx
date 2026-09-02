@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
+import { publishBank } from "@/lib/bank-sync";
 import { COOL_OFF_HOURS, SELF_EXCLUDE_DAYS } from "@/lib/limits";
 import { inviteSitLead, inviteText } from "@/lib/invite-copy";
 import { formatUsdt } from "@/lib/money";
@@ -33,6 +34,7 @@ export function AccountClient() {
         return;
       }
       setUser(data.user);
+      publishBank(data.user.balance);
     })();
     void fetch("/api/rooms")
       .then((response) => response.json() as Promise<{ classicHour?: ClassicHour; fogCup?: FogCup }>)

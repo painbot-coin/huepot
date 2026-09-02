@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { publishBank } from "@/lib/bank-sync";
 import { MIN_DEPOSIT } from "@/lib/config";
 import { formatUsdt } from "@/lib/money";
 import type { GameState, PublicWallet } from "@/lib/types";
@@ -46,6 +47,7 @@ export function InvestClient() {
     const response = await fetch("/api/state");
     const data = (await response.json()) as GameState;
     setState(data);
+    if (typeof data.user?.balance === "number") publishBank(data.user.balance);
     if (!data.user) {
       window.location.href = "/signin";
       return;
@@ -123,6 +125,7 @@ export function InvestClient() {
       const data = (await response.json()) as GameState & { error?: string };
       if (!response.ok) throw new Error(data.error || "Deposit failed");
       setState(data);
+      if (typeof data.user?.balance === "number") publishBank(data.user.balance);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Deposit failed");
     } finally {

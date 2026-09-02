@@ -38,6 +38,7 @@ import { SoundToggle } from "@/components/SoundToggle";
 import { colorById, type ColorId } from "@/lib/colors";
 import { REVEAL_SECONDS } from "@/lib/config";
 import { shortHash } from "@/lib/fairness";
+import { publishBank } from "@/lib/bank-sync";
 import { emitFx } from "@/lib/fx";
 import { classicHourClock } from "@/lib/classic-hour";
 import { fogCupClock } from "@/lib/fog-cup";
@@ -143,6 +144,7 @@ export function GameClient({ slug }: { slug: string }) {
     lastPot.current = next.round.pot;
     lastStatus.current = next.round.status;
     lastRound.current = next.round.number;
+    if (typeof next.user?.balance === "number") publishBank(next.user.balance);
     setState(next);
   }, [slug]);
 

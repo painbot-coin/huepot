@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { publishBank } from "@/lib/bank-sync";
 import {
   MAX_DAILY_WITHDRAW,
   MAX_WITHDRAW,
@@ -34,6 +35,7 @@ export function WithdrawClient() {
     const response = await fetch("/api/state");
     const data = (await response.json()) as GameState;
     setState(data);
+    if (typeof data.user?.balance === "number") publishBank(data.user.balance);
     if (!data.user) {
       window.location.href = "/signin";
       return;
@@ -100,6 +102,7 @@ export function WithdrawClient() {
       };
       if (!response.ok) throw new Error(data.error || "Withdraw failed");
       setState(data);
+      if (typeof data.user?.balance === "number") publishBank(data.user.balance);
       setAmount("");
       if (Array.isArray(data.withdrawals)) setWithdrawals(data.withdrawals);
       if (typeof data.houseReady === "boolean") setHouseReady(data.houseReady);
