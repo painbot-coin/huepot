@@ -1,5 +1,5 @@
-import { AccountClient } from "@/components/AccountClient";
+import { LazyAccountClient } from "@/components/LazyViews";
 
 export default function AccountPage() {
-  return <AccountClient />;
+  return <LazyAccountClient />;
 }

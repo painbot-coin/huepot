@@ -1,4 +1,4 @@
-import { FairnessClient } from "@/components/FairnessClient";
+import { LazyFairnessClient } from "@/components/LazyViews";
 
 export default async function FairnessPage({
   searchParams,
@@ -6,5 +6,5 @@ export default async function FairnessPage({
   searchParams: Promise<{ slug?: string }>;
 }) {
   const { slug } = await searchParams;
-  return <FairnessClient slug={slug} />;
+  return <LazyFairnessClient slug={slug} />;
 }

@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { Cinzel, Outfit } from "next/font/google";
 import { AgeBanner } from "@/components/AgeBanner";
-import { Atmosphere } from "@/components/Atmosphere";
+import { LazyFx, LazyMessageDock } from "@/components/LazyFx";
 import { PlayBlockBanner } from "@/components/PlayBlockBanner";
 import { RefCookie } from "@/components/RefCookie";
-import { MessageDock } from "@/components/MessageDock";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SoundBus } from "@/components/SoundBus";
 import { getHeaderUser } from "@/lib/auth";
 import { appUrl } from "@/lib/config";
 import "./globals.css";
@@ -39,11 +37,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
-        <Atmosphere />
-        <SoundBus />
+        <LazyFx />
         <RefCookie />
         <SiteHeader user={user} />
-        {user ? <MessageDock /> : null}
+        {user ? <LazyMessageDock /> : null}
         {user && !user.ageConfirmed ? <AgeBanner /> : null}
         {user?.blocked && user.blockKind !== "age" ? <PlayBlockBanner user={user} /> : null}
         <div className="page-stage flex-1">{children}</div>

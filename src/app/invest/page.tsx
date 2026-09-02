@@ -1,5 +1,5 @@
-import { InvestClient } from "@/components/InvestClient";
+import { LazyInvestClient } from "@/components/LazyViews";
 
 export default function InvestPage() {
-  return <InvestClient />;
+  return <LazyInvestClient />;
 }

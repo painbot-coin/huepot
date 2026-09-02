@@ -1,4 +1,4 @@
-import { FairnessDetail } from "@/components/FairnessDetail";
+import { LazyFairnessDetail } from "@/components/LazyViews";
 
 export default async function FairnessRoundPage({
   params,
@@ -6,5 +6,5 @@ export default async function FairnessRoundPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <FairnessDetail id={id} />;
+  return <LazyFairnessDetail id={id} />;
 }

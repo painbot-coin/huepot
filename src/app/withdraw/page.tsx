@@ -1,5 +1,5 @@
-import { WithdrawClient } from "@/components/WithdrawClient";
+import { LazyWithdrawClient } from "@/components/LazyViews";
 
 export default function WithdrawPage() {
-  return <WithdrawClient />;
+  return <LazyWithdrawClient />;
 }

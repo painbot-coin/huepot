@@ -1,4 +1,4 @@
-import { NetworkProfile } from "@/components/NetworkProfile";
+import { LazyNetworkProfile } from "@/components/LazyViews";
 
 export default async function NetworkProfilePage({
   params,
@@ -6,5 +6,5 @@ export default async function NetworkProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  return <NetworkProfile username={decodeURIComponent(username)} />;
+  return <LazyNetworkProfile username={decodeURIComponent(username)} />;
 }

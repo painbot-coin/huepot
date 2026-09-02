@@ -1,5 +1,5 @@
-import { NotificationsClient } from "@/components/NotificationsClient";
+import { LazyNotificationsClient } from "@/components/LazyViews";
 
 export default function NotificationsPage() {
-  return <NotificationsClient />;
+  return <LazyNotificationsClient />;
 }

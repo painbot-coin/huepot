@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CreateRoomForm } from "@/components/CreateRoomForm";
+import { LazyCreateRoomForm } from "@/components/LazyViews";
 import { getHeaderUser } from "@/lib/auth";
 
 export default async function NewRoomPage() {
@@ -28,7 +28,7 @@ export default async function NewRoomPage() {
           </Link>
         </div>
       ) : (
-        <CreateRoomForm />
+        <LazyCreateRoomForm />
       )}
     </main>
   );

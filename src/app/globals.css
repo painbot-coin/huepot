@@ -2019,6 +2019,8 @@ select.field {
 }
 
 .room-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 220px;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;

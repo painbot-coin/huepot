@@ -1,5 +1,5 @@
-import { RoomLobby } from "@/components/RoomLobby";
+import { LazyRoomLobby } from "@/components/LazyLobby";
 
 export default function Home() {
-  return <RoomLobby />;
+  return <LazyRoomLobby />;
 }

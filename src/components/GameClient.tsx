@@ -11,7 +11,8 @@ import {
   type CSSProperties,
   type MouseEvent,
 } from "react";
-import { CreateRoomForm } from "@/components/CreateRoomForm";
+import dynamic from "next/dynamic";
+import { PitLoader } from "@/components/PitLoader";
 import {
   IconChat,
   IconClose,
@@ -44,6 +45,11 @@ import { inviteText } from "@/lib/invite-copy";
 import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
 import { formatTakeLine, withSitWhen } from "@/lib/take-copy";
 import type { GameState, PublicRound } from "@/lib/types";
+
+const CreateRoomForm = dynamic(
+  () => import("@/components/CreateRoomForm").then((mod) => mod.CreateRoomForm),
+  { loading: () => <PitLoader label="Opening create…" /> },
+);
 
 type Burst = { id: number; x: number; y: number; color: string };
 type Spark = { id: number; colorId: ColorId };

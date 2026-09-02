@@ -1,14 +1,11 @@
 import { Suspense } from "react";
-import { NetworkClient } from "@/components/NetworkClient";
+import { LazyNetworkClient } from "@/components/LazyViews";
+import { PitLoader } from "@/components/PitLoader";
 
 export default function NetworkPeoplePage() {
   return (
-    <Suspense
-      fallback={
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the pit…</p>
-      }
-    >
-      <NetworkClient />
+    <Suspense fallback={<PitLoader label="Opening the pit…" />}>
+      <LazyNetworkClient />
     </Suspense>
   );
 }

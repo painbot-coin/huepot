@@ -2,7 +2,7 @@
 
 **Live:** https://huepot.net  
 **Read with:** `GROWTH.md` (what not to do) and `UPDATE.md` (product).  
-**Live product:** v1.3.27 is on https://huepot.net (invite, cashier, Classic hour, Fog cup). Open Account for your code before you ask strangers to share.
+**Live product:** v1.3.28 is on https://huepot.net (invite, cashier, Classic hour, Fog cup). Open Account for your code before you ask strangers to share.
 
 Huepot does not grow from a logo. It grows from a **small network of people who sit the same table, get paid, and send one link**. Empty Classic kills every other tactic.
 

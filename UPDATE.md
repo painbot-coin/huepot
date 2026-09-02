@@ -1,6 +1,6 @@
 # Huepot v1.3.22 review and v1.4 update plan
 
-**Live now:** https://huepot.net — product **v1.3.27** (`withdrawSend:true`, `canSend:true`).
+**Live now:** https://huepot.net — product **v1.3.28** (`withdrawSend:true`, `canSend:true`).
 **Read with:** `GROWTH.md`, `NETWORK.md`.
 
 The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live. Empty Classic and empty proof strips are the remaining growth problem — not missing features.

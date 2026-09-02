@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { GameClient } from "@/components/GameClient";
+import { LazyGameClient } from "@/components/LazyGame";
 import { BASIC_ROOMS } from "@/lib/rooms";
 
 export async function generateMetadata({
@@ -23,5 +23,5 @@ export default async function RoomPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return <GameClient slug={slug} />;
+  return <LazyGameClient slug={slug} />;
 }
