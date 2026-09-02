@@ -30,8 +30,8 @@ export function creditConfirmedDeposit(
   notify(store, userId, {
     kind: "deposit",
     title: "Deposit credited",
-    body: `${formatCents(credit)} USDT on ${network.name} is in your bank.`,
-    href: "/invest",
+    body: `${formatCents(credit)} USDT on ${network.name} is in your bank. Classic sits 20:00 UTC. Fog cup Sunday 21:00 UTC.`,
+    href: "/rooms/classic",
   });
   return true;
 }

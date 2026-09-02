@@ -30,6 +30,7 @@ import {
 import { ensureUserWallets } from "./wallets";
 import { classicHourAt } from "./classic-hour";
 import { fogCupAt } from "./fog-cup";
+import { announceSitWindows } from "./sit-windows";
 import type {
   GameState,
   LobbyState,
@@ -533,6 +534,7 @@ export function getLobbyState(store: StoreData, userId: string | null): LobbySta
   for (const room of Object.values(store.rooms)) tickRoom(store, room);
   pruneExpiredRooms(store);
   ensureRooms(store);
+  announceSitWindows(store);
   return {
     now: nowMs(),
     user: publicUserFor(store, userId),
@@ -553,6 +555,7 @@ export function getRoomState(
   ensureRooms(store);
   const room = findRoom(store, slug);
   tickRoom(store, room);
+  announceSitWindows(store);
   const round = room.round!;
   return {
     now: nowMs(),
@@ -578,6 +581,7 @@ export function snapshotRoomState(
     (error as Error & { status?: number }).status = 404;
     throw error;
   }
+  announceSitWindows(store);
   return {
     now: nowMs(),
     user: publicUserFor(store, userId),

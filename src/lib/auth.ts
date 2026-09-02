@@ -161,7 +161,7 @@ export function loginWithGoogle(
     notify(store, user.id, {
       kind: "welcome",
       title: "Welcome to Huepot",
-      body: "Signed in with Google. Your BNB Chain USDT address is ready on Add USDT.",
+      body: "Signed in with Google. Your BNB Chain USDT address is ready on Add USDT. Classic sits 20:00 UTC. Fog cup Sunday 21:00 UTC.",
       href: "/invest",
     });
   } else {
