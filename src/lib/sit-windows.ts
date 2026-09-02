@@ -26,7 +26,7 @@ function pingSitters(
   for (const id of recentSitters(store, now)) {
     if (id === HOUSE_USER_ID) continue;
     const user = store.users[id];
-    if (!user || user.blocked || isHouseUser(user)) continue;
+    if (!user || !user.emailVerified || isHouseUser(user)) continue;
     notify(store, id, {
       kind: "system",
       title: input.title,
