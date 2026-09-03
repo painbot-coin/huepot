@@ -85,15 +85,17 @@ varying vec2 vUv;
 uniform sampler2D uTex;
 uniform float uT;
 uniform float uTake;
+uniform vec2 uParallax;
 void main() {
-  vec2 uv = vUv;
+  vec2 uv = vUv + uParallax * 0.045;
   uv.x += sin(uv.y * 6.0 + uT * 0.35) * 0.008;
   uv.y += cos(uv.x * 5.0 + uT * 0.22) * 0.01;
-  vec4 tex = texture2D(uTex, uv);
+  vec4 tex = texture2D(uTex, clamp(uv, 0.02, 0.98));
   vec3 glow = 0.5 + 0.5 * cos(uT * 0.4 + vec3(0.0, 2.0, 4.0));
   vec3 col = mix(tex.rgb, tex.rgb * (1.0 + glow * 0.18), 0.65);
   col += glow * uTake * 0.22;
-  gl_FragColor = vec4(col, 0.42);
+  float vignette = smoothstep(1.15, 0.35, distance(uv, vec2(0.5)));
+  gl_FragColor = vec4(col, 0.42 * vignette);
 }
 `;
 
@@ -337,12 +339,24 @@ export function FantasyGl({
     const pColB = gl.createBuffer();
 
     let burst = 0;
+    const ptr = { x: 0, y: 0, tx: 0, ty: 0, down: 0 };
     function onFx(event: CustomEvent<FxDetail>) {
       if (event.detail?.kind === "take" || event.detail?.kind === "click") {
         burst = 1;
+        ptr.down = 1;
       }
     }
+    function onPointer(e: PointerEvent) {
+      ptr.tx = (e.clientX / Math.max(window.innerWidth, 1)) * 2 - 1;
+      ptr.ty = -((e.clientY / Math.max(window.innerHeight, 1)) * 2 - 1);
+    }
+    function onPointerDown() {
+      ptr.down = 1;
+      burst = Math.max(burst, 0.55);
+    }
     window.addEventListener("huepot:fx", onFx);
+    window.addEventListener("pointermove", onPointer, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
 
     function bindAttr(
       prog: WebGLProgram,
@@ -386,6 +400,11 @@ export function FantasyGl({
       raf = requestAnimationFrame(draw);
       const t = (now - t0) / 1000;
       burst *= 0.94;
+      ptr.down *= 0.9;
+      ptr.x += (ptr.tx - ptr.x) * 0.08;
+      ptr.y += (ptr.ty - ptr.y) * 0.08;
+      document.documentElement.style.setProperty("--fx-px", ptr.x.toFixed(4));
+      document.documentElement.style.setProperty("--fx-py", ptr.y.toFixed(4));
       const take = modeRef.current === "take" ? 1 : burst;
       const urgent = modeRef.current === "urgent" ? 1 : 0;
       const fog = fogRef.current ? 1 : 0;
@@ -398,17 +417,17 @@ export function FantasyGl({
       bindAttr(backdrop, "aUv", quad, 2);
       gl.uniform1f(gl.getUniformLocation(backdrop, "uT"), t);
       gl.uniform1f(gl.getUniformLocation(backdrop, "uTake"), take);
+      gl.uniform2f(gl.getUniformLocation(backdrop, "uParallax"), ptr.x, ptr.y);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(gl.getUniformLocation(backdrop, "uTex"), 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
       const aspect = w / Math.max(h, 1);
-      const mvp = mul(
-        persp(0.72, aspect, 0.2, 20),
-        mul(lookAt(), mul(rotateX(0.42 + Math.sin(t * 0.35) * 0.08), rotateY(t * 0.42))),
-      );
-      const nmat = mul(rotateX(0.42), rotateY(t * 0.42));
+      const tiltX = 0.42 + Math.sin(t * 0.35) * 0.06 - ptr.y * 0.55;
+      const tiltY = t * 0.42 + ptr.x * 0.9;
+      const nmat = mul(rotateX(tiltX), rotateY(tiltY));
+      const mvp = mul(persp(0.72, aspect, 0.2, 20), mul(lookAt(), nmat));
 
       gl.depthMask(true);
       gl.useProgram(crystal);
@@ -417,23 +436,33 @@ export function FantasyGl({
       bindAttr(crystal, "aCol", colB, 3);
       gl.uniformMatrix4fv(gl.getUniformLocation(crystal, "uMVP"), false, mvp);
       gl.uniformMatrix4fv(gl.getUniformLocation(crystal, "uN"), false, nmat);
-      gl.uniform3f(gl.getUniformLocation(crystal, "uLight"), 1.4, 2.2, 3.2);
-      gl.uniform1f(gl.getUniformLocation(crystal, "uPulse"), 0.22 + take * 0.7 + urgent * 0.25);
+      gl.uniform3f(
+        gl.getUniformLocation(crystal, "uLight"),
+        1.4 + ptr.x * 1.2,
+        2.2 + ptr.y * 0.8,
+        3.2,
+      );
+      gl.uniform1f(
+        gl.getUniformLocation(crystal, "uPulse"),
+        0.22 + take * 0.7 + urgent * 0.25 + ptr.down * 0.35,
+      );
       gl.uniform1f(gl.getUniformLocation(crystal, "uFog"), fog);
       gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
 
       for (let i = 0; i < parts.length; i += 1) {
         const p = parts[i]!;
-        p.x += p.vx;
-        p.y += p.vy + take * 0.01;
-        p.z += p.vz;
+        p.vx += ptr.x * 0.00035;
+        p.vy += ptr.y * 0.0002;
+        p.x += p.vx + ptr.x * 0.004 + take * 0.002;
+        p.y += p.vy + take * 0.01 + ptr.down * 0.01;
+        p.z += p.vz - ptr.y * 0.003;
         if (p.y > 2.2) p.y = -2.1;
         if (p.x > 3.4) p.x = -3.4;
         if (p.x < -3.4) p.x = 3.4;
         pPos[i * 3] = p.x;
         pPos[i * 3 + 1] = p.y;
         pPos[i * 3 + 2] = p.z;
-        pSize[i] = p.s * (1 + take * 0.45);
+        pSize[i] = p.s * (1 + take * 0.45 + ptr.down * 0.35);
         pCol[i * 3] = p.c[0]!;
         pCol[i * 3 + 1] = p.c[1]!;
         pCol[i * 3 + 2] = p.c[2]!;
@@ -451,7 +480,10 @@ export function FantasyGl({
       bindAttr(sparks, "aPos", pPosB, 3);
       bindAttr(sparks, "aSize", pSizeB, 1);
       bindAttr(sparks, "aCol", pColB, 3);
-      const bill = mul(persp(0.72, aspect, 0.2, 20), lookAt());
+      const bill = mul(
+        persp(0.72, aspect, 0.2, 20),
+        mul(lookAt(), rotateY(ptr.x * 0.25)),
+      );
       gl.uniformMatrix4fv(gl.getUniformLocation(sparks, "uMVP"), false, bill);
       gl.uniform1f(
         gl.getUniformLocation(sparks, "uDpr"),
@@ -467,6 +499,8 @@ export function FantasyGl({
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       window.removeEventListener("huepot:fx", onFx);
+      window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("pointerdown", onPointerDown);
     };
   }, []);
 

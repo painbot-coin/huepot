@@ -28,6 +28,7 @@ import {
   IconTable,
   IconUsers,
 } from "@/components/Icons";
+import { FantasyClock } from "@/components/FantasyClock";
 import { PadRune } from "@/components/PadRune";
 import { RoomMark } from "@/components/RoomMark";
 import { PitHint } from "@/components/PitHint";
@@ -564,24 +565,22 @@ export function GameClient({ slug }: { slug: string }) {
             ) : null}
           </div>
         </div>
-        <div className={`timer-track ${urgent ? "is-urgent" : ""}`}>
-          <div
-            className="timer-fill"
-            style={{
-              width: `${Math.max(
-                0,
-                Math.min(
-                  100,
-                  (remainingMs /
-                    (revealing
-                      ? REVEAL_SECONDS * 1000
-                      : round.endsAt - round.startedAt)) *
-                    100,
-                ),
-              )}%`,
-            }}
-          />
-        </div>
+        <FantasyClock
+          fog={fog}
+          label={room.paused ? "Hold" : formatClock(remainingMs)}
+          paused={room.paused}
+          progress={Math.max(
+            0,
+            Math.min(
+              1,
+              remainingMs /
+                (revealing
+                  ? REVEAL_SECONDS * 1000
+                  : Math.max(1, round.endsAt - round.startedAt)),
+            ),
+          )}
+          urgent={urgent || revealing}
+        />
         <p className="pit-rule">
           Same price every coin. Biggest color takes the rest.
           {room.fogSeconds

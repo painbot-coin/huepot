@@ -150,7 +150,6 @@ body,
     url("/fx/huepot-realm.jpg") center 38% / cover;
   filter: saturate(1.15) contrast(1.08);
   opacity: 0.55;
-  transform: scale(1.06);
   animation: realm-breathe 22s ease-in-out infinite;
 }
 
@@ -190,10 +189,12 @@ body,
   top: 54%;
   width: min(120vw, 1120px);
   height: min(68vw, 540px);
-  transform: translate(-50%, -50%) rotateX(8deg);
+  transform: translate(-50%, -50%) rotateX(calc(8deg + var(--fx-py, 0) * 7deg))
+    rotateY(calc(var(--fx-px, 0) * 10deg));
   perspective: 980px;
   perspective-origin: 50% 12%;
   transform-style: preserve-3d;
+  transition: transform 80ms linear;
 }
 
 .fx-mist {
@@ -508,6 +509,86 @@ body,
 
 .timer-track.is-urgent .timer-fill {
   animation: ribbon 0.8s linear infinite, urgent-glow 0.7s ease-in-out infinite;
+}
+
+.fantasy-clock {
+  position: relative;
+  height: 9.5rem;
+  margin: 0.15rem 0 0.35rem;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(255, 210, 122, 0.28);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 176, 32, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(18, 12, 36, 0.55), rgba(8, 6, 18, 0.85)),
+    url("/fx/huepot-realm.jpg") center 40% / cover;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 160, 0.16),
+    0 0 28px rgba(139, 92, 255, 0.14);
+  pointer-events: auto;
+}
+
+.fantasy-clock.is-urgent {
+  border-color: rgba(255, 53, 94, 0.45);
+  box-shadow:
+    inset 0 0 24px rgba(255, 53, 94, 0.18),
+    0 0 32px rgba(255, 53, 94, 0.2);
+}
+
+.fantasy-clock.is-fog {
+  border-color: rgba(201, 196, 216, 0.35);
+}
+
+.fantasy-clock-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  display: block;
+}
+
+.fantasy-clock-face {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+
+.fantasy-clock-kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #ffd27a;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.65);
+}
+
+.fantasy-clock-time {
+  font-family: var(--font-cinzel), serif;
+  font-size: clamp(1.7rem, 4vw, 2.35rem);
+  font-weight: 700;
+  color: #fff8ea;
+  text-shadow:
+    0 0 18px rgba(255, 176, 32, 0.45),
+    0 2px 10px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.04em;
+}
+
+.fantasy-clock-time.is-urgent {
+  color: #ff8aa0;
+  text-shadow: 0 0 22px rgba(255, 53, 94, 0.55);
+}
+
+@media (max-width: 640px) {
+  .fantasy-clock {
+    height: 8.2rem;
+  }
 }
 
 .pot-value.is-pulse,
@@ -1677,10 +1758,10 @@ select.field {
 @keyframes realm-breathe {
   0%,
   100% {
-    transform: scale(1.04) translate3d(0, 0, 0);
+    transform: scale(1.04) translate3d(calc(var(--fx-px, 0) * -22px), calc(var(--fx-py, 0) * -14px), 0);
   }
   50% {
-    transform: scale(1.09) translate3d(0, -1.4%, 0);
+    transform: scale(1.09) translate3d(calc(var(--fx-px, 0) * -26px), calc(var(--fx-py, 0) * -18px), 0);
   }
 }
 
@@ -3101,6 +3182,7 @@ body:has(.pit-app) .page-stage {
   .fx-ticker-track,
   .fx-realm,
   .fx-gl,
+  .fantasy-clock-gl,
   .pad-sheen,
   .pad-glint,
   .pad-rays,
