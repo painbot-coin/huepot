@@ -29,6 +29,7 @@ import {
   IconUsers,
 } from "@/components/Icons";
 import { FantasyClock } from "@/components/FantasyClock";
+import { MagicOrb } from "@/components/MagicOrb";
 import { PadRune } from "@/components/PadRune";
 import { RoomMark } from "@/components/RoomMark";
 import { PitHint } from "@/components/PitHint";
@@ -675,7 +676,7 @@ export function GameClient({ slug }: { slug: string }) {
                 type="button"
                 disabled={!canClick}
                 onClick={(event) => void onClick(color.id, event)}
-                className={`color-pad ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${fog ? "is-fog" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
+                className={`color-pad is-orb ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${fog ? "is-fog" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
                 style={{
                   "--pad": color.hex,
                   "--ink": color.ink,
@@ -683,15 +684,16 @@ export function GameClient({ slug }: { slug: string }) {
                   animationDelay: `${index * 90}ms`,
                 } as CSSProperties}
               >
-                <span className="coin-reeds" />
-                <span className="pad-grain" />
-                <span className="coin-core" />
-                <span className="pad-sheen" />
-                <span className="pad-glint" />
-                <span className="pad-orbit" />
-                <span className="pad-rays" />
-                <span className="pad-twirl" />
-                <PadRune id={color.id} />
+                <MagicOrb
+                  color={color.hex}
+                  fog={fog}
+                  leading={leading && !revealing}
+                  pressed={busyColor === color.id}
+                  spark={sparks.some((item) => item.colorId === color.id)}
+                  winner={Boolean(taken)}
+                />
+                <span className="orb-halo" />
+                <span className="orb-ring" />
                 {bursts
                   .filter((burst) => burst.color === color.hex)
                   .map((burst) => (

@@ -338,13 +338,9 @@ export function Atmosphere() {
 
   return (
     <>
-    <div aria-hidden="true" className={`fx-root is-realm is-${mode} ${foggy ? "is-fog" : ""}`}>
+    <div aria-hidden="true" className={`fx-root is-realm is-live3d is-${mode} ${foggy ? "is-fog" : ""}`}>
       <div className="fx-realm" />
       <div className="fx-prism" />
-      <div className="fx-felt" />
-      <div className="fx-stage">
-        <div className="fx-table" />
-      </div>
       <div className="fx-gold-grain" />
       <div className="fx-spark-field" />
       <FantasyGl foggy={foggy} mode={mode} />

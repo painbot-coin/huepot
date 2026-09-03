@@ -74,6 +74,14 @@ function rotateZ(t: number): Mat {
   return m;
 }
 
+function translate(x: number, y: number, z: number): Mat {
+  const m = ident();
+  m[12] = x;
+  m[13] = y;
+  m[14] = z;
+  return m;
+}
+
 function scale(s: number): Mat {
   const m = ident();
   m[0] = s;
@@ -346,6 +354,215 @@ function torusRing(R: number, r: number, seg = 72, tube = 10, hueIndex = 0) {
   };
 }
 
+/** Thick magical pit table: felt disk, gold rim, short legs. */
+function magicTable(radius = 2.05, segs = 48) {
+  const pos: number[] = [];
+  const nrm: number[] = [];
+  const col: number[] = [];
+  const felt: [number, number, number] = [0.12, 0.08, 0.22];
+  const gold: [number, number, number] = [0.95, 0.75, 0.35];
+  const wood: [number, number, number] = [0.28, 0.16, 0.08];
+  const topY = -1.05;
+  const thick = 0.14;
+  const rimH = 0.18;
+  const rimW = 0.12;
+
+  function tri(
+    ax: number,
+    ay: number,
+    az: number,
+    bx: number,
+    by: number,
+    bz: number,
+    cx: number,
+    cy: number,
+    cz: number,
+    nx: number,
+    ny: number,
+    nz: number,
+    rgb: [number, number, number],
+  ) {
+    for (const p of [
+      [ax, ay, az],
+      [bx, by, bz],
+      [cx, cy, cz],
+    ]) {
+      pos.push(p[0]!, p[1]!, p[2]!);
+      nrm.push(nx, ny, nz);
+      col.push(rgb[0], rgb[1], rgb[2]);
+    }
+  }
+
+  // top felt disk
+  for (let i = 0; i < segs; i += 1) {
+    const a0 = (i / segs) * Math.PI * 2;
+    const a1 = ((i + 1) / segs) * Math.PI * 2;
+    tri(
+      0,
+      topY,
+      0,
+      Math.cos(a0) * radius,
+      topY,
+      Math.sin(a0) * radius,
+      Math.cos(a1) * radius,
+      topY,
+      Math.sin(a1) * radius,
+      0,
+      1,
+      0,
+      felt,
+    );
+  }
+  // underside
+  for (let i = 0; i < segs; i += 1) {
+    const a0 = (i / segs) * Math.PI * 2;
+    const a1 = ((i + 1) / segs) * Math.PI * 2;
+    tri(
+      0,
+      topY - thick,
+      0,
+      Math.cos(a1) * radius,
+      topY - thick,
+      Math.sin(a1) * radius,
+      Math.cos(a0) * radius,
+      topY - thick,
+      Math.sin(a0) * radius,
+      0,
+      -1,
+      0,
+      wood,
+    );
+  }
+  // gold rim (outer wall + top lip)
+  const rOut = radius + rimW;
+  for (let i = 0; i < segs; i += 1) {
+    const a0 = (i / segs) * Math.PI * 2;
+    const a1 = ((i + 1) / segs) * Math.PI * 2;
+    const c0 = Math.cos(a0);
+    const s0 = Math.sin(a0);
+    const c1 = Math.cos(a1);
+    const s1 = Math.sin(a1);
+    // outer wall
+    tri(
+      c0 * rOut,
+      topY - thick,
+      s0 * rOut,
+      c1 * rOut,
+      topY - thick,
+      s1 * rOut,
+      c1 * rOut,
+      topY + rimH,
+      s1 * rOut,
+      c1,
+      0,
+      s1,
+      gold,
+    );
+    tri(
+      c0 * rOut,
+      topY - thick,
+      s0 * rOut,
+      c1 * rOut,
+      topY + rimH,
+      s1 * rOut,
+      c0 * rOut,
+      topY + rimH,
+      s0 * rOut,
+      c0,
+      0,
+      s0,
+      gold,
+    );
+    // rim top
+    tri(
+      c0 * radius,
+      topY + rimH,
+      s0 * radius,
+      c1 * radius,
+      topY + rimH,
+      s1 * radius,
+      c1 * rOut,
+      topY + rimH,
+      s1 * rOut,
+      0,
+      1,
+      0,
+      gold,
+    );
+    tri(
+      c0 * radius,
+      topY + rimH,
+      s0 * radius,
+      c1 * rOut,
+      topY + rimH,
+      s1 * rOut,
+      c0 * rOut,
+      topY + rimH,
+      s0 * rOut,
+      0,
+      1,
+      0,
+      gold,
+    );
+  }
+  // four legs
+  const legR = 0.09;
+  const legH = 0.85;
+  const legY0 = topY - thick - legH;
+  for (const [lx, lz] of [
+    [1.2, 1.2],
+    [1.2, -1.2],
+    [-1.2, 1.2],
+    [-1.2, -1.2],
+  ] as [number, number][]) {
+    for (let i = 0; i < 10; i += 1) {
+      const a0 = (i / 10) * Math.PI * 2;
+      const a1 = ((i + 1) / 10) * Math.PI * 2;
+      const c0 = Math.cos(a0);
+      const s0 = Math.sin(a0);
+      const c1 = Math.cos(a1);
+      const s1 = Math.sin(a1);
+      tri(
+        lx + c0 * legR,
+        legY0,
+        lz + s0 * legR,
+        lx + c1 * legR,
+        legY0,
+        lz + s1 * legR,
+        lx + c1 * legR,
+        topY - thick,
+        lz + s1 * legR,
+        c1,
+        0,
+        s1,
+        wood,
+      );
+      tri(
+        lx + c0 * legR,
+        legY0,
+        lz + s0 * legR,
+        lx + c1 * legR,
+        topY - thick,
+        lz + s1 * legR,
+        lx + c0 * legR,
+        topY - thick,
+        lz + s0 * legR,
+        c0,
+        0,
+        s0,
+        wood,
+      );
+    }
+  }
+
+  return {
+    pos: new Float32Array(pos),
+    nrm: new Float32Array(nrm),
+    col: new Float32Array(col),
+    count: pos.length / 3,
+  };
+}
+
 function loadTex(gl: WebGLRenderingContext, src: string) {
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -404,10 +621,11 @@ export function FantasyGl({
     const sparkProg = program(gl, PVS, PFS);
     const backdrop = program(gl, BVS, BFS);
 
-    const crystal = icosahedron(0.78);
-    const ringA = torusRing(1.55, 0.045, 80, 8, 1);
-    const ringB = torusRing(1.95, 0.035, 80, 8, 6);
-    const ringC = torusRing(2.35, 0.028, 72, 6, 3);
+    const crystal = icosahedron(0.72);
+    const table = magicTable(2.1, 52);
+    const ringA = torusRing(1.45, 0.042, 80, 8, 1);
+    const ringB = torusRing(1.85, 0.032, 80, 8, 6);
+    const ringC = torusRing(2.25, 0.026, 72, 6, 3);
 
     function buf(data: Float32Array) {
       const b = gl.createBuffer();
@@ -419,6 +637,9 @@ export function FantasyGl({
     const crystalPos = buf(crystal.pos);
     const crystalNrm = buf(crystal.nrm);
     const crystalCol = buf(crystal.col);
+    const tablePos = buf(table.pos);
+    const tableNrm = buf(table.nrm);
+    const tableCol = buf(table.col);
     const rings = [
       { mesh: ringA, pos: buf(ringA.pos), nrm: buf(ringA.nrm), col: buf(ringA.col) },
       { mesh: ringB, pos: buf(ringB.pos), nrm: buf(ringB.nrm), col: buf(ringB.col) },
@@ -605,7 +826,24 @@ export function FantasyGl({
       const light: [number, number, number] = [1.5 + ptr.x * 1.4, 2.3 + ptr.y * 0.9, 3.1];
 
       gl.depthMask(true);
-      const crystalM = mul(world, mul(rotateY(t * 0.55), scale(1 + take * 0.08 + ptr.down * 0.06)));
+      // Magical 3D pit table under the crystal
+      const tableM = mul(world, translate(0, 0.05 + Math.sin(t * 0.4) * 0.02, 0));
+      drawMesh(
+        tablePos,
+        tableNrm,
+        tableCol,
+        table.count,
+        mul(proj, mul(view, tableM)),
+        tableM,
+        light,
+        0.12 + take * 0.2,
+        fog,
+      );
+
+      const crystalM = mul(
+        world,
+        mul(translate(0, 0.35, 0), mul(rotateY(t * 0.55), scale(1 + take * 0.08 + ptr.down * 0.06))),
+      );
       drawMesh(
         crystalPos,
         crystalNrm,
