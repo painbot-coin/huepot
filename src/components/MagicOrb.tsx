@@ -27,12 +27,13 @@ export function MagicOrb({
   stateRef.current = { pressed, spark, leading, winner, fog, color };
 
   useEffect(() => {
-    const canvasEl = canvasRef.current;
-    if (!canvasEl) return;
+    const node = canvasRef.current;
+    if (!node) return;
+    const surface: HTMLCanvasElement = node;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const renderer = new THREE.WebGLRenderer({
-      canvas: canvasEl,
+      canvas: surface,
       alpha: true,
       antialias: true,
       powerPreference: "high-performance",
@@ -158,7 +159,7 @@ export function MagicOrb({
 
     const ptr = { x: 0, y: 0, tx: 0, ty: 0 };
     function onMove(e: PointerEvent) {
-      const rect = canvasEl.getBoundingClientRect();
+      const rect = surface.getBoundingClientRect();
       ptr.tx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       ptr.ty = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
     }
@@ -166,8 +167,8 @@ export function MagicOrb({
       ptr.tx = 0;
       ptr.ty = 0;
     }
-    canvasEl.addEventListener("pointermove", onMove);
-    canvasEl.addEventListener("pointerleave", onLeave);
+    surface.addEventListener("pointermove", onMove);
+    surface.addEventListener("pointerleave", onLeave);
 
     function burst() {
       for (let i = 0; i < sparkCount; i += 1) {
@@ -189,7 +190,7 @@ export function MagicOrb({
     let lastPressed = false;
 
     function resize() {
-      const rect = canvasEl.getBoundingClientRect();
+      const rect = surface.getBoundingClientRect();
       const w = Math.max(1, Math.floor(rect.width));
       const h = Math.max(1, Math.floor(rect.height));
       camera.aspect = w / h;
@@ -200,7 +201,7 @@ export function MagicOrb({
     }
     resize();
     const ro = new ResizeObserver(resize);
-    ro.observe(canvasEl);
+    ro.observe(surface);
 
     let raf = 0;
     let running = true;
@@ -279,8 +280,8 @@ export function MagicOrb({
       running = false;
       cancelAnimationFrame(raf);
       ro.disconnect();
-      canvasEl.removeEventListener("pointermove", onMove);
-      canvasEl.removeEventListener("pointerleave", onLeave);
+      surface.removeEventListener("pointermove", onMove);
+      surface.removeEventListener("pointerleave", onLeave);
       composer.dispose();
       renderer.dispose();
       orb.geometry.dispose();

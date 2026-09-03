@@ -26,12 +26,13 @@ export function FantasyWorld({
   fogRef.current = foggy;
 
   useEffect(() => {
-    const canvasEl = canvasRef.current;
-    if (!canvasEl) return;
+    const node = canvasRef.current;
+    if (!node) return;
+    const surface: HTMLCanvasElement = node;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const renderer = new THREE.WebGLRenderer({
-      canvas: canvasEl,
+      canvas: surface,
       alpha: true,
       antialias: true,
       powerPreference: "high-performance",
@@ -308,8 +309,8 @@ export function FantasyWorld({
       renderer.setSize(w, h, false);
       composer.setSize(w, h);
       bloom.setSize(w, h);
-      canvasEl.style.width = `${w}px`;
-      canvasEl.style.height = `${h}px`;
+      surface.style.width = `${w}px`;
+      surface.style.height = `${h}px`;
     }
     resize();
     window.addEventListener("resize", resize);
