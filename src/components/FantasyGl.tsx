@@ -275,12 +275,13 @@ export function FantasyGl({
     if (!canvas) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const gl = canvas.getContext("webgl", {
+    const got = canvas.getContext("webgl", {
       alpha: true,
       antialias: true,
       premultipliedAlpha: true,
     });
-    if (!gl) return;
+    if (!got) return;
+    const gl: WebGLRenderingContext = got;
 
     const crystal = program(gl, VS, FS);
     const sparks = program(gl, PVS, PFS);
