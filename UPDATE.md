@@ -92,7 +92,7 @@ Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-**Build status:** v1.3.39 replaces the flat CSS table with a WebGL magical pit table and turns color buttons into interactive 3D orbs. Proof rows still wait on you sitting and paying.
+**Build status:** v1.3.40 rebuilds the pit on Three.js — PBR materials, bloom, transmission glass orbs, and a real lit 3D table. Proof rows still wait on you sitting and paying.
 
 Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 

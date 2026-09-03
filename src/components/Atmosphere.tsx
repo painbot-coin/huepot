@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FantasyGl } from "@/components/FantasyGl";
+import { FantasyWorld } from "@/components/FantasyWorld";
 import type { FxDetail } from "@/lib/fx";
 
 const PALETTE = [
@@ -343,7 +343,7 @@ export function Atmosphere() {
       <div className="fx-prism" />
       <div className="fx-gold-grain" />
       <div className="fx-spark-field" />
-      <FantasyGl foggy={foggy} mode={mode} />
+      <FantasyWorld foggy={foggy} mode={mode} />
       <div className="fx-aurora fx-aurora-a" />
       <div className="fx-aurora fx-aurora-b" />
       <div className="fx-aurora fx-aurora-c" />
