@@ -92,7 +92,7 @@ Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-**Build status:** v1.3.23–1.3.27 are shipped. Lobby sitting is this-round only. Proof rows still wait on you sitting and paying.
+**Build status:** v1.3.36 ships a WebGL crystal pit and fantasy lobby art. Proof rows still wait on you sitting and paying.
 
 Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 

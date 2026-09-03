@@ -16,3 +16,6 @@ spark.png, flare.png, burst.png, ripple.png, twirl.png, glint.png, star.png
   Kenney Particle Pack (CC0)
   https://kenney.nl/assets/particle-pack
   GitHub mirror: Calinou/kenney-particle-pack
+
+huepot-realm.jpg, huepot-crystal.jpg
+  Original Huepot fantasy art for the WebGL pit (1.3.36).

@@ -174,9 +174,10 @@ export function RoomLobby() {
     <div className="lobby-stage">
       <header className="lobby-hero">
         <div className="lobby-hero-art">
+          <img alt="" className="lobby-crystal" src="/fx/huepot-crystal.jpg" />
           <BrandMark className="brand-mark is-hero" />
         </div>
-        <p className="lobby-kicker">Color pot</p>
+        <p className="lobby-kicker">Fantasy pit</p>
         <h1 className="font-display">Same price. Biggest color takes.</h1>
         <p className="lobby-rule">
           Every coin costs the same. When the clock ends, the color with the most

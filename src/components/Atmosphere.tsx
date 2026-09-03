@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FantasyGl } from "@/components/FantasyGl";
 import type { FxDetail } from "@/lib/fx";
 
 const PALETTE = [
@@ -86,7 +87,7 @@ function burst(w: number, h: number, color: string, count: number): Particle[] {
 export function Atmosphere() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ticker, setTicker] = useState<TickerItem[]>([
-    { id: 0, text: "Rainbow coins · same price on every face", color: "#ffd27a" },
+    { id: 0, text: "Fantasy pit · same price on every face", color: "#ffd27a" },
     { id: 1, text: "Crimson · Azure · Volt · Amber · Violet · Mint", color: "#ffb0c0" },
     { id: 2, text: "Biggest color takes the pot", color: "#9ad4ff" },
   ]);
@@ -206,8 +207,8 @@ export function Atmosphere() {
     window.addEventListener("huepot:fx", onFx);
 
     const flavor = [
-      { text: "Rainbow coins in the pit", color: "#ffd27a" },
-      { text: "Crimson fire on the rim", color: "#ffb0c0" },
+      { text: "Rainbow crystal over the pit", color: "#ffd27a" },
+      { text: "Anime petals in the gold fog", color: "#ffb0c0" },
       { text: "Azure tide rolling in", color: "#9ad4ff" },
       { text: "Volt spark on the floor", color: "#e8ff9a" },
       { text: "Mint glass in the felt", color: "#b8ffe4" },
@@ -337,7 +338,8 @@ export function Atmosphere() {
 
   return (
     <>
-    <div aria-hidden="true" className={`fx-root is-${mode} ${foggy ? "is-fog" : ""}`}>
+    <div aria-hidden="true" className={`fx-root is-realm is-${mode} ${foggy ? "is-fog" : ""}`}>
+      <div className="fx-realm" />
       <div className="fx-prism" />
       <div className="fx-felt" />
       <div className="fx-stage">
@@ -345,6 +347,7 @@ export function Atmosphere() {
       </div>
       <div className="fx-gold-grain" />
       <div className="fx-spark-field" />
+      <FantasyGl foggy={foggy} mode={mode} />
       <div className="fx-aurora fx-aurora-a" />
       <div className="fx-aurora fx-aurora-b" />
       <div className="fx-aurora fx-aurora-c" />
