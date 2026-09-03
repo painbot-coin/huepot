@@ -1918,6 +1918,10 @@ select.field {
   line-height: 1.6;
 }
 
+.lobby-rule {
+  margin: 0 0 0.75rem;
+}
+
 .lobby-hour {
   color: #ffd27a !important;
   font-size: 0.9rem;

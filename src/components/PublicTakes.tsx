@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { IconPot } from "@/components/Icons";
+import { classicHourClock, classicHourUtc } from "@/lib/classic-hour";
 import { formatUsdt } from "@/lib/money";
 import type { PublicTake } from "@/lib/types";
 
@@ -47,7 +48,7 @@ export function PublicTakes() {
       {takes.length === 0 ? (
         <p className="strip-empty">
           <IconPot />
-          Takes land here.
+          A take lands when one color beats another. Sit Classic {classicHourClock(classicHourUtc())}.
         </p>
       ) : (
         <ul>

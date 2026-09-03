@@ -176,20 +176,36 @@ export function RoomLobby() {
         <div className="lobby-hero-art">
           <BrandMark className="brand-mark is-hero" />
         </div>
-        <p className="lobby-kicker">Sit. Pick a color. Watch the pot.</p>
-        <h1 className="font-display">Huepot tables</h1>
-        <ClassicLine rooms={basic} />
+        <p className="lobby-kicker">Color pot</p>
+        <h1 className="font-display">Same price. Biggest color takes.</h1>
+        <p className="lobby-rule">
+          Every coin costs the same. When the clock ends, the color with the most
+          clicks splits the rest of the pot. Ties come back.
+        </p>
         <ClassicHourLine hour={state?.classicHour} now={now} />
         <FogCupLine cup={state?.fogCup} now={now} />
+        <ClassicLine rooms={basic} />
         <div className="lobby-hero-tools">
-          <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
+          <Link
+            className="chip-btn"
+            href="/rooms/classic"
+            onFocus={prefetchTable}
+            onMouseEnter={prefetchTable}
+          >
+            {state?.classicHour?.live ? "Sit Classic now" : "Sit Classic"}
+          </Link>
           {state?.user?.inviteCode ? (
             <ClassicInvite
               code={state.user.inviteCode}
               cup={state.fogCup}
               hour={state.classicHour?.hour}
             />
-          ) : null}
+          ) : (
+            <Link className="nav-link" href="/how-it-works">
+              How it works
+            </Link>
+          )}
+          <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
           <Link aria-label="Create room" className="pit-create" href="/rooms/new">
             <IconPlus />
           </Link>

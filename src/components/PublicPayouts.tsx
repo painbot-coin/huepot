@@ -49,7 +49,7 @@ export function PublicPayouts() {
       {payouts.length === 0 ? (
         <p className="strip-empty">
           <IconCash />
-          Cash-outs land here.
+          A cash-out lands here with a BscScan link. Same-day send.
         </p>
       ) : (
         <ul>

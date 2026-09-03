@@ -55,9 +55,9 @@ export function liveTakes(store: StoreData): PublicTake[] {
   return out;
 }
 
-export async function listPublicTakes(store: StoreData, limit = 6) {
+export async function listPublicTakes(live: PublicTake[], limit = 6) {
   const byId = new Map<string, PublicTake>();
-  for (const take of liveTakes(store)) byId.set(take.id, take);
+  for (const take of live) byId.set(take.id, take);
   for (const row of listPendingSettled()) {
     const take = takeFromSettled(row);
     if (take) byId.set(take.id, take);
