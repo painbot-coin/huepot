@@ -92,7 +92,7 @@ Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-**Build status:** v1.3.37 ships a pointer-reactive WebGL pit and a 3D fantasy round clock on the live table. Proof rows still wait on you sitting and paying.
+**Build status:** v1.3.38 ships generative fantasy art plus an interactive WebGL constellation graph (rings, nodes, pointer zoom). Proof rows still wait on you sitting and paying.
 
 Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 

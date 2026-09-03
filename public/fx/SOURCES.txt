@@ -19,3 +19,6 @@ spark.png, flare.png, burst.png, ripple.png, twirl.png, glint.png, star.png
 
 huepot-realm.jpg, huepot-crystal.jpg
   Original Huepot fantasy art for the WebGL pit (1.3.36).
+
+huepot-orbit.jpg, huepot-panel.jpg, huepot-chrono.jpg
+  Original Huepot fantasy art for the interactive orbit graph (1.3.38).
