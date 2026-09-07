@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
-import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
+import { Avatar } from "@/components/Avatar";
+import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import type { NetworkCard, NetworkState, NetworkTab } from "@/lib/types";
 
 function ageLabel(at: number | null, now: number) {

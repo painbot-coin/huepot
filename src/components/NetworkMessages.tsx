@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
+import { Avatar } from "@/components/Avatar";
+import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import { useChatScroll } from "@/components/useChatScroll";
 import type { NetworkMessage, NetworkThread, NetworkYou } from "@/lib/types";
 

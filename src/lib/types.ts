@@ -290,6 +290,7 @@ export type PublicRoomCard = {
 export type PublicSeat = {
   userId: string;
   username: string;
+  avatar: string;
   you: boolean;
   balance: number;
   totalClicks: number;
@@ -346,6 +347,7 @@ export type PublicTake = {
 /** Who was paid for a take. Derived from the payout rows, never stored. */
 export type TakeWinner = {
   username: string;
+  avatar: string;
   amount: number;
 };
 

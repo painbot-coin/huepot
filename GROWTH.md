@@ -828,9 +828,26 @@ Editing a profile now offers initials, the eight house colours, and Upload. A pi
 
 Nine call sites now share one `Avatar` component: profile, feed sidebar, composer, people lists, posts, message threads and the dock.
 
-### Still to come
+### Finished on the seat and the take page (1.3.94)
 
-Seats in the pit and take pages still show a name without a face; both carry a username in payloads that would each need widening. And no real picture has been through this yet — the upload route answers 503 until Spaces credentials exist, so what is proven here is the colour path end to end and the URL rules, not a photograph on a profile.
+Both were left with a name and no face. Both are now wired, and `Avatar` moved to its own module with no `"use client"` to get there — a server-rendered take page should not pull a client bundle in to draw a circle. It has no hooks, so nothing was lost, and the nine existing importers now point at the definition rather than at the chrome that happened to hold it.
+
+Verified by playing a round rather than by reading the code:
+
+```
+the seat is on the board                     ok
+the seat carries the face   hue:volt         ok
+the take page still names the winner         ok
+the take page shows the winner's face        ok
+```
+
+A face only appears on a take page for a single winner. A split take lists several names with their shares, and a row of circles there would crowd out the number that matters.
+
+### Still not proven
+
+No real picture has been through any of this. The upload route answers 503 until Spaces credentials exist, so what is established is the colour path end to end, the URL rules, and the rendering. A photograph on a profile is not.
+
+Pit chat lines still show a name alone. Those come from stored `RoomEvent` rows that carry a username and no id, so a face there needs either a wider row or a lookup at render — worth doing deliberately, not as a side effect of this.
 
 ## Next for the social layer
 

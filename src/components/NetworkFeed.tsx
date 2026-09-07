@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
+import { Avatar } from "@/components/Avatar";
+import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import type { FriendRelation, NetworkCard, NetworkPost, NetworkYou } from "@/lib/types";
 
 type FeedTab = "recent" | "recommended";

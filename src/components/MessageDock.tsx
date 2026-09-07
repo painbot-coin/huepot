@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Avatar } from "@/components/NetworkChrome";
+import { Avatar } from "@/components/Avatar";
 import { useChatScroll } from "@/components/useChatScroll";
 import { MESSAGE_OPEN, openMessageDock } from "@/lib/message-dock";
 import type { NetworkMessage, NetworkThread } from "@/lib/types";

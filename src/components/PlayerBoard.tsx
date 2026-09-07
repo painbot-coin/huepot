@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { Avatar } from "@/components/Avatar";
 import {
   IconBolt,
   IconCash,
@@ -66,8 +67,11 @@ export function PlayerBoard({
               return (
               <tr className={seat.you ? "is-you" : ""} key={seat.userId}>
                 <td>
-                  @{seat.username}
-                  {seat.you ? " · you" : ""}
+                  <span className="seat-who">
+                    <Avatar avatar={seat.avatar} size="sm" username={seat.username} />
+                    @{seat.username}
+                  </span>
+                  {seat.you ? " Â· you" : ""}
                   {host && !seat.you && onMute ? (
                     <button
                       aria-label={`Mute @${seat.username}`}
@@ -79,17 +83,17 @@ export function PlayerBoard({
                     </button>
                   ) : null}
                 </td>
-                <td>{seat.you ? formatUsdt(seat.balance) : "—"}</td>
-                <td>{veil ? "·" : seat.totalClicks}</td>
+                <td>{seat.you ? formatUsdt(seat.balance) : "â€”"}</td>
+                <td>{veil ? "Â·" : seat.totalClicks}</td>
                 {buttonIds.map((id) => (
-                  <td key={id}>{veil ? "·" : seat.clicks[id] || 0}</td>
+                  <td key={id}>{veil ? "Â·" : seat.clicks[id] || 0}</td>
                 ))}
                 <td>
                   {veil
-                    ? "·"
+                    ? "Â·"
                     : seat.estimated > 0
                       ? formatUsdt(seat.estimated)
-                      : "—"}
+                      : "â€”"}
                 </td>
               </tr>
               );

@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
+import { Avatar } from "@/components/Avatar";
 import { fogCupAt, fogCupClock } from "@/lib/fog-cup";
 import { formatUsdt } from "@/lib/money";
 import { withStoreRead } from "@/lib/store";
@@ -36,7 +37,7 @@ export async function generateMetadata({
   const found = await loadTake(id);
   if (!found) {
     return {
-      title: "Take — Huepot",
+      title: "Take â€” Huepot",
       description: "Same-price color buttons. Biggest color splits the rest of the pot.",
     };
   }
@@ -44,7 +45,7 @@ export async function generateMetadata({
   // Short enough to survive a browser tab and a social card headline. A name
   // reads better than a colour, so it leads when the payout rows still name one.
   const who = winners.length ? creditLine(winners) : take.names;
-  const short = `${who} took ${formatUsdt(take.amount)} USDT · ${take.roomName}`;
+  const short = `${who} took ${formatUsdt(take.amount)} USDT Â· ${take.roomName}`;
   const description = `Same price on every color. Biggest color takes the rest. ${cupWhen()}.`;
   return {
     title: short,
@@ -89,12 +90,15 @@ export default async function TakePage({
     <main className="prose-page take-page">
       <p className="hall-kicker">The take</p>
       <p className="lobby-kicker">{take.roomName}</p>
+      {winners.length === 1 ? (
+        <Avatar avatar={winners[0].avatar} size="lg" username={winners[0].username} />
+      ) : null}
       <h1 className="font-display text-4xl text-white">
         {winners.length ? creditLine(winners) : take.names} took the pot
       </h1>
       <p className="take-page-pot">{formatUsdt(take.amount)} USDT</p>
       <p className="take-page-hue">
-        on {take.names} · round #{take.number}
+        on {take.names} Â· round #{take.number}
       </p>
       {winners.length > 1 ? (
         <ul className="take-page-split">
@@ -110,7 +114,7 @@ export default async function TakePage({
       ) : winners.length === 1 ? (
         <p>
           <Link href={`/network?u=${encodeURIComponent(winners[0].username)}`}>
-            See {winners[0].username}’s record
+            See {winners[0].username}â€™s record
           </Link>
         </p>
       ) : null}
@@ -121,7 +125,7 @@ export default async function TakePage({
         <Link className="chip-btn" href={`/rooms/${take.slug}`}>
           Sit the next round
         </Link>
-        {" · "}
+        {" Â· "}
         <Link href={`/fairness/${take.id}`}>Open the ledger</Link>
       </p>
     </main>

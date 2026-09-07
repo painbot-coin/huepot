@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
-import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
+import { Avatar } from "@/components/Avatar";
+import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import { hueRule, levelFor, nextRankFor } from "@/lib/coin";
 import { AVATAR_HUES, hueHexOf } from "@/lib/hues";
 import { formatUsdt } from "@/lib/money";

@@ -1,4 +1,4 @@
-import {
+﻿import {
   colorById,
   emptyColorCounts,
   type ColorId,
@@ -168,7 +168,7 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
       addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} push`);
       notify(store, playerId, {
         kind: "refund",
-        title: `${room.name} · round #${round.number} push`,
+        title: `${room.name} Â· round #${round.number} push`,
         body: `Colors tied. ${formatCents(amount)} USDT was returned.`,
         href,
       });
@@ -262,7 +262,7 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
     );
     notify(store, playerId, {
       kind: "payout",
-      title: `${room.name} · wager earned`,
+      title: `${room.name} Â· wager earned`,
       body: `${names} took the pot. You received ${formatCents(amount)} USDT. Copy invite on the card.`,
       href,
     });
@@ -281,7 +281,7 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
     const user = store.users[playerId];
     notify(store, playerId, {
       kind: "system",
-      title: `${room.name} · round #${round.number} settled`,
+      title: `${room.name} Â· round #${round.number} settled`,
       body: "Your color did not have the most clicks.",
       href,
     });
@@ -492,6 +492,7 @@ function toSeats(store: StoreData, room: Room, viewerId: string | null): PublicS
     seats.push({
       userId,
       username: user.username,
+      avatar: (user.avatar ?? "").trim(),
       you,
       balance: you ? fromCents(user.balance) : 0,
       totalClicks: hide ? 0 : totalClicks,
@@ -526,7 +527,7 @@ function pruneExpiredRooms(store: StoreData) {
       notify(store, playerId, {
         kind: "system",
         title: `${room.name} closed`,
-        body: "This table’s live time ended and the room was deleted.",
+        body: "This tableâ€™s live time ended and the room was deleted.",
         href: "/",
       });
     }
@@ -741,7 +742,7 @@ export function staffKillRound(store: StoreData, slug: string) {
     addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} voided`);
     notify(store, playerId, {
       kind: "refund",
-      title: `${room.name} · round voided`,
+      title: `${room.name} Â· round voided`,
       body: `Staff ended the round. ${formatCents(amount)} USDT came back.`,
       href: roomHref(room),
     });
