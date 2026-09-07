@@ -642,6 +642,62 @@ Verified before trusting it: the tunnel route reaches the staff sign-in while th
 
 Three runs of this said "no gap" and were wrong: a stale `next start` from an earlier phase still held port 3000 and answered every request. Kill the old server and confirm the port is free before trusting a security result. Also `staffIpAllowed` returns true when `STAFF_IPS` is empty, so an unconfigured gate looks identical to a passed one.
 
+## Phase 29 — What a player can type (verified, no change needed)
+
+The house writes raw SQL in a lot of places, and player text reaches some of it. Nothing broke, and this is the reasoning and the evidence, because "we looked and it was fine" is worth nothing without both.
+
+### Why the raw SQL holds
+
+Every escape helper is `value.replace(/'/g, "''")`, which is the correct escape for a single-quoted SQLite literal — SQLite has no backslash escapes to work around. Player text either goes through that inside quotes, or is bound as a `?` parameter, or reaches Prisma's tagged templates, which bind rather than interpolate.
+
+The interpolations that sit **outside** quotes were the ones worth reading, since an escape does nothing there. All of them are server constants or clamped numbers:
+
+```
+fairness   LIMIT ${limit}          Math.max(1, Math.min(80, take)), take is a literal 40
+staff log  LIMIT ${take}           Math.max(1, Math.min(120, ...))
+sweeps     LIMIT ${...}            Math.max(1, Math.min(40, take))
+record     SELECT ${hueSums}       built from the fixed COLORS list, userId bound as ?
+store      day/window arithmetic   module constants
+```
+
+### What was actually thrown at it
+
+Ten payloads — quote break-outs, `'; DROP TABLE Tx; --`, `' UNION SELECT balance FROM User --`, script and `onerror` tags, a backslash quote, template braces, a null byte — at the public fairness slug, search, profile fields, room chat, and network posts.
+
+Everything came back as text, exactly as sent:
+
+```
+chat    '; DROP TABLE Tx; --                stored: "'; DROP TABLE Tx; --"
+chat    <script>alert(1)</script>           stored: "<script>alert(1)</script>"
+post    ' UNION SELECT balance FROM User -- stored: "' UNION SELECT balance FROM User --"
+profile ' OR 1=1 --                         stored: "' OR 1=1 --"
+```
+
+Every table still present afterwards, account count unchanged, and row counts moved only by the writes the test itself made.
+
+### Why script tags in the database are not a problem here
+
+There is no `dangerouslySetInnerHTML`, `innerHTML`, `outerHTML`, `insertAdjacentHTML` or `document.write` anywhere in the source. Player text therefore reaches the page only as a React text node, which escapes by construction. Storing `<script>` is harmless when nothing can ever parse it as markup — and that property is worth keeping deliberately, because it is one `dangerouslySetInnerHTML` away from being untrue.
+
+### Anti-spam holds
+
+```
+first message      200
+straight after     400  Wait a moment before sending again
+after 1.1s         200
+5000 characters    400  Keep chat under 240 characters
+```
+
+### Not covered, and worth saying so
+
+- **Direct messages.** The only other local account is the house, which is excluded from player lookups, so the send path was never exercised. It shares `sendMessage` and the same bound queries as posts.
+- **Host mute and slow mode.** These need a custom room and a second real player; sign-in is Google only, so a second account cannot be conjured locally.
+- **XSS end to end in a browser.** Established structurally, from the absence of every raw-HTML sink, rather than by watching a payload fail to fire.
+
+### One thing left as an observation
+
+`parseChat` blanks `http://`, `https://` and `www.` links. A bare `bit.ly/x` or `huepot.net.evil.com` passes through. Tightening that trades false positives against scam links, which is a product call rather than a defect, so it stands as written.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.
