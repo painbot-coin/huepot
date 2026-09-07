@@ -11,6 +11,7 @@ import { PublicTakes } from "@/components/PublicTakes";
 import { RoomMark } from "@/components/RoomMark";
 import { SearchDock } from "@/components/SearchDock";
 import { colorsForCount } from "@/lib/colors";
+import { eventSoon, hallClass, hallFor } from "@/lib/hall";
 import { BASIC_ROOMS } from "@/lib/rooms";
 import { classicHourClock } from "@/lib/classic-hour";
 import { fogCupClock } from "@/lib/fog-cup";
@@ -162,23 +163,29 @@ export function RoomLobby() {
     return (
       <div className="loader-stage">
         <div className="loader-ring" />
-        <p>Opening the rooms…</p>
+        <p>Opening the hall…</p>
       </div>
     );
   }
 
   const basic = state?.rooms.filter((room) => room.kind === "basic") ?? [];
   const custom = state?.rooms.filter((room) => room.kind === "custom") ?? [];
+  const hourLive = Boolean(state?.classicHour?.live);
+  const cupLive = Boolean(state?.fogCup?.live);
+  const hourSoon = Boolean(state?.classicHour && eventSoon(state.classicHour.startAt, now));
+  const cupSoon = Boolean(state?.fogCup && eventSoon(state.fogCup.startAt, now));
 
   return (
     <div className="lobby-stage">
-      <header className="lobby-hero">
+      <header
+        className={`lobby-hero${hourLive ? " is-hour" : ""}${cupLive ? " is-cup" : ""}${
+          !hourLive && !cupLive && (hourSoon || cupSoon) ? " is-soon" : ""
+        }`}
+      >
         <div className="lobby-hero-art">
-          <img alt="" className="lobby-crystal" src="/fx/huepot-chrono.jpg" />
-          <img alt="" className="lobby-crystal is-gem" src="/fx/huepot-crystal.jpg" />
           <BrandMark className="brand-mark is-hero" />
         </div>
-        <p className="lobby-kicker">Orbit pit</p>
+        <p className="lobby-kicker">The hall</p>
         <h1 className="font-display">Same price. Biggest color takes.</h1>
         <p className="lobby-rule">
           Every coin costs the same. When the clock ends, the color with the most
@@ -194,8 +201,18 @@ export function RoomLobby() {
             onFocus={prefetchTable}
             onMouseEnter={prefetchTable}
           >
-            {state?.classicHour?.live ? "Sit Classic now" : "Sit Classic"}
+            {hourLive ? "Sit Classic now" : "Sit Classic"}
           </Link>
+          {cupLive ? (
+            <Link
+              className="chip-btn"
+              href="/rooms/fog"
+              onFocus={prefetchTable}
+              onMouseEnter={prefetchTable}
+            >
+              Sit Fog now
+            </Link>
+          ) : null}
           {state?.user?.inviteCode ? (
             <ClassicInvite
               code={state.user.inviteCode}
@@ -204,21 +221,21 @@ export function RoomLobby() {
             />
           ) : (
             <Link className="nav-link" href="/how-it-works">
-              How it works
+              Rite
             </Link>
           )}
-          <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
-          <Link aria-label="Create room" className="pit-create" href="/rooms/new">
+          <Link aria-label="Raise a table" className="pit-create" href="/rooms/new">
             <IconPlus />
           </Link>
         </div>
+        <div className="lobby-search">
+          <SearchDock onPickRoom={(slug) => router.push(`/rooms/${slug}`)} />
+        </div>
       </header>
-      <PublicTakes />
-      <PublicPayouts />
       {error ? <p className="error-toast">{error}</p> : null}
 
       <section>
-        <h2 className="lobby-label">House</h2>
+        <h2 className="lobby-label">House pits</h2>
         <div className="lobby-grid">
           {basic.map((room) => (
             <RoomCard
@@ -226,8 +243,10 @@ export function RoomLobby() {
               now={now}
               room={room}
               blurb={blurbFor(room)}
-              hourOn={room.slug === "classic" && Boolean(state?.classicHour?.live)}
-              cupOn={room.slug === "fog" && Boolean(state?.fogCup?.live)}
+              hourOn={room.slug === "classic" && hourLive}
+              hourSoon={room.slug === "classic" && hourSoon}
+              cupOn={room.slug === "fog" && cupLive}
+              cupSoon={room.slug === "fog" && cupSoon}
             />
           ))}
         </div>
@@ -235,10 +254,10 @@ export function RoomLobby() {
 
       <section>
         <div className="lobby-row">
-          <h2 className="lobby-label">Open tables</h2>
+          <h2 className="lobby-label">Guest tables</h2>
         </div>
         {custom.length === 0 ? (
-          <p className="lobby-empty">No custom tables yet.</p>
+          <p className="lobby-empty">No guest tables yet. Open one from the hall.</p>
         ) : (
           <div className="lobby-grid">
             {custom.map((room) => (
@@ -247,6 +266,8 @@ export function RoomLobby() {
           </div>
         )}
       </section>
+      <PublicTakes />
+      <PublicPayouts />
     </div>
   );
 }
@@ -256,17 +277,32 @@ function RoomCard({
   blurb,
   now,
   hourOn,
+  hourSoon,
   cupOn,
+  cupSoon,
 }: {
   room: PublicRoomCard;
   blurb: string;
   now: number;
   hourOn?: boolean;
+  hourSoon?: boolean;
   cupOn?: boolean;
+  cupSoon?: boolean;
 }) {
+  const eventKicker = hourOn
+    ? "Hour is on"
+    : cupOn
+      ? "Cup is on"
+      : hourSoon
+        ? "Hour soon"
+        : cupSoon
+          ? "Cup soon"
+          : null;
   return (
     <Link
-      className="room-card"
+      className={`room-card ${hallClass(room.slug)}${hourOn ? " is-hour" : ""}${
+        cupOn ? " is-cup" : ""
+      }${hourSoon || cupSoon ? " is-soon" : ""}`}
       href={`/rooms/${room.slug}`}
       onFocus={prefetchTable}
       onMouseEnter={prefetchTable}
@@ -281,7 +317,10 @@ function RoomCard({
             </strong>
             <em className={`pit-kind is-${room.kind}`} title={room.kind === "basic" ? "House" : "Custom"} />
           </div>
-          <p>{blurb}</p>
+          <p className="hall-kicker">
+            {eventKicker ?? hallFor(room.slug)?.kicker ?? "Guest table"}
+          </p>
+          <p>{hallFor(room.slug)?.enter ?? blurb}</p>
         </div>
       </div>
       <div className="room-coin-row" aria-hidden="true">
@@ -318,8 +357,6 @@ function RoomCard({
       <p className="room-card-foot">
         #{room.roundNumber || 1} · {sittingLine(room)}
         {` · ${room.paused ? "paused" : room.status}`}
-        {hourOn ? " · hour on" : ""}
-        {cupOn ? " · cup on" : ""}
         {room.closesAt ? ` · ${formatClock(room.closesAt - now)}` : ""}
       </p>
     </Link>

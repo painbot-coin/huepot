@@ -2,7 +2,7 @@ import { LazySigninForm } from "@/components/LazyViews";
 
 export default function SigninPage() {
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-12">
+    <main className="app-page">
       <LazySigninForm />
     </main>
   );

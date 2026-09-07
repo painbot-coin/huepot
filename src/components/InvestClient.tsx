@@ -135,9 +135,10 @@ export function InvestClient() {
 
   if (!state?.user) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+      <main className="app-page is-wide">
+        <p className="hall-kicker">The vault</p>
         <h1 className="font-display text-4xl text-white">Add USDT</h1>
-        <p className="mt-2 text-zinc-400">Opening your deposit address…</p>
+        <p className="app-lead">Opening your deposit address…</p>
       </main>
     );
   }
@@ -145,12 +146,13 @@ export function InvestClient() {
   const deposits = state.user.txs.filter((tx) => tx.type === "deposit");
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-10">
+    <main className="app-page is-wide">
+      <p className="hall-kicker">The vault</p>
       <h1 className="font-display text-4xl text-white">Add USDT</h1>
-      <p className="mt-2 text-zinc-400">
-        One address. Send at least {MIN_DEPOSIT} USDT on BNB Chain (BEP-20).
-        Credit lands after {confirms} confirms. This page watches until it
-        posts. Any other chain is gone — Huepot does not watch it.
+      <p className="app-lead">
+        Gold in through this door. Send at least {MIN_DEPOSIT} USDT (BEP-20) on
+        BNB Chain. Credit lands after {confirms} confirms. Any other chain is
+        gone.
       </p>
 
       <p className="mt-6 font-display text-3xl text-white">
@@ -167,12 +169,12 @@ export function InvestClient() {
       ) : null}
 
       {liveWallet ? (
-        <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5">
+        <section className="app-card">
           <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
             Live deposit · {liveWallet.name} · {liveWallet.standard} {liveWallet.asset}
           </p>
           <button
-            className="mt-2 w-full break-all rounded-2xl bg-black/40 px-4 py-3 text-left font-mono text-sm text-zinc-200"
+            className="vault-door mt-2 w-full break-all px-4 py-3 text-left font-mono text-sm text-zinc-200"
             onClick={() => void copyAddress()}
             type="button"
           >
@@ -228,7 +230,7 @@ export function InvestClient() {
           <ul className="mt-3 space-y-2">
             {pending.map((item) => (
               <li
-                className="flex justify-between gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-zinc-300"
+                className="ledger-row is-waiting"
                 key={item.txHash}
               >
                 <span>
@@ -256,7 +258,7 @@ export function InvestClient() {
 
       <ul className="mt-8 space-y-2">
         {deposits.length === 0 ? (
-          <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-500">
+          <li className="ledger-row">
             No credited deposits yet. After {confirms} confirms, they show here.
           </li>
         ) : (
@@ -264,7 +266,7 @@ export function InvestClient() {
             const hash = txHashFromNote(tx.note);
             return (
               <li
-                className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400"
+                className="ledger-row"
                 key={tx.id}
               >
                 <span>

@@ -32,18 +32,21 @@ export function NotificationsClient() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10">
+    <main className="app-page">
       <div className="flex items-end justify-between gap-4">
-        <h1 className="font-display text-4xl text-white">Notifications</h1>
+        <div>
+          <p className="hall-kicker">House notices</p>
+          <h1 className="font-display text-4xl text-white">Notices</h1>
+        </div>
         <button className="nav-link" onClick={() => void markAll()} type="button">
           Mark all read
         </button>
       </div>
-      <ul className="mt-8 space-y-2">
+      <ul className="ledger-list">
         {items.map((item) => (
           <li key={item.id}>
             <Link
-              className={`block rounded-2xl border px-4 py-3 ${item.read ? "border-white/8 text-zinc-400" : "border-white/16 bg-white/5 text-zinc-200"}`}
+              className={`ledger-row notice-item is-stack is-${item.kind} ${item.read ? "" : "is-unread"}`}
               href={item.href || "/"}
             >
               <p className="text-white">{item.title}</p>
@@ -55,7 +58,9 @@ export function NotificationsClient() {
           </li>
         ))}
         {items.length === 0 ? (
-          <li className="text-zinc-500">No notifications yet.</li>
+          <li className="empty-note">
+            No notices yet. Takes, gold in, and company asks land here.
+          </li>
         ) : null}
       </ul>
     </main>

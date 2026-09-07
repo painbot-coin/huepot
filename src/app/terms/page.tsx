@@ -1,6 +1,7 @@
 export default function TermsPage() {
   return (
     <main className="prose-page">
+      <p className="hall-kicker">House law</p>
       <h1 className="font-display text-4xl text-white">Terms</h1>
       <p>
         Huepot is an 18+ color-pot game. By signing in with Google you confirm you

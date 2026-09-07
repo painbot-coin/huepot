@@ -40,7 +40,7 @@ export function seedCommit(seed: string) {
   return sha256Hex(seed);
 }
 
-export function fairDigest(input: {
+type FairInput = {
   serverSeed: string;
   roundId: string;
   number: number;
@@ -51,7 +51,14 @@ export function fairDigest(input: {
   losingPot: number;
   payoutPerWinningClick: number;
   rake?: number;
-}) {
+};
+
+/**
+ * The exact string that gets hashed into the settle digest. Shown verbatim on
+ * the ledger page so anyone can recompute the digest themselves — which is why
+ * the digest must never be built anywhere but here.
+ */
+export function fairPreimage(input: FairInput) {
   const totals = input.buttonIds.map((id) => `${id}:${input.totals[id] ?? 0}`).join(",");
   const winners = [...input.winners].sort().join(",");
   const parts = [
@@ -65,7 +72,26 @@ export function fairDigest(input: {
     String(input.payoutPerWinningClick),
   ];
   if (input.rake) parts.push(String(input.rake));
-  return sha256Hex(parts.join("|"));
+  return parts.join("|");
+}
+
+export function fairDigest(input: FairInput) {
+  return sha256Hex(fairPreimage(input));
+}
+
+export function settledPreimage(row: PublicSettledRound) {
+  return fairPreimage({
+    serverSeed: row.serverSeed,
+    roundId: row.id,
+    number: row.number,
+    buttonIds: row.buttonIds,
+    totals: row.totals,
+    kind: row.kind,
+    winners: row.winners,
+    losingPot: row.losingPot,
+    payoutPerWinningClick: row.payoutPerWinningClick,
+    rake: row.rake ?? 0,
+  });
 }
 
 export function ensureRoundSeed(round: Round) {
@@ -185,6 +211,19 @@ export function settledSummary(row: PublicSettledRound) {
 
 export function settledDollars(row: PublicSettledRound, value: number) {
   return row.unit === "cents" ? fromCents(value) : value;
+}
+
+/**
+ * What the winning color actually collected: the losing pot after the house
+ * take, plus the winners' own stakes back. The losing pot alone understates it
+ * and reads as 0.00 when the losers barely clicked, so every surface that
+ * names a take amount must use this.
+ */
+export function settledTakeAmount(row: PublicSettledRound) {
+  const losing = settledDollars(row, row.losingPot);
+  const rake = settledDollars(row, row.rake ?? 0);
+  const click = settledDollars(row, row.clickPrice);
+  return Math.max(0, losing - rake) + row.winningClicks * click;
 }
 
 export function shortHash(value: string) {

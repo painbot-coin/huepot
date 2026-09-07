@@ -13,7 +13,7 @@ export function SiteHeader({ user }: { user: PublicUser | null }) {
       </Link>
       <nav className="site-nav">
         <Link className="nav-link" href="/">
-          Rooms
+          Hall
         </Link>
         <HeaderNav user={user} />
       </nav>

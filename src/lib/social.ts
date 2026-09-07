@@ -12,6 +12,7 @@ import { isHouseUser } from "@/lib/house";
 import { playBlock } from "@/lib/limits";
 import { notify } from "@/lib/notifications";
 import { isOnline, presenceAt, touchPresence } from "@/lib/presence";
+import { emptyRecord } from "@/lib/record";
 import type {
   NetworkMessage,
   NetworkPost,
@@ -129,6 +130,7 @@ export function publicProfile(store: StoreData, viewer: User, username: string):
     relation: self ? "friends" : playerRelation(viewer.id, user.id),
     friends: friendCount(user.id),
     you: self,
+    record: emptyRecord(),
   };
 }
 

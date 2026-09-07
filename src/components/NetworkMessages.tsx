@@ -90,8 +90,8 @@ export function NetworkMessages() {
       <NetworkChrome>
         <main className="li-main is-wide">
           <aside className="li-card li-inbox">
-            <p className="lobby-label">Messaging</p>
-            <p className="mt-3 text-sm text-zinc-500">Opening inbox…</p>
+            <p className="lobby-label">Letters</p>
+            <p className="mt-3 text-sm text-zinc-500">Opening letters…</p>
           </aside>
           <section className="li-card li-chat">
             <p className="text-sm text-zinc-500">Opening this chat…</p>
@@ -104,9 +104,9 @@ export function NetworkMessages() {
 
   return (
     <NetworkChrome you={you}>
-      <main className="li-main is-wide">
+      <main className={`li-main is-wide ${peer ? "is-thread" : ""}`}>
         <aside className="li-card li-inbox">
-          <p className="lobby-label">Messaging</p>
+          <p className="lobby-label">Letters</p>
           {inbox.length === 0 ? (
             <p className="mt-3 text-sm text-zinc-500">No threads yet.</p>
           ) : (
@@ -134,6 +134,9 @@ export function NetworkMessages() {
           {peer ? (
             <>
               <p className="li-chat-top">
+                <Link className="li-back" href="/network/messages" onClick={() => setPeer("")}>
+                  Inbox
+                </Link>
                 <Link href={`/network/u/${encodeURIComponent(peer)}`}>@{peer}</Link>
               </p>
               <ul className="li-bubbles" onScroll={onScroll} ref={scroller}>

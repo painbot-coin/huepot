@@ -8,6 +8,10 @@ import { useChatScroll } from "@/components/useChatScroll";
 import { MESSAGE_OPEN, openMessageDock } from "@/lib/message-dock";
 import type { NetworkMessage, NetworkThread } from "@/lib/types";
 
+function onPit(path: string) {
+  return path.startsWith("/rooms/");
+}
+
 function whenLabel(at: number) {
   const mins = Math.floor(Math.max(0, Date.now() - at) / 60_000);
   if (mins < 1) return "now";
@@ -18,14 +22,22 @@ function whenLabel(at: number) {
 }
 
 export function MessageLaunch() {
+  const path = usePathname();
+  if (onPit(path)) {
+    return (
+      <Link aria-label="Chat" className="notice-bell" href="/network/messages">
+        Chat
+      </Link>
+    );
+  }
   return (
     <button
-      aria-label="Messaging"
+      aria-label="Chat"
       className="notice-bell"
       onClick={() => openMessageDock()}
       type="button"
     >
-      Messaging
+      Chat
     </button>
   );
 }
@@ -176,7 +188,7 @@ export function MessageDock() {
   const filtered = query.trim()
     ? inbox.filter((thread) => thread.username.toLowerCase().includes(query.trim().toLowerCase()))
     : inbox;
-  if (path.startsWith("/network/messages")) return null;
+  if (path.startsWith("/network/messages") || onPit(path)) return null;
 
   return (
     <div className="msg-dock">
@@ -229,13 +241,13 @@ export function MessageDock() {
 
       {!open ? (
         <button className="msg-tab is-fade-in" onClick={() => setOpen(true)} type="button">
-          Messaging
+          Letters
           {unread ? <b>{unread}</b> : null}
         </button>
       ) : !(chatOpen && peer) ? (
         <section className="msg-panel msg-inbox is-fade-in">
           <header className="msg-bar">
-            <strong>Messaging</strong>
+            <strong>Letters</strong>
             <span>
               <button
                 aria-label="New message"
@@ -301,7 +313,7 @@ export function MessageDock() {
             </ul>
           )}
           <Link className="msg-all" href="/network/messages">
-            Open messaging
+            Open letters
           </Link>
         </section>
       ) : null}

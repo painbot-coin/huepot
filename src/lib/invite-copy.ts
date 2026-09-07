@@ -19,5 +19,5 @@ export function inviteText(
 ) {
   const lead = sit ? inviteSitLead(sit) : "";
   const prefix = lead ? `${lead} ` : "";
-  return `${prefix}Sign in with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
+  return `${prefix}Enter the house with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
 }

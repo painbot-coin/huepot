@@ -25,3 +25,26 @@ huepot-orbit.jpg, huepot-panel.jpg, huepot-chrono.jpg
 
 huepot-orb-energy.jpg
   Original Huepot magical orb energy texture for 3D color balls (1.3.39).
+
+huepot-hall.jpg, huepot-chamber.jpg, huepot-slate.jpg
+  Original Huepot house plates for the calm backdrop pass (1.3.70).
+  hall = site backdrop, chamber = pit arena floor, slate = card material.
+
+huepot-hall-tall.jpg
+  Original Huepot portrait cut of the hall for phones (1.3.71).
+  Used when the viewport is taller than it is wide.
+
+../fonts/cinzel-700.ttf
+  Cinzel 700, Google Fonts (SIL Open Font License 1.1).
+  Bundled so the share image can render the house typeface (1.3.77).
+  next/font cannot be read at runtime, and next/og needs the raw file.
+
+huepot-hdri.hdr
+  Poly Haven — dikhololo_night 1k (CC0)
+  https://polyhaven.com/a/dikhololo_night
+
+huepot-pit.glb
+  Original Huepot authored pit mesh (felt, gold rim, pedestal, rune tiles).
+
+clock-face.png, clock-hand-hour.png, clock-hand-minute.png, clock-hand-second.png
+  Original Huepot analog pit clock. Convex irregular heptagon bezel, circular dial, hard-edge needles.

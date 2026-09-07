@@ -30,6 +30,7 @@ export function WithdrawClient() {
   const [busy, setBusy] = useState(false);
   const [houseReady, setHouseReady] = useState<boolean | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [left, setLeft] = useState<number | null>(null);
 
   async function load() {
     const response = await fetch("/api/state");
@@ -101,6 +102,7 @@ export function WithdrawClient() {
         houseReady?: boolean;
       };
       if (!response.ok) throw new Error(data.error || "Withdraw failed");
+      setLeft(Number(amount));
       setState(data);
       if (typeof data.user?.balance === "number") publishBank(data.user.balance);
       setAmount("");
@@ -124,24 +126,25 @@ export function WithdrawClient() {
 
   if (!state?.user) {
     return (
-      <main className="mx-auto w-full max-w-xl px-4 py-10">
+      <main className="app-page">
+        <p className="hall-kicker">Leave the vault</p>
         <h1 className="font-display text-4xl text-white">Withdraw</h1>
-        <p className="mt-2 text-zinc-400">Opening your bank…</p>
+        <p className="app-lead">Opening your vault…</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-10">
+    <main className="app-page">
+      <p className="hall-kicker">Leave the vault</p>
       <h1 className="font-display text-4xl text-white">Withdraw</h1>
-      <p className="mt-2 text-zinc-400">
-        Cash out USDT on BNB Chain. Minimum {MIN_WITHDRAW} USDT, max {MAX_WITHDRAW}{" "}
-        USDT per send, {MAX_DAILY_WITHDRAW} USDT per day. Huepot sends from the
-        house wallet when you confirm. If the house is short, it stays queued and
-        retries. This page watches until BscScan lands.
+      <p className="app-lead">
+        Cash out BEP-20 USDT. Min {MIN_WITHDRAW}, max {MAX_WITHDRAW} per send,
+        {` ${MAX_DAILY_WITHDRAW}`} per day. If the house is short, the send stays
+        queued and retries.
       </p>
 
-      <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="app-card">
         <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
           Available
         </p>
@@ -189,9 +192,12 @@ export function WithdrawClient() {
           disabled={!canSend}
           type="submit"
         >
-          {busy ? "Sending…" : pending ? "Already sending" : "Withdraw"}
+          {busy ? "Leaving…" : pending ? "Already sending" : "Leave with gold"}
         </button>
         </form>
+        {left != null ? (
+          <p className="vault-rite">Leaving the vault · {formatUsdt(left)} USDT</p>
+        ) : null}
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
         {houseReady === false ? (
           <p className="mt-3 text-sm text-zinc-500">
@@ -206,13 +212,13 @@ export function WithdrawClient() {
 
       <ul className="mt-8 space-y-2">
         {withdrawals.length === 0 ? (
-          <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-500">
+          <li className="ledger-row">
             No cash-outs yet. Sends land here.
           </li>
         ) : (
           withdrawals.map((item) => (
             <li
-              className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400"
+              className="ledger-row"
               key={item.id}
             >
               <span>

@@ -46,3 +46,6 @@ next-env.d.ts
 
 # local game store
 /data
+
+# contract toolchain output (source of truth is contracts/*.sol)
+/.hardhat

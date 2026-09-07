@@ -1,5 +1,6 @@
 import type { ColorId } from "./colors";
 import type { NetworkId } from "./networks";
+import type { PlayerRecord } from "./record";
 
 export type RoundStatus = "live" | "revealing";
 export type TxType =
@@ -423,4 +424,5 @@ export type NetworkProfile = {
   relation: FriendRelation;
   friends: number;
   you: boolean;
+  record: PlayerRecord;
 };

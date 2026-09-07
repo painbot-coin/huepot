@@ -13,6 +13,7 @@ import {
   listReports,
   setReportStatus,
 } from "@/lib/reports";
+import { readBooks } from "@/lib/books";
 import { staffKillRound } from "@/lib/game";
 import { ensureHouseUser, rakeBps, rakePercentLabel } from "@/lib/house";
 import { jsonError } from "@/lib/http";
@@ -66,6 +67,9 @@ export async function GET(request: Request) {
     }
     if (tab === "reports") {
       return NextResponse.json({ reports: await listReports(), house, you });
+    }
+    if (tab === "books") {
+      return NextResponse.json({ books: await readBooks(), house, you });
     }
     if (tab === "ledger") {
       const txs = await withStoreRead((store) =>

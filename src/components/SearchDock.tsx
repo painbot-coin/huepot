@@ -48,18 +48,18 @@ export function SearchDock({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Search rooms and players…"
+        placeholder="Find a table or a seat…"
         value={q}
       />
       <Fade className="search-pop" show={open}>
           {q.trim().length < 2 ? (
-            <span>Type a room or player name.</span>
+            <span>Type a table or a seat.</span>
           ) : (
             <>
-          <p aria-label="Rooms">
+          <p aria-label="Tables">
             <IconSearch />
           </p>
-          {hits.rooms.length === 0 ? <span>No rooms match.</span> : null}
+          {hits.rooms.length === 0 ? <span>No tables match.</span> : null}
           {hits.rooms.map((room) => (
             <button
               key={room.slug}
@@ -76,10 +76,10 @@ export function SearchDock({
               </em>
             </button>
           ))}
-          <p aria-label="Players">
+          <p aria-label="Seats">
             <IconUsers />
           </p>
-          {hits.users.length === 0 ? <span>No players match.</span> : null}
+          {hits.users.length === 0 ? <span>No seats match.</span> : null}
           {hits.users.map((user) => (
             <button
               key={user.username}
@@ -91,7 +91,7 @@ export function SearchDock({
               type="button"
             >
               <strong>@{user.username}</strong>
-              <em>Player</em>
+              <em>Seat</em>
             </button>
           ))}
             </>

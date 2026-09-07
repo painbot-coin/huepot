@@ -26,7 +26,7 @@ export function AgeBanner() {
 
   return (
     <div className="verify-banner">
-      <p>Huepot is 18+. Confirm your age to invest and click.</p>
+      <p>The lintel is 18+. Confirm before you sit or send gold.</p>
       <button disabled={busy} onClick={() => void confirm()} type="button">
         {busy ? "Saving…" : "I am 18+"}
       </button>

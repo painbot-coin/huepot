@@ -47,22 +47,24 @@ export function AccountClient() {
 
   if (!user) {
     return (
-      <main className="mx-auto w-full max-w-2xl px-4 py-10">
+      <main className="app-page">
+        <p className="hall-kicker">The vault</p>
         <h1 className="font-display text-4xl text-white">Account</h1>
-        <p className="mt-2 text-zinc-400">Opening your account…</p>
+        <p className="app-lead">Opening your vault…</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10">
+    <main className="app-page">
+      <p className="hall-kicker">The vault</p>
       <h1 className="font-display text-4xl text-white">Account</h1>
-      <p className="mt-2 text-zinc-400">
+      <p className="app-lead">
         Signed in as <strong className="text-zinc-200">@{user.username}</strong>
       </p>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="app-card is-flush">
           <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
             Balance
           </p>
@@ -70,7 +72,7 @@ export function AccountClient() {
             {formatUsdt(user.balance)} USDT
           </p>
         </div>
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+        <div className="app-card is-flush">
           <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
             Invite earned
           </p>
@@ -86,7 +88,7 @@ export function AccountClient() {
         {new Date(user.createdAt).toLocaleDateString()}
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-3">
+      <div className="app-actions">
         <Link className="chip-btn" href="/invest">
           Add USDT
         </Link>
@@ -107,7 +109,7 @@ export function AccountClient() {
           .filter((wallet) => wallet.live)
           .map((wallet) => (
           <li
-            className="rounded-2xl border border-white/8 px-4 py-3"
+            className="ledger-row is-stack"
             key={wallet.id}
           >
             <p className="text-sm text-white">
@@ -168,7 +170,8 @@ function InviteCard({
   const sit = inviteSitLead({ hour: hour?.hour, cup });
 
   return (
-    <section className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-5">
+    <section className="app-card">
+      <p className="hall-kicker">Bring a seat</p>
       <h2 className="font-display text-2xl text-white">Invite</h2>
       <p className="mt-1 text-sm text-zinc-500">
         New Google accounts from your link are tagged once. When they sit and a
@@ -232,7 +235,8 @@ function ProfileCard({
   }
 
   return (
-    <section className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-5">
+    <section className="app-card">
+      <p className="hall-kicker">Your seat</p>
       <h2 className="font-display text-2xl text-white">Profile</h2>
       <p className="mt-1 text-sm text-zinc-500">
         Name shows on the table. Email comes from Google and stays with that account.
@@ -363,7 +367,7 @@ function LedgerCard({ txs }: { txs: Tx[] }) {
             const amount = txSigned(tx);
             return (
               <li
-                className="flex items-start justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm"
+                className="ledger-row"
                 key={tx.id}
               >
                 <div>
@@ -421,7 +425,8 @@ function LimitsCard({
   }
 
   return (
-    <section className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-5">
+    <section className="app-card">
+      <p className="hall-kicker">Seat limits</p>
       <h2 className="font-display text-2xl text-white">Play limits</h2>
       <p className="mt-1 text-sm text-zinc-500">
         Today’s play loss {formatUsdt(user.playLossToday)} USDT. Cool-off and
@@ -517,7 +522,8 @@ function SecurityCard({ user: _user }: { user: PublicUser }) {
   }
 
   return (
-    <section className="mt-10 rounded-3xl border border-white/10 bg-white/5 p-5">
+    <section className="app-card">
+      <p className="hall-kicker">This seat</p>
       <h2 className="font-display text-2xl text-white">Sign-in</h2>
       <p className="mt-1 text-sm text-zinc-500">
         This account signs in with Google. Kick other devices here.
@@ -536,7 +542,7 @@ function SecurityCard({ user: _user }: { user: PublicUser }) {
       <ul className="mt-3 space-y-2">
         {sessions.map((session) => (
           <li
-            className="flex items-start justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm"
+            className="ledger-row"
             key={session.hint}
           >
             <div>

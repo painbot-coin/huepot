@@ -6,7 +6,7 @@ import { requirePageUser } from "@/lib/auth";
 export default async function NetworkMessagesPage() {
   await requirePageUser();
   return (
-    <Suspense fallback={<PitLoader label="Opening messages…" />}>
+    <Suspense fallback={<PitLoader label="Opening letters…" />}>
       <LazyNetworkMessages />
     </Suspense>
   );

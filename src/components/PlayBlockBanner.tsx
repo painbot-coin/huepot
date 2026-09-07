@@ -7,7 +7,7 @@ export function PlayBlockBanner({ user }: { user: PublicUser }) {
     <div className="verify-banner">
       <p>
         {user.blockMessage}{" "}
-        <Link href="/account">Account limits</Link>
+        <Link href="/account">Seat limits</Link>
       </p>
     </div>
   );

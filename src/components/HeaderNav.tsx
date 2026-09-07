@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SoundToggle } from "@/components/SoundToggle";
 import { onBank } from "@/lib/bank-sync";
@@ -14,6 +15,7 @@ const SignedNav = dynamic(
 );
 
 export function HeaderNav({ user }: { user: PublicUser | null }) {
+  const path = usePathname();
   const [balance, setBalance] = useState(user?.balance ?? 0);
 
   useEffect(() => {
@@ -52,20 +54,25 @@ export function HeaderNav({ user }: { user: PublicUser | null }) {
     return (
       <>
         <Link className="nav-link" href="/how-it-works">
-          How it works
+          Rite
         </Link>
         <SoundToggle className="pit-ico header-sound" />
-        <Link className="chip-btn" href="/signin">
-          Sign in
-        </Link>
+        {path !== "/signin" ? (
+          <Link className="chip-btn" href="/signin">
+            Sign in
+          </Link>
+        ) : null}
       </>
     );
   }
 
   return (
     <>
+      <Link className="nav-link" href="/how-it-works">
+        Rite
+      </Link>
       <Link className="nav-link" href="/network">
-        Network
+        Wing
       </Link>
       <Link className="nav-link" href="/invest">
         Add USDT

@@ -110,7 +110,7 @@ export function NetworkClient() {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the pit…</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
       </NetworkChrome>
     );
   }
@@ -127,13 +127,13 @@ export function NetworkClient() {
     <NetworkChrome you={state?.you}>
     <main className="li-main is-wide">
       <aside className="li-card li-manage">
-        <p className="lobby-label">Manage my network</p>
+        <p className="lobby-label">Company</p>
         <button
           className={tab === "friends" ? "is-on" : ""}
           onClick={() => openTab("friends")}
           type="button"
         >
-          <span>Connections</span>
+          <span>Company</span>
           <b>{state?.you.friends ?? 0}</b>
         </button>
         <button
@@ -141,7 +141,7 @@ export function NetworkClient() {
           onClick={() => openTab("requests")}
           type="button"
         >
-          <span>Invitations</span>
+          <span>Asks</span>
           <b>{state?.pendingIn ?? 0}</b>
         </button>
         <button
@@ -149,27 +149,27 @@ export function NetworkClient() {
           onClick={() => openTab("pit")}
           type="button"
         >
-          <span>People you may know</span>
+          <span>In the pit</span>
         </button>
       </aside>
       <div className="li-col">
       <h1 className="font-display text-3xl text-white">
-        {tab === "friends" ? "Connections" : tab === "requests" ? "Invitations" : "People you may know"}
+        {tab === "friends" ? "Company" : tab === "requests" ? "Asks" : "In the pit"}
       </h1>
       <p className="mt-2 text-zinc-400">
         {tab === "friends"
-          ? "People you already connected with."
+          ? "People already in your company."
           : tab === "requests"
-            ? "Invites you sent or received."
-            : "Everyone in the pit, even people you have not connected with yet. Send a request."}
+            ? "Asks you sent or received."
+            : "Everyone sitting the house. Send an ask."}
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {(
           [
-            { id: "pit", label: "People you may know" },
-            { id: "friends", label: "Connections" },
-            { id: "requests", label: `Invitations${state?.pendingIn ? ` · ${state.pendingIn}` : ""}` },
+            { id: "pit", label: "In the pit" },
+            { id: "friends", label: "Company" },
+            { id: "requests", label: `Asks${state?.pendingIn ? ` · ${state.pendingIn}` : ""}` },
           ] as { id: NetworkTab; label: string }[]
         ).map((item) => (
           <button
@@ -184,7 +184,7 @@ export function NetworkClient() {
       </div>
 
       <label className="mt-6 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Search players
+        Search seats
       </label>
       <input
         className="field mt-2"
@@ -196,11 +196,11 @@ export function NetworkClient() {
       {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
 
       {!state ? (
-        <p className="mt-10 text-center text-zinc-500">Opening the pit…</p>
+        <p className="mt-10 text-center text-zinc-500">Opening the wing…</p>
       ) : state.cards.length === 0 ? (
         <p className="mt-10 text-sm text-zinc-500">
           {tab === "friends"
-            ? "No connections yet. Open People you may know and hit Connect."
+            ? "No company yet. Open In the pit and send an ask."
             : tab === "requests"
               ? "No open invitations."
               : "No players match."}
@@ -242,9 +242,7 @@ function PlayerCard({
   const highlighted = focus.toLowerCase() === player.username.toLowerCase();
   return (
     <li
-      className={`rounded-3xl border px-4 py-4 ${
-        highlighted ? "border-amber-400/30 bg-amber-400/5" : "border-white/10 bg-white/5"
-      }`}
+      className={`ledger-row is-stack ${highlighted ? "is-waiting" : ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -268,7 +266,7 @@ function PlayerCard({
                 ? `Online · sitting ${player.room.name}`
                 : "Online"
               : `Offline · ${ageLabel(player.lastSeen, now)}`}
-            {` · ${player.friends} connections · since ${sinceLabel(player.createdAt)}`}
+            {` · ${player.friends} in company · since ${sinceLabel(player.createdAt)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -285,11 +283,11 @@ function PlayerCard({
               onClick={() => onAct("request", player.username)}
               type="button"
             >
-              Connect
+              Ask
             </button>
           ) : null}
           {player.relation === "outgoing" ? (
-            <span className="chip-btn chip-btn-ghost pointer-events-none">Requested</span>
+            <span className="chip-btn chip-btn-ghost pointer-events-none">Ask sent</span>
           ) : null}
           {player.relation === "incoming" ? (
             <>

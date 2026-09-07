@@ -4,6 +4,15 @@ type RoomMarkProps = {
   className?: string;
 };
 
+function plate(slug: string, fog?: boolean) {
+  if (slug === "classic") return "#1b3a28";
+  if (slug === "lightning") return "#2a1a06";
+  if (slug === "duo") return "#140c14";
+  if (slug === "high") return "#2a2110";
+  if (slug === "fog" || fog) return "#16141c";
+  return "#14110e";
+}
+
 function FeltTable() {
   return (
     <>
@@ -78,8 +87,7 @@ export function RoomMark({ slug, fog, className = "room-mark" }: RoomMarkProps) 
 
   return (
     <svg aria-hidden="true" className={className} viewBox="0 0 80 80">
-      <rect width="80" height="80" rx="22" fill="#14110e" />
-      <rect width="80" height="80" rx="22" fill="#1b3a28" opacity="0.35" />
+      <rect width="80" height="80" fill={plate(slug, fog)} />
       {mark}
     </svg>
   );

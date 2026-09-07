@@ -1,11 +1,13 @@
 # Huepot v1.3.22 review and v1.4 update plan
 
-**Live now:** https://huepot.net — product **v1.3.32** (`withdrawSend:true`, `canSend:true`).
-**Read with:** `GROWTH.md`, `NETWORK.md`.
+**Live now:** https://huepot.net — product **v1.3.56**.
+**Read with:** `GROWTH.md` (fantasy UI/UX), `NETWORK.md`.
 
-The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live. Empty Classic and empty proof strips are the remaining growth problem — not missing features.
+**v1.3.56** starts the look the product asked for: one deep-fantasy house. Hall, rite, gate, ledger, and vault share the pit’s convex chrome. Next is Phase 2 — the pit as a place (light by round state), not more ops chrome.
 
-The next update is **v1.4 — finish the house**. Not more rooms. Not more hours. Not ads.
+The v1.2 invite job is done. Cashier, named sit times, take cards, and hour pings are live.
+
+The next product update is **v1.4 — deepen the house**. Not more rooms. Not more hours. Not ads.
 
 ---
 
@@ -92,7 +94,7 @@ Week 1 still means: 3 sign-ins who are not you, 2 deposits, 1 cash-out.
 
 A stranger can: land on Rooms (not an empty feed), sign in with Google only, add USDT on BSC, sit Classic, see a real last take and a real paid cash-out, copy invite from Account or a take card, and a referred sit pays rake-only on Account.
 
-**Build status:** v1.3.40 rebuilds the pit on Three.js — PBR materials, bloom, transmission glass orbs, and a real lit 3D table. Proof rows still wait on you sitting and paying.
+**Build status:** v1.3.55 — house chrome cleaned (one clock needle, energy orbs without a box, sit CTAs for blocked/paused, How it works stays in nav, dead 3D clock kit and scaffold assets gone). Proof rows still wait on you sitting and paying.
 
 Then go back to `NETWORK.md`: sit Classic, pay same-day, post proof, live in one hangout.
 

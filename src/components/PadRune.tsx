@@ -1,14 +1,14 @@
 import type { ColorId } from "@/lib/colors";
 
 const paths: Record<ColorId, string> = {
-  crimson: "M12 2 L14.5 9 L22 9 L16 13.5 L18.2 21 L12 16.8 L5.8 21 L8 13.5 L2 9 L9.5 9 Z",
-  azure: "M12 3 C16 7 19 10 19 14 A7 7 0 1 1 5 14 C5 10 8 7 12 3 Z",
-  volt: "M13 2 L6 13 H12 L10 22 L18 10 H12 Z",
-  amber: "M12 2 L20 7 V17 L12 22 L4 17 V7 Z",
-  violet: "M12 3 L19 8 L16.5 17 H7.5 L5 8 Z",
-  mint: "M12 2 C16 6 20 9 12 22 C4 9 8 6 12 2 Z",
-  ember: "M12 2 L18 10 L12 22 L6 10 Z",
-  frost: "M12 2 L13.5 10 L22 12 L13.5 14 L12 22 L10.5 14 L2 12 L10.5 10 Z",
+  crimson: "M7 3 L18 4 L22 12 L16 21 L5 20 L2 11 Z",
+  azure: "M12 2 L21 8 L18 20 L6 20 L3 8 Z",
+  volt: "M6 4 L19 3 L22 13 L15 21 L4 18 Z",
+  amber: "M5 5 L19 3 L22 14 L14 21 L3 16 Z",
+  violet: "M12 2 L21 9 L17 21 L6 20 L3 8 Z",
+  mint: "M8 3 L18 5 L21 15 L13 21 L3 14 Z",
+  ember: "M6 4 L18 3 L21 12 L14 21 L4 17 Z",
+  frost: "M12 2 L20 7 L18 18 L8 21 L3 11 Z",
 };
 
 export function PadRune({

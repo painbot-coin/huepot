@@ -13,6 +13,7 @@ export function SigninForm() {
   const [error, setError] = useState("");
   const [age, setAge] = useState(false);
   const [ref, setRef] = useState("");
+  const [sitNow, setSitNow] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -34,6 +35,16 @@ export function SigninForm() {
     setError(value);
   }, []);
 
+  useEffect(() => {
+    void fetch("/api/rooms")
+      .then((response) => response.json() as Promise<{ classicHour?: { live?: boolean }; fogCup?: { live?: boolean } }>)
+      .then((data) => {
+        if (data.classicHour?.live) setSitNow("Classic hour is on.");
+        else if (data.fogCup?.live) setSitNow("Fog cup is on.");
+      })
+      .catch(() => undefined);
+  }, []);
+
   return (
     <div className="auth-card">
       <div className="auth-mark">
@@ -45,15 +56,16 @@ export function SigninForm() {
           <MiniCoin id="amber" />
         </div>
       </div>
-      <h1 className="font-display text-4xl text-white">Sign in</h1>
-      <p className="mt-2 text-zinc-400">
-        Huepot uses Google only. Tick 18+, then continue with the same Gmail you
-        play with.
+      <p className="hall-kicker">The gate</p>
+      <h1 className="font-display text-4xl text-white">Enter the house</h1>
+      <p className="app-lead">
+        Google only. Tick 18+, then continue with the same Gmail you play with.
       </p>
       <p className="mt-3 text-sm text-zinc-500">
         Classic sits {classicHourClock(CLASSIC_HOUR_UTC)}. Fog cup{" "}
         {fogCupClock(FOG_CUP_WEEKDAY, FOG_CUP_HOUR_UTC)}.
       </p>
+      {sitNow ? <p className="lobby-hour mt-2">{sitNow}</p> : null}
       <label className="mt-5 flex items-start gap-2 text-sm text-zinc-400">
         <input
           checked={age}
@@ -73,7 +85,7 @@ export function SigninForm() {
         <GoogleButton
           disabled={!age}
           href={ref ? `/api/auth/google?age=1&ref=${encodeURIComponent(ref)}` : "/api/auth/google?age=1"}
-          label="Continue with Google"
+          label="Cross with Google"
         />
       </div>
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
@@ -83,7 +95,7 @@ export function SigninForm() {
         </p>
       ) : null}
       {!age ? (
-        <p className="mt-3 text-xs text-zinc-500">Tick 18+ to continue.</p>
+        <p className="empty-note">The gate opens after you tick 18+.</p>
       ) : null}
     </div>
   );

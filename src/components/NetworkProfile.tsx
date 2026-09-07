@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
 import { NetworkChrome, SignInGate, initials } from "@/components/NetworkChrome";
+import { hueRule, levelFor, nextRankFor } from "@/lib/coin";
+import { formatUsdt } from "@/lib/money";
+import type { PlayerRecord } from "@/lib/record";
+import type { TaskProgress } from "@/lib/tasks";
 import type { NetworkPost, NetworkProfile as Profile, NetworkYou } from "@/lib/types";
 
 function ageLabel(at: number | null) {
@@ -12,6 +16,111 @@ function ageLabel(at: number | null) {
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   return `${Math.floor(mins / 60)}h ago`;
+}
+
+function SeatRecord({ record, you }: { record: PlayerRecord; you: boolean }) {
+  if (!record || record.clicks === 0) {
+    return (
+      <p className="seat-record-empty">
+        {you
+          ? "No rounds yet. Sit a table and your record starts here."
+          : "This seat has not sat a round yet."}
+      </p>
+    );
+  }
+  const level = levelFor(record.coin);
+  const next = nextRankFor(record.coin);
+
+  return (
+    <div className="seat-record">
+      <p className="hall-kicker">The record</p>
+      <div className="seat-coin">
+        <div>
+          <p className="seat-coin-value">{record.coin.toLocaleString()} HUE</p>
+          <p className="seat-coin-rank">
+            Level {level.level} · {level.title}
+          </p>
+        </div>
+        <p className="seat-coin-note">
+          {hueRule()}
+          {record.bonus > 0
+            ? ` ${record.bonus.toLocaleString()} of it from tasks.`
+            : ""}
+          {next
+            ? ` ${(next.at - record.coin).toLocaleString()} to ${next.name}.`
+            : " Top of the house."}
+        </p>
+      </div>
+      <dl>
+        <div>
+          <dt>Takes</dt>
+          <dd>{record.takes}</dd>
+        </div>
+        <div>
+          <dt>Taken</dt>
+          <dd>{formatUsdt(record.taken)}</dd>
+        </div>
+        <div>
+          <dt>Biggest</dt>
+          <dd>{formatUsdt(record.biggest)}</dd>
+        </div>
+        <div>
+          <dt>Struck</dt>
+          <dd>{record.clicks}</dd>
+        </div>
+        {record.hue ? (
+          <div>
+            <dt>Favours</dt>
+            <dd>{record.hue}</dd>
+          </div>
+        ) : null}
+      </dl>
+      {you ? (
+        <div className="seat-tasks">
+          <TaskList title="Today" tasks={record.daily} resets="Resets 00:00 UTC" />
+          <TaskList title="This week" tasks={record.weekly} resets="Resets Monday" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TaskList({
+  title,
+  tasks,
+  resets,
+}: {
+  title: string;
+  tasks: TaskProgress[];
+  resets: string;
+}) {
+  if (!tasks?.length) return null;
+  const done = tasks.filter((task) => task.done).length;
+  return (
+    <div className="task-col">
+      <p className="task-head">
+        <span>{title}</span>
+        <em>
+          {done}/{tasks.length} · {resets}
+        </em>
+      </p>
+      <ul className="task-list">
+        {tasks.map((task) => (
+          <li className={task.done ? "is-done" : ""} key={task.id}>
+            <span className="task-mark" aria-hidden="true" />
+            <span className="task-name">
+              {task.name}
+              <em>{task.note}</em>
+            </span>
+            <span className="task-score">
+              {task.progress}/{task.target}
+              <em>+{task.bonus} HUE</em>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export function NetworkProfile({ username }: { username: string }) {
@@ -119,7 +228,7 @@ export function NetworkProfile({ username }: { username: string }) {
               <p className="li-head">{profile.headline}</p>
               {profile.location ? <p className="text-sm text-zinc-500">{profile.location}</p> : null}
               <p className="mt-2 text-xs text-zinc-500">
-                {profile.friends} connections ·{" "}
+                {profile.friends} in company ·{" "}
                 {profile.online
                   ? profile.room
                     ? `Online · ${profile.room.name}`
@@ -127,6 +236,7 @@ export function NetworkProfile({ username }: { username: string }) {
                   : `Last seen ${ageLabel(profile.lastSeen)}`}
                 {` · Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
               </p>
+              <SeatRecord record={profile.record} you={profile.you} />
               <div className="mt-4 flex flex-wrap gap-2">
                 {profile.you ? (
                   <button className="chip-btn" onClick={() => setEdit((open) => !open)} type="button">
@@ -142,11 +252,11 @@ export function NetworkProfile({ username }: { username: string }) {
                     ) : null}
                     {profile.relation === "none" ? (
                       <button className="chip-btn chip-btn-ghost" onClick={() => void act("request")} type="button">
-                        Connect
+                        Ask
                       </button>
                     ) : null}
                     {profile.relation === "outgoing" ? (
-                      <span className="chip-btn chip-btn-ghost pointer-events-none">Pending</span>
+                      <span className="chip-btn chip-btn-ghost pointer-events-none">Ask sent</span>
                     ) : null}
                     {profile.relation === "incoming" ? (
                       <>

@@ -24,22 +24,23 @@ export function NetworkChrome({
     Boolean(you?.username) &&
     (path === me || path === `/network/u/${you?.username}`);
   const links = [
-    { href: "/network", label: "Home", match: path === "/network" },
+    { href: "/network", label: "Board", match: path === "/network" },
     {
       href: "/network/people",
-      label: you?.pendingIn ? `My Network · ${you.pendingIn}` : "My Network",
+      label: you?.pendingIn ? `Company · ${you.pendingIn}` : "Company",
       match: path.startsWith("/network/people"),
     },
     {
       href: "/network/messages",
-      label: you?.unreadMessages ? `Messaging · ${you.unreadMessages}` : "Messaging",
+      label: you?.unreadMessages ? `Letters · ${you.unreadMessages}` : "Letters",
       match: path.startsWith("/network/messages"),
     },
-    { href: me, label: "Me", match: onMe },
+    { href: me, label: "Seat", match: onMe },
   ];
   return (
     <div className="li-shell">
-      <nav className="li-nav" aria-label="Network">
+      <p className="hall-kicker">The wing</p>
+      <nav className="li-nav" aria-label="The wing">
         {links.map((link) => (
           <Link
             className={link.match ? "is-on" : ""}
@@ -70,11 +71,13 @@ export function NetworkChrome({
 export function SignInGate() {
   return (
     <NetworkChrome>
-      <main className="mx-auto w-full max-w-2xl px-4 py-16 text-center">
-        <h1 className="font-display text-4xl text-white">Network</h1>
-        <p className="mt-3 text-zinc-400">Sign in to meet the pit.</p>
+      <main className="app-page text-center">
+        <h1 className="font-display text-4xl text-white">The wing</h1>
+        <p className="app-lead mx-auto">
+          Cross the gate to meet who sits the house.
+        </p>
         <Link className="chip-btn mt-6 inline-flex" href="/signin">
-          Sign in with Google
+          Enter the house
         </Link>
       </main>
     </NetworkChrome>

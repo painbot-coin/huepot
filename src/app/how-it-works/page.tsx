@@ -1,17 +1,35 @@
+import Link from "next/link";
 import { MiniCoin } from "@/components/MiniCoin";
 import { RoomMark } from "@/components/RoomMark";
+import { hallFor } from "@/lib/hall";
 import { BASIC_ROOMS } from "@/lib/rooms";
 import { COLORS } from "@/lib/colors";
 
 export default function HowItWorksPage() {
   return (
-    <main className="prose-page">
-      <h1 className="font-display text-4xl text-white">How it works</h1>
+    <main className="app-page">
+      <p className="hall-kicker">The rite</p>
+      <h1 className="font-display text-4xl text-white">How the house works</h1>
+      <p className="app-lead">
+        Same price on every color. When the clock ends, the color with the most
+        clicks takes the rest of the pot.
+      </p>
+      <p className="guide-cta">
+        <Link className="chip-btn" href="/rooms/classic">
+          Sit Classic
+        </Link>
+        <Link className="nav-link" href="/signin">
+          Enter the house
+        </Link>
+      </p>
       <div className="guide-marks" aria-hidden="true">
         {BASIC_ROOMS.map((room) => (
           <figure key={room.slug}>
             <RoomMark fog={Boolean(room.fogSeconds)} slug={room.slug} />
-            <figcaption>{room.name}</figcaption>
+            <figcaption>
+              {room.name}
+              <small>{hallFor(room.slug)?.kicker}</small>
+            </figcaption>
           </figure>
         ))}
       </div>
@@ -20,56 +38,37 @@ export default function HowItWorksPage() {
           <MiniCoin id={color.id} key={color.id} size={32} />
         ))}
       </div>
-      <p>
-        Huepot is a timed color pot played in rooms. Each room has its own coins,
-        click price, round clock, and a live feed for takes and table talk.
-      </p>
-      <ol>
-        <li>Sign in with Google. Tick 18+ on the sign-in page, then you can add USDT, click, and chat.</li>
+      <ol className="app-steps">
         <li>
-          Add at least 10 USDT on BNB Chain (BEP-20) only. Huepot watches
-          that chain and credits your bank after enough confirms. Send on any
-          other network and the money is gone. You get one BNB Chain address.
+          <strong>Cross the gate</strong>
+          Sign in with Google. Tick 18+ first. Use the same Gmail you play with.
         </li>
         <li>
-          Join a basic room for free — Classic, Lightning, Duo, High Table, or
-          Fog Pit — or create a custom room with 2–8 coins, click price, round
-          length, and a live timer. Classic hour is 20:00 UTC. Fog cup is
-          Sunday 21:00 UTC. When those windows open, recent sitters get a
-          notice, even if the lobby is empty. Fog Pit (and custom tables with
-          fog on) hide public
-          click counts in the last 12
-          seconds. When that live time ends, the custom table is deleted. No
-          create fee.
+          <strong>Fill the vault</strong>
+          Send at least 10 USDT as BEP-20 on BNB Chain. Any other network is
+          gone — Huepot does not watch it.
         </li>
         <li>
-          During a live round, click any coin. Each click spends that room’s
-          price from your play balance. After your first click, one notice
-          asks you to copy invite for Classic 20:00 UTC.
+          <strong>Sit a pit</strong>
+          Classic, Lightning, Duo, High Table, and Fog Pit are free to join.
+          Classic hour is 20:00 UTC. Fog cup is Sunday 21:00 UTC.
         </li>
         <li>
-          When time is up, the color with the most clicks wins. Those clickers
-          split the money from the other colors, by click. Winning clicks also
-          come back. The room feed posts earnings, refunds, and table talk.
-          Each round publishes a hashed seed at open and reveals it at settle —
-          check any round on the fairness sheet. Recent takes show on the lobby.
-          Share a take to sit the next round — the line names Fog cup.
-          After a take, copy invite from the card.
+          <strong>Strike a color</strong>
+          Each click costs that room’s price. Fog tables hide public counts in
+          the last 12 seconds.
         </li>
         <li>
-          If every color ties, clicks are refunded. Withdraw to a BNB Chain
-          address; Huepot sends USDT from the house wallet. If the house is
-          short, the cash-out stays queued and retries. Paid sends show on the
-          lobby with a BscScan link. Share your Account
-          invite link: a new Google player from that link can earn you a slice
-          of house rake only, capped per day. Copy invite from Account or the
-          lobby — both name Classic hour and Fog cup.
+          <strong>The take</strong>
+          Winners split the rest of the pot. Ties come back. Every round posts a
+          hashed seed you can check on the ledger.
+        </li>
+        <li>
+          <strong>Leave with gold</strong>
+          Withdraw to a BNB Chain address. Set a loss cap or cool-off from
+          Account before a long session.
         </li>
       </ol>
-      <p>
-        Live play watches BNB Chain USDT and credits after confirmations. Set a
-        loss cap or cool-off from Account before you sit a long session.
-      </p>
     </main>
   );
 }

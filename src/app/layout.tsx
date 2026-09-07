@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cinzel, Outfit } from "next/font/google";
 import { AgeBanner } from "@/components/AgeBanner";
 import { LazyFx, LazyMessageDock } from "@/components/LazyFx";
@@ -25,9 +25,30 @@ const cinzel = Cinzel({
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl()),
-  title: "Huepot — color take",
+  // "The house" is the voice, but a search result or a shared link has to say
+  // what this is. Child pages keep their own title and gain the suffix.
+  title: {
+    default: "Huepot — same price, biggest color takes",
+    template: "%s · Huepot",
+  },
   description:
-    "Same-price color buttons. Biggest color splits the rest of the pot.",
+    "A timed color-pot house. Every coin costs the same, and when the clock ends the color with the most clicks takes the rest of the pot. Provably fair, 18+.",
+  applicationName: "Huepot",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "Huepot",
+    url: "/",
+    title: "Huepot — same price, biggest color takes",
+    description:
+      "A timed color-pot house. Click a color, biggest color takes the pot.",
+  },
+  twitter: { card: "summary_large_image" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#070614",
+  colorScheme: "dark",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -39,6 +60,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        {/* The backdrop plate is the first thing a player sees, so start it
+            with the stylesheet rather than after it parses. */}
+        <link
+          as="image"
+          href="/fx/huepot-hall.jpg"
+          media="(min-aspect-ratio: 1/1)"
+          rel="preload"
+        />
+        <link
+          as="image"
+          href="/fx/huepot-hall-tall.jpg"
+          media="(max-aspect-ratio: 1/1)"
+          rel="preload"
+        />
         <LazyFx />
         <RefCookie />
         <SiteHeader user={user} />

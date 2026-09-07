@@ -50,89 +50,105 @@ export function CreateRoomForm({
   }
 
   return (
-    <form className="auth-card create-room" onSubmit={(event) => void submit(event)}>
-      <h1 className="font-display text-3xl">Open a table</h1>
-      <p className="mt-2 text-zinc-400">
-        No create fee. Set coins, click price, round clock, and how long this
-        table stays live. When live time ends, the room is deleted.
-      </p>
-      <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Room name
-        <input
-          className="field"
-          maxLength={28}
-          minLength={3}
-          onChange={(event) => setName(event.target.value)}
-          required
-          value={name}
-        />
-      </label>
-      <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Coin buttons ({MIN_BUTTONS}–{MAX_BUTTONS})
-        <input
-          className="field"
-          max={MAX_BUTTONS}
-          min={MIN_BUTTONS}
-          onChange={(event) => setButtonCount(Number(event.target.value))}
-          required
-          type="number"
-          value={buttonCount}
-        />
-      </label>
-      <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Click price in USDT ({MIN_CLICK_PRICE}–{MAX_CLICK_PRICE})
-        <input
-          className="field"
-          max={MAX_CLICK_PRICE}
-          min={MIN_CLICK_PRICE}
-          onChange={(event) => setClickPrice(Number(event.target.value))}
-          required
-          step="0.1"
-          type="number"
-          value={clickPrice}
-        />
-      </label>
-      <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Round seconds ({MIN_ROUND_SECONDS}–{MAX_ROUND_SECONDS})
-        <input
-          className="field"
-          max={MAX_ROUND_SECONDS}
-          min={MIN_ROUND_SECONDS}
-          onChange={(event) => setRoundSeconds(Number(event.target.value))}
-          required
-          type="number"
-          value={roundSeconds}
-        />
-      </label>
-      <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Table live time
-        <select
-          className="field"
-          onChange={(event) => setLiveMinutes(Number(event.target.value))}
-          value={liveMinutes}
-        >
-          {LIVE_MINUTE_OPTIONS.map((mins) => (
-            <option key={mins} value={mins}>
-              {mins < 60 ? `${mins} minutes` : `${mins / 60} hour${mins === 60 ? "" : "s"}`} — then delete
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="fog-check">
-        <input
-          checked={fog}
-          onChange={(event) => setFog(event.target.checked)}
-          type="checkbox"
-        />
-        <span>
-          Fog in the last {FOG_SECONDS} seconds
-          <small>Public counts, leader marks, and estimates go dark. Your own clicks stay visible.</small>
-        </span>
-      </label>
-      {error ? <p className="error-toast mt-4">{error}</p> : null}
-      <button className="chip-btn mt-6" disabled={busy} type="submit">
-        {busy ? "Opening…" : "Open room"}
-      </button>
+    <form className="create-room" onSubmit={(event) => void submit(event)}>
+      <header className="create-room-head">
+        <div>
+          <p className="create-room-kicker">Raise a table</p>
+          <h1 className="font-display create-room-title">Open a table</h1>
+        </div>
+        <p className="create-room-lead">
+          A guest door in the house. No fee. It falls when live time ends.
+        </p>
+      </header>
+
+      <div className="create-room-body">
+        <label className="create-field">
+          <span>Room name</span>
+          <input
+            className="field"
+            maxLength={28}
+            minLength={3}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="My fog table"
+            required
+            value={name}
+          />
+        </label>
+
+        <div className="create-grid">
+          <label className="create-field">
+            <span>Coins ({MIN_BUTTONS}–{MAX_BUTTONS})</span>
+            <input
+              className="field"
+              max={MAX_BUTTONS}
+              min={MIN_BUTTONS}
+              onChange={(event) => setButtonCount(Number(event.target.value))}
+              required
+              type="number"
+              value={buttonCount}
+            />
+          </label>
+          <label className="create-field">
+            <span>Click USDT</span>
+            <input
+              className="field"
+              max={MAX_CLICK_PRICE}
+              min={MIN_CLICK_PRICE}
+              onChange={(event) => setClickPrice(Number(event.target.value))}
+              required
+              step="0.1"
+              type="number"
+              value={clickPrice}
+            />
+          </label>
+          <label className="create-field">
+            <span>Round sec</span>
+            <input
+              className="field"
+              max={MAX_ROUND_SECONDS}
+              min={MIN_ROUND_SECONDS}
+              onChange={(event) => setRoundSeconds(Number(event.target.value))}
+              required
+              type="number"
+              value={roundSeconds}
+            />
+          </label>
+          <label className="create-field">
+            <span>Live time</span>
+            <select
+              className="field"
+              onChange={(event) => setLiveMinutes(Number(event.target.value))}
+              value={liveMinutes}
+            >
+              {LIVE_MINUTE_OPTIONS.map((mins) => (
+                <option key={mins} value={mins}>
+                  {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="fog-check">
+          <input
+            checked={fog}
+            onChange={(event) => setFog(event.target.checked)}
+            type="checkbox"
+          />
+          <span>
+            Fog last {FOG_SECONDS}s
+            <small>Public counts go dark. Your clicks stay visible.</small>
+          </span>
+        </label>
+
+        {error ? <p className="error-toast create-room-error">{error}</p> : null}
+      </div>
+
+      <footer className="create-room-actions">
+        <button className="chip-btn create-room-submit" disabled={busy} type="submit">
+          {busy ? "Opening…" : "Open the table"}
+        </button>
+      </footer>
     </form>
   );
 }

@@ -9,8 +9,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type MouseEvent,
+  type PointerEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { PitLoader } from "@/components/PitLoader";
 import {
@@ -41,7 +42,8 @@ import { colorById, type ColorId } from "@/lib/colors";
 import { REVEAL_SECONDS } from "@/lib/config";
 import { shortHash } from "@/lib/fairness";
 import { publishBank } from "@/lib/bank-sync";
-import { emitFx } from "@/lib/fx";
+import { emitFx, emitPads } from "@/lib/fx";
+import { hallClass, hallFor } from "@/lib/hall";
 import { classicHourClock } from "@/lib/classic-hour";
 import { fogCupClock } from "@/lib/fog-cup";
 import { inviteText } from "@/lib/invite-copy";
@@ -231,9 +233,15 @@ export function GameClient({ slug }: { slug: string }) {
     if (!state || state.round.status !== "live" || state.room.paused) return;
     if (remainingMs > 0 && remainingMs < 10_000 && !urgentSent.current) {
       urgentSent.current = true;
-      emitFx({ kind: "urgent", color: "#ff355e", label: "Final seconds" });
+      emitFx({ kind: "urgent", color: "#ff355e", label: "Last seconds" });
     }
   }, [remainingMs, state]);
+
+  useEffect(() => {
+    if (!state?.room.paused) return;
+    urgentSent.current = false;
+    emitFx({ kind: "round" });
+  }, [state?.room.paused]);
 
   const boardFog = Boolean(
     state &&
@@ -257,8 +265,28 @@ export function GameClient({ slug }: { slug: string }) {
     return ids.filter((id) => state.round.totals[id] === max);
   }, [boardFog, state]);
 
-  async function onClick(colorId: ColorId, event: MouseEvent<HTMLButtonElement>) {
-    if (!state || state.round.status !== "live" || !state.user) return;
+  useEffect(() => {
+    if (!state) return;
+    const ids = state.round.buttonIds;
+    const total = state.round.totalClicks;
+    const revealingNow = state.round.status === "revealing";
+    emitPads({
+      fog: boardFog,
+      pads: ids.map((id) => {
+        const clicks = state.round.totals[id] ?? 0;
+        const share = boardFog || total <= 0 ? 0 : clicks / total;
+        return {
+          color: colorById(id).hex,
+          leading: !boardFog && leader.includes(id),
+          spark: sparks.some((item) => item.colorId === id),
+          share,
+          winner: Boolean(revealingNow && state.round.result?.winners.includes(id)),
+        };
+      }),
+    });
+  }, [boardFog, leader, sparks, state]);
+
+  function punchPad(colorId: ColorId, event: PointerEvent<HTMLButtonElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     const burst: Burst = {
       id: burstId.current++,
@@ -273,22 +301,31 @@ export function GameClient({ slug }: { slug: string }) {
       setBursts((list) => list.filter((item) => item.id !== burst.id));
       setSparks((list) => list.filter((item) => item.id !== burst.id));
     }, 700);
+  }
 
-    setBusyColor(colorId);
-    setError("");
+  function onPadDown(colorId: ColorId, event: PointerEvent<HTMLButtonElement>) {
+    if (!canClick) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
     try {
-      applyState(
-        await readApi(`/api/rooms/${slug}/click`, {
-          method: "POST",
-          body: JSON.stringify({ colorId }),
-        }),
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Click failed");
-      void refresh();
-    } finally {
-      setBusyColor(null);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* capture is optional */
     }
+    punchPad(colorId, event);
+    setBusyColor(colorId);
+    window.setTimeout(() => {
+      setBusyColor((current) => (current === colorId ? null : current));
+    }, 180);
+    setError("");
+    void readApi(`/api/rooms/${slug}/click`, {
+      method: "POST",
+      body: JSON.stringify({ colorId }),
+    })
+      .then((next) => applyState(next))
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Click failed");
+        void refresh();
+      });
   }
 
   async function hostAct(body: Record<string, unknown>) {
@@ -333,18 +370,31 @@ export function GameClient({ slug }: { slug: string }) {
   const urgent = !revealing && !room.paused && remainingMs > 0 && remainingMs < 10_000;
   const canClick =
     Boolean(user?.emailVerified) &&
+    !user?.blocked &&
     !room.paused &&
     !revealing &&
     (user?.balance ?? 0) >= round.clickPrice;
   const winner = round.result?.winners[0];
   const winnerColor = winner ? colorById(winner) : null;
+  const hall = hallFor(slug);
+  // Most rounds on a quiet table settle with nobody clicking. That is not a take.
+  const tookPot = Boolean(revealing && winnerColor);
+  const emptyRound = revealing && round.result?.kind === "empty";
 
   return (
-    <div className="pit-app">
+    <div
+      className={`pit-app ${hallClass(slug)} ${room.paused ? "is-paused" : revealing ? (tookPot ? "is-take" : "is-closed") : "is-calm"} ${urgent ? "is-urgent" : ""} ${fog ? "is-fog" : ""} ${slug === "classic" && hour?.live ? "is-hour" : ""} ${slug === "fog" && cup?.live ? "is-cup" : ""}`}
+      style={
+        {
+          ...(hall ? { "--hall": hall.material } : {}),
+          ...(revealing && winnerColor ? { "--take": winnerColor.hex } : {}),
+        } as CSSProperties
+      }
+    >
       <PitHint />
       <div className="pit-top">
         <SearchDock onPickRoom={(next) => router.push(`/rooms/${next}`)} />
-        <button aria-label="Create room" className="pit-create" onClick={() => setCreating(true)} type="button">
+        <button aria-label="Raise a table" className="pit-create" onClick={() => setCreating(true)} type="button">
           <IconPlus />
         </button>
         <SoundToggle />
@@ -422,7 +472,8 @@ export function GameClient({ slug }: { slug: string }) {
             >
               <IconHideLeft />
             </button>
-            <button aria-label="Create room" className="pit-ico" onClick={() => setCreating(true)} type="button">
+            <span className="pit-rail-title">Rooms</span>
+            <button aria-label="Raise a table" className="pit-ico" onClick={() => setCreating(true)} type="button">
               <IconPlus />
             </button>
             <button
@@ -437,7 +488,7 @@ export function GameClient({ slug }: { slug: string }) {
           <div className="pit-rail-list">
             {rooms.map((item) => (
               <button
-                className={`pit-room ${item.slug === slug ? "is-on" : ""}`}
+                className={`pit-room ${hallClass(item.slug)} ${item.slug === slug ? "is-on" : ""}`}
                 key={item.slug}
                 onClick={() => {
                   router.push(`/rooms/${item.slug}`);
@@ -445,15 +496,17 @@ export function GameClient({ slug }: { slug: string }) {
                 }}
                 type="button"
               >
-                <strong>
-                  <RoomMark className="room-mark is-rail" fog={Boolean(item.fogSeconds)} slug={item.slug} />
-                  {item.name}
-                  <em className={`pit-kind is-${item.kind}`} title={item.kind === "basic" ? "No fee" : "Custom"} />
-                </strong>
-                <span>
-                  {item.buttonCount} · {formatUsdt(item.clickPrice)} · {formatUsdt(item.pot)}
-                  {item.paused ? " · paused" : ""}
-                  {item.closesAt ? ` · ${formatClock(item.closesAt - now)}` : ""}
+                <RoomMark className="room-mark is-rail" fog={Boolean(item.fogSeconds)} slug={item.slug} />
+                <span className="pit-room-copy">
+                  <strong>
+                    {item.name}
+                    <em className={`pit-kind is-${item.kind}`} title={item.kind === "basic" ? "No fee" : "Custom"} />
+                  </strong>
+                  <span>
+                    {item.buttonCount} · {formatUsdt(item.clickPrice)} · {formatUsdt(item.pot)}
+                    {item.paused ? " · paused" : ""}
+                    {item.closesAt ? ` · ${formatClock(item.closesAt - now)}` : ""}
+                  </span>
                 </span>
               </button>
             ))}
@@ -499,11 +552,11 @@ export function GameClient({ slug }: { slug: string }) {
             {room.paused ? " · paused" : ""}
             {slug === "classic" && hour
               ? hour.live
-                ? " · hour on"
+                ? " · hour is on"
                 : ` · hour ${classicHourClock(hour.hour)}`
               : slug === "fog" && cup
                 ? cup.live
-                  ? " · cup on"
+                  ? " · cup is on"
                   : ` · cup ${fogCupClock(cup.weekday, cup.hour)}`
                 : ""}
           </span>
@@ -513,38 +566,29 @@ export function GameClient({ slug }: { slug: string }) {
           {liveLeft != null ? ` · table ${formatClock(liveLeft)}` : ""}
           {room.slowMode ? " · slow chat" : ""}
           {" · "}
-          <Link href={`/fairness?slug=${slug}`}>Fairness</Link>
+          <Link href={`/fairness?slug=${slug}`}>Ledger</Link>
         </span>
       </div>
-      {revealing && winnerColor ? (
-        <div
-          className="take-veil"
-          style={
-            {
-              "--pad": winnerColor.hex,
-              "--ink": winnerColor.ink,
-              "--glow": winnerColor.glow,
-            } as CSSProperties
-          }
-        >
-          <span className="take-corona" />
-          {Array.from({ length: 10 }, (_, index) => (
-            <span className="take-spark" key={index} style={{ "--i": index } as CSSProperties} />
-          ))}
-          <PadRune id={winnerColor.id} />
-          <p className="take-kicker">Takes the pot</p>
-          <p className="take-name">{winnerColor.name}</p>
-          {round.pot > 0 ? (
-            <p className="take-pot">{formatUsdt(round.pot)} USDT</p>
-          ) : null}
-        </div>
-      ) : null}
-
       <section className={`arena ${revealing ? "is-revealing" : ""} ${urgent ? "is-urgent" : ""} ${fog ? "is-fog" : ""}`}>
+        {revealing && winnerColor ? (
+          <div
+            className="take-wash"
+            style={
+              {
+                "--pad": winnerColor.hex,
+                "--glow": winnerColor.glow,
+              } as CSSProperties
+            }
+          />
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-              {revealing ? "Winner lock" : `${room.name} · round #${round.number}`}
+              {revealing
+                ? tookPot
+                  ? "The take"
+                  : "Round closed"
+                : `${room.name} · round #${round.number}`}
             </p>
             <p className={`font-display pot-value text-3xl text-white ${potPulse ? "is-pulse" : ""}`}>
               {formatUsdt(round.pot)}{" "}
@@ -553,10 +597,13 @@ export function GameClient({ slug }: { slug: string }) {
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-              {room.paused ? "Paused" : revealing ? "Next round" : fog ? "Fog · time left" : "Time left"}
-            </p>
-            <p className={`font-display clock-value text-3xl tabular-nums text-white ${urgent ? "is-urgent" : ""}`}>
-              {room.paused ? "Hold" : formatClock(remainingMs)}
+              {room.paused
+                ? "Paused"
+                : revealing
+                  ? "Next round"
+                  : fog
+                    ? "Fog clock"
+                    : hall?.clock ?? "Pit clock"}
             </p>
             {round.seedCommit ? (
               <p className="mt-1 font-mono text-[10px] text-zinc-500">
@@ -567,26 +614,48 @@ export function GameClient({ slug }: { slug: string }) {
           </div>
         </div>
         <FantasyClock
+          durationMs={
+            revealing
+              ? REVEAL_SECONDS * 1000
+              : Math.max(1, round.endsAt - round.startedAt)
+          }
           fog={fog}
-          label={room.paused ? "Hold" : formatClock(remainingMs)}
           paused={room.paused}
-          progress={Math.max(
-            0,
-            Math.min(
-              1,
-              remainingMs /
-                (revealing
-                  ? REVEAL_SECONDS * 1000
-                  : Math.max(1, round.endsAt - round.startedAt)),
-            ),
-          )}
-          urgent={urgent || revealing}
+          remainingMs={remainingMs}
+          revealing={revealing}
+          urgent={urgent}
         />
+        {hall ? <p className="pit-enter">{hall.enter}</p> : null}
         <p className="pit-rule">
           Same price every coin. Biggest color takes the rest.
           {room.fogSeconds
             ? ` Last ${room.fogSeconds}s, public counts go dark.`
             : ""}
+        </p>
+        <p className="pit-mood">
+          {room.paused
+            ? "The host paused the pit."
+            : revealing
+              ? tookPot
+                ? "The take."
+                : emptyRound
+                  ? "Nobody clicked. The board comes back."
+                  : "The round closed."
+              : fog && urgent
+                ? cup?.live
+                  ? "Fog cup. Last seconds."
+                  : "Fog. Last seconds."
+                : fog
+                  ? cup?.live
+                    ? "Fog cup. The board is dark."
+                    : "The board is dark."
+                  : urgent
+                    ? "Last seconds."
+                    : slug === "classic" && hour?.live
+                      ? hall?.hour ?? "Classic hour is on."
+                      : slug === "fog" && cup?.live
+                        ? hall?.cup ?? "Fog cup is on."
+                        : hall?.calm ?? "The pit is open."}
         </p>
         {!user ? (
           <p className="pit-cta">
@@ -598,9 +667,16 @@ export function GameClient({ slug }: { slug: string }) {
         ) : !user.emailVerified ? (
           <p className="pit-cta">
             <Link className="chip-btn" href="/signin">
-              Sign in with Google
+              Cross the gate
             </Link>
             <span>Then you can click colors.</span>
+          </p>
+        ) : user.blocked ? (
+          <p className="pit-cta">
+            <Link className="chip-btn" href="/account">
+              Seat limits
+            </Link>
+            <span>{user.blockMessage || "Play is paused on this account."}</span>
           </p>
         ) : user.balance < round.clickPrice ? (
           <p className="pit-cta">
@@ -609,35 +685,15 @@ export function GameClient({ slug }: { slug: string }) {
             </Link>
             <span>Bank is below this table’s click price.</span>
           </p>
+        ) : room.paused ? (
+          <p className="pit-cta">
+            <span>The host paused this table.</span>
+          </p>
         ) : null}
       </section>
 
-      {revealing && round.result ? (
-        <ResultCard
-          playerId={user?.id ?? ""}
-          result={round.result}
-          round={round}
-          roomName={room.name}
-          sharePath={
-            user?.inviteCode
-              ? `/take/${round.id}?ref=${user.inviteCode}`
-              : `/take/${round.id}`
-          }
-          canOpenFog={Boolean(user?.emailVerified) && !user?.blocked}
-          inviteCode={user?.inviteCode ?? ""}
-          slug={slug}
-          hour={hour?.hour}
-          cup={cup}
-          buttonCount={room.buttonCount}
-          clickPrice={round.clickPrice}
-          roundSeconds={room.roundSeconds}
-          sitWhen={cup ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}` : ""}
-          wash={winnerColor?.hex}
-        />
-      ) : null}
-
       {error ? (
-        <p className="error-toast rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <p className="error-toast">
           {error}{" "}
           {error.toLowerCase().includes("invest") ? (
             <Link className="underline" href="/invest">
@@ -657,7 +713,14 @@ export function GameClient({ slug }: { slug: string }) {
         </p>
       ) : null}
 
-      <div className="pad-grid">
+      <div
+        className={`pad-grid is-${table.length} ${revealing ? "is-locked" : ""}`}
+        style={
+          revealing && winnerColor
+            ? ({ "--pad": winnerColor.hex } as CSSProperties)
+            : undefined
+        }
+      >
         {table.map((color, index) => {
           const clicks = round.totals[color.id];
           const yours = round.yourClicks[color.id];
@@ -669,20 +732,30 @@ export function GameClient({ slug }: { slug: string }) {
           const estimated = fog ? 0 : estimateIfWins(round, color.id);
           const taken =
             revealing && round.result?.winners.includes(color.id);
-          const dimmed = revealing && !taken;
+          const dimmed = revealing && !taken && tookPot;
           return (
-            <div className="coin-slot" key={color.id}>
+            <div
+              className="coin-slot"
+              key={color.id}
+              style={{
+                "--pad": color.hex,
+                "--ink": color.ink,
+                "--glow": color.glow,
+              } as CSSProperties}
+            >
               <button
                 type="button"
+                aria-label={`${color.name} · ${fog ? "board in fog" : `${clicks} clicks`} · you ${yours}`}
                 disabled={!canClick}
-                onClick={(event) => void onClick(color.id, event)}
+                onPointerCancel={() => {
+                  setBusyColor((current) => (current === color.id ? null : current));
+                }}
+                onPointerDown={(event) => onPadDown(color.id, event)}
+                onPointerUp={() => {
+                  setBusyColor((current) => (current === color.id ? null : current));
+                }}
                 className={`color-pad is-orb ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${fog ? "is-fog" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
-                style={{
-                  "--pad": color.hex,
-                  "--ink": color.ink,
-                  "--glow": color.glow,
-                  animationDelay: `${index * 90}ms`,
-                } as CSSProperties}
+                style={{ animationDelay: `${index * 90}ms` } as CSSProperties}
               >
                 <MagicOrb
                   color={color.hex}
@@ -692,8 +765,6 @@ export function GameClient({ slug }: { slug: string }) {
                   spark={sparks.some((item) => item.colorId === color.id)}
                   winner={Boolean(taken)}
                 />
-                <span className="orb-halo" />
-                <span className="orb-ring" />
                 {bursts
                   .filter((burst) => burst.color === color.hex)
                   .map((burst) => (
@@ -718,13 +789,13 @@ export function GameClient({ slug }: { slug: string }) {
                   <span className="lead-chip">Biggest</span>
                 ) : null}
                 <div className="coin-copy">
-                  <span className="coin-name font-display">{color.name}</span>
                   <span className="count-pop coin-count font-display">
                     {fog ? "—" : clicks}
                   </span>
                   <span className="coin-you">You {yours}</span>
                 </div>
               </button>
+              <p className="coin-label">{color.name}</p>
               <p className="coin-meta">
                 {fog
                   ? "Board in fog"
@@ -739,6 +810,57 @@ export function GameClient({ slug }: { slug: string }) {
           );
         })}
       </div>
+
+      {revealing ? (
+        <aside className="take-notice">
+          {winnerColor ? (
+            <div
+              className="take-veil"
+              style={
+                {
+                  "--pad": winnerColor.hex,
+                  "--ink": winnerColor.ink,
+                  "--glow": winnerColor.glow,
+                } as CSSProperties
+              }
+            >
+              <span className="take-corona" />
+              {Array.from({ length: 10 }, (_, index) => (
+                <span className="take-spark" key={index} style={{ "--i": index } as CSSProperties} />
+              ))}
+              <PadRune id={winnerColor.id} />
+              <p className="take-kicker">The take</p>
+              <p className="take-name">{winnerColor.name}</p>
+              {round.pot > 0 ? (
+                <p className="take-pot">{formatUsdt(round.pot)} USDT</p>
+              ) : null}
+            </div>
+          ) : null}
+          {round.result ? (
+            <ResultCard
+              playerId={user?.id ?? ""}
+              result={round.result}
+              round={round}
+              roomName={room.name}
+              sharePath={
+                user?.inviteCode
+                  ? `/take/${round.id}?ref=${user.inviteCode}`
+                  : `/take/${round.id}`
+              }
+              canOpenFog={Boolean(user?.emailVerified) && !user?.blocked}
+              inviteCode={user?.inviteCode ?? ""}
+              slug={slug}
+              hour={hour?.hour}
+              cup={cup}
+              buttonCount={room.buttonCount}
+              clickPrice={round.clickPrice}
+              roundSeconds={room.roundSeconds}
+              sitWhen={cup ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}` : ""}
+              wash={winnerColor?.hex}
+            />
+          ) : null}
+        </aside>
+      ) : null}
     </div>
         <div className="pit-table-desktop">
           <PlayerBoard
@@ -808,21 +930,34 @@ export function GameClient({ slug }: { slug: string }) {
           <span>Talk</span>
         </button>
       </nav>
-      {creating ? (
-        <div className="pit-modal" onClick={() => setCreating(false)}>
-          <div onClick={(event) => event.stopPropagation()}>
-            <CreateRoomForm
-              onCreated={(next) => {
-                setCreating(false);
-                router.push(`/rooms/${next}`);
-              }}
-            />
-            <button className="nav-link mt-3" onClick={() => setCreating(false)} type="button">
-              Close
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {creating
+        ? createPortal(
+            <div
+              aria-modal="true"
+              className="pit-modal"
+              onClick={() => setCreating(false)}
+              role="dialog"
+            >
+              <div className="pit-modal-card" onClick={(event) => event.stopPropagation()}>
+                <button
+                  aria-label="Close"
+                  className="pit-modal-x"
+                  onClick={() => setCreating(false)}
+                  type="button"
+                >
+                  <IconClose />
+                </button>
+                <CreateRoomForm
+                  onCreated={(next) => {
+                    setCreating(false);
+                    router.push(`/rooms/${next}`);
+                  }}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -1018,7 +1153,7 @@ function ResultCard({
   const sheet = (
     <p className="mt-2 text-xs text-zinc-500">
       <Link className="underline" href={`/fairness/${round.id}`}>
-        Check this round
+        Open the ledger
       </Link>
       {round.fairHash ? ` · ${shortHash(round.fairHash)}` : ""}
     </p>
@@ -1029,7 +1164,8 @@ function ResultCard({
 
   if (result.kind === "void") {
     return (
-      <div className="result-card" style={cardStyle}>
+      <div className="result-card is-quiet">
+        <p className="hall-kicker">The rite</p>
         Staff voided this round. Everyone who clicked got their USDT back.
         {yours ? ` You received ${formatUsdt(yours.amount)} USDT.` : ""}
         {sheet}
@@ -1039,8 +1175,9 @@ function ResultCard({
 
   if (result.kind === "empty") {
     return (
-      <div className="result-card">
-        No clicks that round. Pot stays empty.
+      <div className="result-card is-quiet">
+        <p className="hall-kicker">The round</p>
+        Nobody clicked that round. The pot stays empty.
         {sheet}
       </div>
     );
@@ -1049,6 +1186,7 @@ function ResultCard({
   if (result.kind === "push") {
     return (
       <div className="result-card" style={cardStyle}>
+        <p className="hall-kicker">The rite</p>
         All colors tied. Everyone who clicked got their USDT back.
         {yours ? ` You received ${formatUsdt(yours.amount)} USDT.` : ""}
         {sheet}
@@ -1058,6 +1196,7 @@ function ResultCard({
 
   return (
     <div className="result-card" style={cardStyle}>
+      <p className="hall-kicker">The rite</p>
       <strong>{names}</strong> had the most clicks and took the other colors’
       money.
       {result.rake

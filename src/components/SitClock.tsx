@@ -42,5 +42,9 @@ export function SitClock() {
   }, []);
 
   if (elapsed < 15_000) return null;
-  return <span className="nav-sit">Sit {formatClock(elapsed)}</span>;
+  return (
+    <span className="nav-sit" title="Time on Huepot this session">
+      Sit {formatClock(elapsed)}
+    </span>
+  );
 }

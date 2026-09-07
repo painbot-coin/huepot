@@ -1,6 +1,10 @@
 import { colorById } from "./colors";
 import { REVEAL_SECONDS } from "./config";
-import { settledDollars, type PublicSettledRound } from "./fairness";
+import {
+  settledDollars,
+  settledTakeAmount,
+  type PublicSettledRound,
+} from "./fairness";
 import {
   getSettledRound,
   listPendingSettled,
@@ -13,11 +17,8 @@ export { formatTakeLine, takeLine } from "./take-copy";
 
 export function takeFromSettled(row: PublicSettledRound): PublicTake | null {
   if (row.kind !== "take" || !row.winners.length) return null;
-  const losing = settledDollars(row, row.losingPot);
-  if (losing <= 0) return null;
-  const rake = settledDollars(row, row.rake);
-  const click = settledDollars(row, row.clickPrice);
-  const amount = Math.max(0, losing - rake) + row.winningClicks * click;
+  if (settledDollars(row, row.losingPot) <= 0) return null;
+  const amount = settledTakeAmount(row);
   if (amount <= 0) return null;
   return {
     id: row.id,
@@ -62,7 +63,7 @@ export async function listPublicTakes(live: PublicTake[], limit = 6) {
     const take = takeFromSettled(row);
     if (take) byId.set(take.id, take);
   }
-  for (const row of await listSettledRounds(undefined, 24)) {
+  for (const row of await listSettledRounds(undefined, 24, "take")) {
     const take = takeFromSettled(row);
     if (take) byId.set(take.id, take);
   }

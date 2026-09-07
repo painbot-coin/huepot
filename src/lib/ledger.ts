@@ -1,11 +1,26 @@
 import { LIVE_CHAIN_ID } from "@/lib/config";
+import { prisma } from "@/lib/db";
 import { notePlayTx } from "@/lib/limits";
 import { formatCents } from "@/lib/money";
 import { networkById } from "@/lib/networks";
 import { notify } from "@/lib/notifications";
 import type { StoreData } from "@/lib/types";
 
-export function creditConfirmedDeposit(
+/**
+ * `store.txs` keeps only the newest 400 rows, so memory alone cannot say
+ * whether an older deposit was already credited. The Tx table can.
+ */
+async function alreadyCredited(store: StoreData, txHash: string) {
+  if (store.txs.some((tx) => tx.type === "deposit" && tx.note.includes(txHash))) {
+    return true;
+  }
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM Tx WHERE type = 'deposit' AND note LIKE ${`%${txHash}%`} LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+export async function creditConfirmedDeposit(
   store: StoreData,
   userId: string,
   amount: number,
@@ -13,7 +28,7 @@ export function creditConfirmedDeposit(
 ) {
   const user = store.users[userId];
   if (!user) return false;
-  if (store.txs.some((tx) => tx.note.includes(txHash))) return false;
+  if (await alreadyCredited(store, txHash)) return false;
   const credit = Math.round(amount);
   if (credit < 1) return false;
   const network = networkById(LIVE_CHAIN_ID);

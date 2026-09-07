@@ -44,7 +44,7 @@ export function NotificationBell() {
   return (
     <div className="notice-wrap" ref={box}>
       <button
-        aria-label="Notifications"
+        aria-label="Notices"
         className={`notice-bell ${data.unread > 0 ? "has-unread" : ""}`}
         onClick={() => {
           setOpen((value) => !value);
@@ -52,13 +52,13 @@ export function NotificationBell() {
         }}
         type="button"
       >
-        Alerts
+        Notices
         {data.unread > 0 ? <span className="notice-count">{data.unread}</span> : null}
       </button>
       <Fade className="notice-panel" show={open}>
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-              Notifications
+              Notices
             </p>
             <Link className="text-xs text-zinc-400 hover:text-white" href="/notifications">
               See all
@@ -68,7 +68,7 @@ export function NotificationBell() {
             {data.items.slice(0, 7).map((item) => (
               <li key={item.id}>
                 <Link
-                  className={`notice-item ${item.read ? "" : "is-unread"}`}
+                  className={`notice-item is-${item.kind} ${item.read ? "" : "is-unread"}`}
                   href={item.href || "/"}
                   onClick={() => void mark(item.id)}
                 >
@@ -78,7 +78,7 @@ export function NotificationBell() {
               </li>
             ))}
             {data.items.length === 0 ? (
-              <li className="text-sm text-zinc-500">No notifications yet.</li>
+              <li className="text-sm text-zinc-500">No notices yet.</li>
             ) : null}
           </ul>
       </Fade>

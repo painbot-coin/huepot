@@ -110,15 +110,35 @@ const SETTLED_SELECT = `id, roomSlug, roomName, number,
   clickPrice, buttonIds, totals, seedCommit, serverSeed, fairHash, kind, winners,
   losingPot, winningClicks, payoutPerWinningClick, paidCount, moneyCents, rake`;
 
-export async function listSettledRounds(slug?: string, take = 40) {
+/**
+ * Most rounds settle with nobody clicking, so a plain "most recent" window is
+ * all empties and never contains a take. Pass a kind to look for takes.
+ */
+export async function listSettledRounds(slug?: string, take = 40, kind?: string) {
   await ensureFairTables();
   const limit = Math.max(1, Math.min(80, take));
+  const where: string[] = [];
+  if (slug) where.push(`roomSlug = '${esc(slug)}'`);
+  if (kind) where.push(`kind = '${esc(kind)}'`);
+  const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const rows = await prisma.$queryRawUnsafe<RawSettled[]>(
-    slug
-      ? `SELECT ${SETTLED_SELECT} FROM SettledRound WHERE roomSlug = '${esc(slug)}' ORDER BY settledAt DESC LIMIT ${limit}`
-      : `SELECT ${SETTLED_SELECT} FROM SettledRound ORDER BY settledAt DESC LIMIT ${limit}`,
+    `SELECT ${SETTLED_SELECT} FROM SettledRound ${clause} ORDER BY settledAt DESC LIMIT ${limit}`,
   );
   return rows.map(fromRow);
+}
+
+export async function countSettledRounds(slug?: string) {
+  await ensureFairTables();
+  try {
+    const rows = await prisma.$queryRawUnsafe<{ n: number | bigint }[]>(
+      slug
+        ? `SELECT COUNT(*) AS n FROM SettledRound WHERE roomSlug = '${esc(slug)}'`
+        : "SELECT COUNT(*) AS n FROM SettledRound",
+    );
+    return Number(rows[0]?.n ?? 0);
+  } catch {
+    return 0;
+  }
 }
 
 export async function getSettledRound(id: string) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionToken, requireUser } from "@/lib/auth";
 import { readyFriends } from "@/lib/friends";
 import { jsonError } from "@/lib/http";
+import { playerRecord } from "@/lib/record";
 import {
   listAuthorPosts,
   publicProfile,
@@ -28,6 +29,7 @@ export async function GET(request: Request) {
       const author = Object.values(store.users).find(
         (item) => item.username.toLowerCase() === profile.username.toLowerCase(),
       );
+      if (author) profile.record = await playerRecord(author.id);
       return {
         you,
         profile,
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
     const payload = await withStore(async (store) => {
       const user = requireUser(store, token);
       const profile = saveProfile(store, user, body);
+      profile.record = await playerRecord(user.id);
       const you = youPayload(user);
       you.unreadMessages = await refreshUnread(user.id);
       return { you, profile };

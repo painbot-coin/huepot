@@ -1,78 +1,399 @@
-# Huepot growth plan (low budget)
+# Huepot UI — grow into a deep fantasy house
 
-Huepot is live at https://huepot.net. Getting many users with almost no money is possible, but it will not come from ads. For a custodial USDT pot, people leave because they do not trust the cashier, not because they never saw the logo.
+Live: https://huepot.net · product **v1.3.84**.
 
-**How to run it this month:** `NETWORK.md` — seed a small player network, sit Classic hour (20:00 UTC), use the rake invite. Live product is v1.3.32. This file is the constraints.
+This is the look-and-feel plan. The rule stays the same: same price, biggest color takes. The interface grows until Huepot feels like one house you enter — not a SaaS site with a fancy pit in the middle.
 
-**The real job:** get a few people to deposit, get paid out once, and tell two friends. Empty tables kill growth faster than no marketing.
+## The house
 
-## What will not work
+| Room | Route | Feel |
+|------|--------|------|
+| Gate | `/signin` | Cross in with Google. 18+ on the lintel. |
+| Hall | `/` | House pits as doors. Classic is the public pit. |
+| Pit | `/rooms/[slug]` | Clock, four hues, talk. You sit a table. |
+| Rite | `/how-it-works` | How to enter, sit, strike, and leave. |
+| Ledger | `/fairness` | The seed book. Anyone can check a take. |
+| Vault | `/invest`, `/withdraw`, `/account` | Gold in, gold out, limits. |
+| Wing | `/network`, `/notifications` | Company, letters, notices. |
 
-Save the time.
+## What already belongs
 
-- Google / Meta / TikTok ads: gambling is blocked or burns cash.
-- Buying bots or fake pot volume: that is fraud, and it trains real players to leave.
-- A big launch before payouts feel boring and reliable.
-- Chasing every chain, language, or influencer at once.
+- Sharp rectangle frames. Gold inlay. Cinzel on titles.
+- One clock needle. Floating energy orbs. No stars. No virus meshes.
+- Sit, click, take, cash out — words a stranger already knows.
 
-## Phase 1 — Make the first 20 real players stay
+## Phase 1 — One house (live)
 
-Do this yourself, in public, every day.
+Lobby, rite, gate, ledger, and vault use the same hall chrome as the pit. Frames are sharp rectangles.
 
-1. **Sit the tables.** Classic and Fog Pit should almost never look dead. You play small. Dead rooms make the next visitor bounce.
-2. **Pay withdrawals the same day.** One slow cash-out kills ten sign-ups. Staff queue speed is the growth feature.
-3. **Post proof, not hype.** One short clip or screenshot a day: a take, a fairness seed, a paid withdrawal. No private keys. No balances that look fake. Telegram + crypto Twitter / X is enough.
-4. **One room as the always-on table.** Tell people “Classic is the public pit.” Fog Pit is the hook for streamers; Classic is where strangers meet.
+## Phase 2 — The pit as a place (live in 1.3.60)
 
-Invite people you already know first. Twenty depositing players who come back beat two thousand empty Google accounts.
+Round state changes the room: gold when open, red in the last 10 seconds, silver fog, winner wash on a take. Light and a short line name the mood. Urgent tick while time is short. Pads stay locked. No extra 3D toys.
 
-## Phase 2 — Free distribution that fits this game
+## Phase 3 — Each pit a character (live in 1.3.61)
 
-Pick **one** hangout and live there for a month.
+Classic, Lightning, Duo, High, and Fog each have a mark plate, a hall color, and an enter line. Guest tables stay doors.
 
-- A Huepot Telegram (or Discord) with live round pings and payout notes.
-- Short Fog Pit clips: last 12 seconds, board goes dark, then the take. That is the only native shareable moment.
-- Reply in BNB / USDT / “color game” threads with the rule in one sentence, then the link. No spam raids.
+## Phase 4 — Deep game feel (live in 1.3.62)
 
-Host invites already exist. Make “copy invite” the default after someone wins: open a 30-minute Fog table, send the link to 3 people. Custom rooms are the viral object. House rooms are the storefront.
+A take is a rite. Cash-out is leaving the vault. Fairness is a ledger of real pages only. No fake proof rows.
 
-## Phase 3 — One product loop
+## Phase 5 — You live here (live in 1.3.64)
 
-Do not build a marketing site. Build **one** loop:
+Network, notices, and create-room belong to the same house. The wing is Board, Company, Letters, Seat. No LinkedIn pills. No star clips on notices. No extra 3D.
 
-**Invite code → both people get a cut of house rake, not free play money.**
+## Phase 6 — The lintel (live in 1.3.65)
 
-A deposit bonus is not affordable. Sharing part of the 5% rake when a referred player’s clicks settle stays solvent.
+Header, search, age, talk compose, and fields are the doorframe. Sharp. Rite in the nav. Find a table or a seat. No extra 3D.
 
-Also worth doing, in this order:
+## Phase 7 — The seat (live in 1.3.66)
 
-1. Public “last payouts” strip (time + amount, no addresses) so strangers see money leaving.
-2. Share card after a take (“Azure took 12.40 USDT — sit the next round”).
-3. A weekly Fog Pit cup with a posted start time so people show up together.
+The gate, the sit CTAs, account cards, pit tabs, and the raise-a-table door are house furniture. Sharp rectangles. Cross with Google. Seat limits. No extra 3D.
 
-Skip leaderboards and achievements until 50+ weekly depositors. They do not create trust.
+## Hold — The house holds (1.3.67–1.3.68)
 
-## Phase 4 — Only after payouts are boring
+The wing no longer talks LinkedIn. Hall doors do not lift. Pit room rows are square. Raise a table is the name of that door. The hall shows doors first, then last takes and cash-outs. No extra 3D.
 
-Then, and only then:
+## Phase 8 — The hour (shipping in 1.3.69)
 
-- One English-speaking BNB micro-influencer, paid in a posted table buy-in you can afford, not a $500 tweet.
-- List on free play-to-earn / on-chain game directories.
-- If a community forms, let them host custom Fog rooms and keep the social graph off payroll.
+Classic hour and Fog cup change the hall and the pit. The door names the hour. The room golds or silvers when it is on. Last 15 minutes the door says soon. No extra 3D. No fake rows.
 
-## How you know it is working
+## Phase 9 — The quiet house (shipping in 1.3.70)
 
-Ignore sign-ins. Watch weekly:
+One world, not eleven layers. The backdrop is a single dark hall plate. The arena floor is a gold-inlay chamber. Every panel is the same slate material.
 
-- First deposits
-- Second-session rate
-- Withdrawals completed same day
-- Custom rooms opened by someone who is not you
+Cut: the rainbow prism, the diagonal shine sweep, the five pinned sparkle PNGs, two of four aurora blobs, the ambient star dust on every page, the flavor-text ticker, the pinned hero gem images, the animated wordmark.
 
-If deposits happen and withdrawals stall, stop acquiring. If withdrawals are fast and rooms are empty, that is a traffic problem — go back to Phase 2.
+Cut in 3D: the sixteen-node constellation web and its lines, one of three rings. Dust 260 → 90. Bloom 0.48 → 0.26. Lights roughly halved.
 
-Do not spend money until same-day payouts are routine and Classic is busy without you sitting it.
+Kept: the 3D world, the pit, the crystal, the floating orbs, one clock needle, and the take burst — a take still throws sparks and coins.
 
-## Next useful build
+## Phase 10 — The narrow house (shipping in 1.3.71)
 
-Do not build more product for growth. Run `NETWORK.md`. v1.3.32 is live. Sit Classic, pay the first cash-out, open one Telegram, send invite links to people you already know.
+The house has to be a place on a phone too. `cover` on a portrait viewport crops the wide hall plate down to its empty middle, so phones were reading the backdrop as flat black.
+
+Taller-than-wide viewports now get a hall plate composed for that shape: columns down both edges, one tall window high up, dark where the content sits. Art direction by aspect ratio, not width.
+
+Checked at 390px: the pit has no horizontal scroll, the clock and the 2×2 orb grid read, hue names sit under the orbs, the rite marks wrap 3+2.
+
+## Phase 11 — An empty round is not a take (shipping in 1.3.72)
+
+Watched a real round settle on Lightning. On a quiet table almost every round ends with nobody clicking, and the pit was announcing all of them as **THE TAKE · 0.00 USDT**, dimming all four orbs like losers and washing the pads gold. That is the state a new visitor sees most often, and it cheapened the real thing.
+
+A round with no winner now reads **Round closed** with "Nobody clicked. The board comes back." The room goes neutral grey instead of take-gold, the orbs stay lit because nobody lost, and the gold pad wash only fires when a color actually took the pot. The particle burst was already correct — it only ever fired on a real winner.
+
+Also: the pit had a horizontal scrollbar, because the rotating clock needle pokes a few px past its box. Clipped on `.pit-main` instead of clipping the needle.
+
+## Verified signed in (1.3.72)
+
+The signed-in rooms were unverified for several phases. Closed that with a local dev server and a minted session instead of guessing.
+
+Recipe, for next time:
+
+- `node_modules/next/dist/bin/next dev --port 3000` with `PRODUCT_MODE=0` so `cookieSecure()` is false and the cookie works over http.
+- Sessions are a plain table: insert `token/userId/expiresAt/createdAt/userAgent`. Use raw SQL — the local db predates the BigInt widening, so the Prisma client rejects `createdAt` on write.
+- Age lives in the `auth` JSON column as `ageConfirmedAt`; `balance` is integer cents.
+- Drive it with PowerShell `Invoke-WebRequest` and a `huepot_session` cookie. **The IDE browser cannot reach the host's localhost on any port**, so screenshots of local pages are not possible. Only the live site can be photographed.
+
+Results: `/account`, `/invest`, `/withdraw`, `/network`, `/network/messages`, `/network/people` and `/notifications` all render signed in. No stray rounded corners in those components — they inherit the slate material through `.app-page`, `.app-card`, `.li-card` and `.ledger-row`, which is why the Phase 9 pass reached them for free.
+
+A real take, driven through the click API: pot 4.00, Crimson 3 clicks against Azure 1, `kind: "take"`, winner `crimson`, payout 3.95, seed opened on settle. The money is exact — losing pot 1.00, house 5% is 0.05, winner takes back 3.00 plus 0.95. So both settle branches are now proven: the winner path by data, the no-click path on the live site.
+
+One false alarm worth remembering: `/network/people` returned a 500 once. It was Turbopack's `EBUSY` rename on the slow `F:` drive from two dev servers sharing `.next`, not an app fault. It returns 200 on retry.
+
+## Phase 12 — The record (shipping in 1.3.73)
+
+Goal: the wing should be where bettors go to see who actually wins, not a generic network. The atom of that is a real record on every seat.
+
+Surveyed production first, because a ranking table built on nothing is a lie. What is actually there: 11 users, 30,496 settled rounds of which only **19 are takes**, 111 clicks, 0 withdrawals — and **one player has ever clicked**. So a leaderboard would be a one-row table. The record per seat is the honest version of the same data, and it reads correctly at one player or ten thousand.
+
+A seat now shows takes, USDT taken, biggest single take, colors struck, and the hue it favours. Derived from real `Tx` rows. A seat with no rounds says so.
+
+**Privacy line, do not cross:** wins and activity only. Takes are already public — the room feed announces them and every take has a shareable page — so this reveals nothing new. Balance, net position and losses stay private. Never add them to a public profile.
+
+The hue a seat favours is counted from the click note (`Clicked <Hue> in <Room> #<n>`), so no schema change was needed.
+
+## Phase 13 — Show the real takes (shipping in 1.3.74)
+
+The house had 19 real payouts and **showed none of them**. Both public proof surfaces were broken the same way, and it was a windowing bug, not a data problem.
+
+`listPublicTakes` scanned only the 24 most recent settled rounds. Rounds settle every 15–60s across six rooms and 30,477 of 30,496 are empty, so that window is *always* empties and `takeFromSettled` returned null for every one. The hall's "Last takes" strip could never display a take, forever. `/api/fairness` had the same flaw at 40 rows, so the ledger was a wall of empty rounds with the real takes buried thousands of rows deep.
+
+`listSettledRounds` now accepts a `kind`, and both surfaces ask for takes. The ledger also states how many rounds settled in total, so filtering to takes hides nothing.
+
+For a product trying to attract its second bettor this was the most damaging bug in it: real proof of payout existed and a visitor saw "no takes yet".
+
+With the takes finally visible, a second bug showed up in 1.3.75: the ledger's amount column was `losingPot`, not what the winner collected. So the same round read **7.90 USDT** on the hall strip and **2.00 pot** in the ledger, and rounds where the losers barely clicked read **0.00 pot** — which looks broken on the one surface whose whole job is trust.
+
+`settledTakeAmount` in `lib/fairness.ts` is now the single definition of a take amount — losing pot after the house take, plus the winners' own stakes back — and both the hall strip and the ledger use it. Keep it that way: two surfaces quoting different numbers for one round is worse than either number being imperfect.
+
+## Phase 14 — The brag (shipping in 1.3.77)
+
+The take page is the only public artifact a player can share, so it is how the second bettor arrives. Its share image was a default `next/og` card: system sans, flat background, and **no trace of the winning color** — in a game entirely about color.
+
+Now the hue is the hero. The winning color drives a left edge bar, a marker, the headline and a background glow, with the amount huge in Cinzel and `huepot.net` in the corner so a stranger knows where to go.
+
+Notes worth keeping:
+
+- Cinzel had to be **bundled** at `public/fonts/cinzel-700.ttf`. `next/font` cannot be read at runtime and `next/og` needs the raw file. It is OFL licensed; recorded in `public/fx/SOURCES.txt`.
+- Supply every font a card needs. Satori falls back to whatever you give it, so providing only Cinzel put the body copy in serif caps too. The fix was to drop the long body copy rather than bundle a second face — a brag card wants few words.
+- **Do not put a photograph in an OG image.** Embedding the chamber plate pushed the PNG from 43kB to **755kB**; `ImageResponse` only emits PNG, which is wrong for photos. Gradients plus a hue glow land at ~80kB and look better.
+- The take page title was a whole sentence including the Fog cup schedule. Shortened to `<Hue> took <amount> USDT · <Room>`, and the body no longer repeats its own headline.
+
+Verified locally against two real takes before shipping — Crimson 3.95 and Amber 67.15 — which also re-confirms `settledTakeAmount` by hand: (100−5)/100 + 3 = 3.95, and (3700−185)/100 + 32 = 67.15.
+
+## Phase 15 — Provable, not just claimed (shipping in 1.3.78)
+
+Both the ledger and the share card end in "Open the ledger", so `/fairness/[id]` is the last link in the trust chain. It verified correctly — all three checks passed on the real production take — but it printed the commit and digest **truncated** (`c11c2d28…f9ac`). A hash you cannot see in full is a hash you cannot recompute, so "provably fair" was a claim rather than a proof.
+
+The page now prints the seed, the full commit, the **exact settle line that gets hashed**, and the full digest. Anyone can paste the line into any sha256 tool and land on the digest.
+
+`fairPreimage` is now the single place that settle line is built, and `fairDigest` hashes its output. The displayed string cannot drift from the hashed string, because they are the same function.
+
+Checked independently against every real take before shipping: **19/19 commits and 19/19 digests reproduce** from a standalone script using node's `crypto`, outside the app's own code.
+
+### The trap in `payoutPerWinningClick`
+
+Adding a per-click line nearly shipped a false impression. That field is a **floor** (`clickPrice + floor(distributable / winningClicks)`), and the digest commits to it — but the actual payout distributes the leftover cents via `splitCentsByClicks`. For round #8584 the floor is 1.31 with 6 winning clicks, so a reader multiplying gets 7.86 against an advertised 7.90 and concludes the house is shaving 4 cents.
+
+It is labelled "Floor per winning click" with a note that leftover cents go to winning seats. On a trust page, a number that invites a wrong subtraction is worse than no number.
+
+## Phase 16 — Found and shareable (shipping in 1.3.79)
+
+Phase 14 gave a take a share card, but the most-shared URL is the bare domain, and **`huepot.net` had no share image at all** — posting it in a chat produced a naked link. There was also no `robots.txt` and no `sitemap.xml`, both 404.
+
+Shipped:
+
+- A house share card at the root: gold rule, Cinzel, the four hue coins, `huepot.net`. Gradients only again, ~88kB.
+- `robots.ts` allowing the public house and **disallowing `/api/`, `/staff`, `/account`, `/invest`, `/withdraw`, `/notifications`, `/network`** — a player's vault and wing are nobody else's business.
+- `sitemap.ts` with the hall, rite, ledger, gate, terms, privacy, the five house pits, and every real take with its ledger page. Guest tables are left out because they fall when their live time ends.
+- The root title was "Huepot — the house", which is the voice but tells a stranger nothing. Now "Huepot — same price, biggest color takes", with a `%s · Huepot` template so child pages keep their own title and gain the brand.
+
+Verified locally before shipping: robots.txt renders the rules, sitemap.xml lists 17 URLs against the local database, and the house card renders at 1200x630. The first render wrapped its footer line into the domain, so that copy got trimmed.
+
+## Phase 17 — HUE, the house coin (shipping in 1.3.80)
+
+A coin was asked for. This is the off-chain half, and it was built first on purpose.
+
+**The rule:** `1 HUE a click, 10 HUE a take.` Ranks in house voice — Unmarked, Seated, Marked, Gilded, Gold-handed, House name. A seat shows its HUE, its rank, and how far to the next one.
+
+**It is derived, never stored.** HUE is computed from `Tx` rows inside the existing record query, so it costs no extra queries, applies retroactively to everything already played, cannot drift from what a seat actually did, and cannot be minted by accident. No schema change was needed.
+
+### The line HUE must not cross
+
+HUE is **standing, not money**. No USDT rate, not withdrawable, and it buys nothing priced in USDT. Attaching a cash value, a payout or a rake share changes what it legally *is* — a token drawing value from a gambling house's revenue is treated as a security in many jurisdictions, and gambling plus token issuance is heavily regulated on top of that. That is a decision for the owner with advice, not a code change. It is written at the top of `src/lib/coin.ts` for whoever reads it next.
+
+### Why off-chain first
+
+- Reversible. No contract, no gas, no liquidity, no audit.
+- **Zero withdrawals have ever completed.** The USDT cash-out path is still unproven, and a second currency on top of an unproven payout is a roof on an unbuilt wall.
+- It establishes the earn curve with real play, so an on-chain HUE later has something behind it rather than a guess.
+
+Verified before shipping: 7/7 rule checks including the real production case — 111 clicks and 19 takes give 301 HUE, Gilded, 99 to Gold-handed.
+
+## Phase 18 — HUE on chain (contract done, not deployed)
+
+Real BEP-20 requested, distributed as a play bonus, with a market price. `contracts/HuepotCoin.sol`, 12 tests passing on a local EVM. **Nothing is deployed** — that needs a treasury key and is the owner's call.
+
+**Fixed supply, no mint, no owner, no pause, no blacklist, no upgrade.** 1,467 bytes of runtime. A coin a house hands out is only worth holding if the house cannot print more of it or freeze it, so every admin hook was left out. Bonuses are paid by **transferring from a treasury balance**, never by minting — the pool is visibly finite on chain and supply is conserved on every payout.
+
+Deploy guards: mainnet refuses without `COIN_CONFIRM_MAINNET=yes`, and the **destination is checked before the key**, so a misdirected mainnet run fails on the destination rather than on a missing signer. Both guards verified independently.
+
+Lesson worth keeping: I installed a standalone `solc` alongside Hardhat, it drifted to 0.8.26 against the contract's pinned `0.8.24`, and the compile broke while Hardhat's own run passed. Two compilers that can disagree is a footgun. `solc` was removed — Hardhat is the only compiler, with the version pinned in config so the bytecode stays reproducible for BscScan verification.
+
+### Still to do before HUE is real
+
+1. Deploy to **testnet** (chainId 97) with a faucet-funded key.
+2. Wire the bonus: `record.coin` is earned standing; paying it out on chain needs a claim table so nothing is double-sent — the existing `Withdrawal` queue is the right shape to copy.
+3. Treasury key must stay **off the web server**. Payouts should be signed by a separate limited hot wallet topped up from treasury.
+4. A price requires funding a HUE/USDT liquidity pool. Code cannot create one.
+5. Legal advice before mainnet. See `contracts/README.md`.
+
+## Phase 19 — Level, daily and weekly tasks, bonus (shipping in 1.3.81)
+
+**Daily:** sit a round (1 click, +5), strike ten (10 clicks, +15), take a pot (1 take, +25). Resets 00:00 UTC.
+**Weekly:** fifty strikes (+60), three takes (+100). Resets Monday.
+**Level** is the HUE rank's position, so there is one progression and not two competing ones.
+
+### Why there is no claim button
+
+Progress and completion are **derived from `Tx` rows** — a task is complete because the play happened. Nothing is stored and nothing is claimed, so a bonus cannot be double-claimed, cannot be granted by mistake, and applies retroactively to every day already played. No schema change touched the live money database.
+
+The subtle part: the bonus is summed over **every past day and week that met a target**, not just the current window. Had it only counted the active window, a player's HUE would drop every midnight. Coin has to be monotonic, and there is a check for exactly that.
+
+Real production result: `bill` played 4 days across 1 week — 111 clicks, 19 takes, 325 bonus → **626 HUE, Level 5 Gold-handed**, up from 301 on play alone.
+
+Verified: 20/20 logic checks, including Monday week alignment against four real Mondays from 1970 to 2026 (`weekIndex = floor((dayIndex + 3) / 7)`, since epoch day 0 is a Thursday), plus the bucketing SQL run against production.
+
+## Phase 20 — The books (shipping in 1.3.82)
+
+Accountant and management, as a `books` tab on the existing staff console. Read-only, derived from `Tx`, `Withdrawal`, `User.balance` and the on-chain treasury. Nothing in `lib/books.ts` writes. The staff console was **not restyled** — the new tab uses the chrome that was already there.
+
+Two headline numbers, because they are the only two that can sink the house:
+
+1. **Cover** — treasury USDT minus what is owed to players. Negative means the house cannot pay everyone out.
+2. **Reconciliation** — every balance rebuilt from its rows and compared to the stored balance. Money leaving a balance without a `Tx` row is the one fault that hides all the others, so it is recomputed every time the books are opened.
+
+Plus today/this-week operating counts (clicks, takes, rake, deposits, active seats), all-time money lines, account counts, and withdrawal status totals.
+
+### It found something on the first run
+
+The ledger is internally perfect: 111.00 staked = 109.30 paid + 1.70 rake, to the cent.
+
+But **balances are 10.00 USDT short of the ledger**. Localised to one account: `bill` holds 8.30 while his rows imply 18.30. Zero orphan rows, and the house account reconciles exactly. So 10.00 left a balance without a matching `Tx` row — most likely a direct balance write during an early migration or dev reset, since a staff adjustment would have written an `adjust` row and there are none.
+
+The direction is safe for the house (it owes less than the ledger says, not more) but the player is short, and an unexplained gap on a real-money ledger should not stay unexplained. It is now visible on the books tab instead of invisible.
+
+## Phase 21 — The cash-out path, exercised (1.3.83)
+
+Zero withdrawals had ever completed, so the payout path was the largest untested risk in the product. Everything up to the on-chain send is now exercised against a local server. **It works.**
+
+| Case | Result |
+|---|---|
+| 1 USDT (min is 5) | rejected, no debit |
+| malformed address | rejected, no debit |
+| more than balance | rejected, no debit |
+| non-BSC network | rejected, no debit |
+| balance after 4 rejections | unchanged — no partial debits |
+| 25 USDT valid | debited exactly, row `queued` |
+| staff rejection | **balance refunded exactly** |
+| 2500 (per-send max 2000) | rejected |
+| 2000 + 2000, then 2000 | third rejected at the 5000 daily cap |
+| 1000 to land on exactly 5000 | accepted, then even 5 more rejected |
+
+`withStore` snapshots and restores on throw, so a failed payout insert rolls the debit back rather than losing a player's money.
+
+### What I got wrong, twice
+
+**My safety override did not take effect.** I blanked `WITHDRAW_KEY` and `BSC_RPC_URL` in the shell to guarantee no chain contact, but `.env.local` values were used anyway, so a real BSC mainnet RPC connection was attempted with the live house key. **Nothing was broadcast** — `txHash` stayed empty, and production's `Withdrawal` table is still empty. Next time, assert `withdrawSendEnabled() === false` before touching a money path instead of assuming an env override worked.
+
+**I misdiagnosed a wedge.** A row sitting at `sending` with no `txHash` looked like a permanent trap, because rejection requires `queued`. It is not: `sendQueuedWithdrawal` already has a `catch` that reverts `sending` → `queued` whenever no hash exists. What I saw was an in-flight attempt hanging on an unreachable RPC.
+
+### Fixed
+
+The withdrawal note now moves with terminal status — `Sent on chain` / `Rejected by staff · balance refunded` — so the books never show a rejected row still reading "Queued for send". Deliberately **not** applied to `sending`, because that state gets reverted and the note would then lie.
+
+### Left alone on purpose
+
+Staff cannot reject a payout while it is `sending`. That looks awkward but it is right: once `tx.send` may have broadcast, refunding could pay twice. Do not "fix" it.
+
+Still untested: the actual on-chain transfer. It needs a funded house wallet.
+
+## Phase 22 — The Fog Pit holds (verified, no change needed)
+
+A betting game that only *visually* hides information is not hiding it — anyone with devtools reads the network response and plays with an edge worth real money. So the Fog Pit was checked properly, with actual clicks in an actual fog window.
+
+Measured during fog with 3 clicks in the pot:
+
+| View | Per-colour counts | Other seats | Own clicks |
+|---|---|---|---|
+| Anonymous observer | `0 0 0` | `0` | — |
+| The player | `0 0 0` | hidden | `c=2 a=1` |
+
+Correct on every axis. `publicRound` zeroes per-colour totals server-side (`totals: fog ? emptyColorCounts() : ...`), `toSeats` hides other seats via `hide = fog && !you`, and `yourClicks` still reports your own so the game stays playable. `totalClicks` and `pot` stay visible on purpose: you know the size of the stake, never the split.
+
+The SSE route matters here too and is safe — `/api/rooms/[slug]/live` serialises through the same `getRoomState` / `snapshotRoomState`, so the stream cannot leak what the poll hides.
+
+**Do not "optimise" this.** Sending real totals and hiding them in the client would silently turn the Fog Pit into a cheat.
+
+## Phase 23 — The deposit path, and what it turned up (1.3.84)
+
+Withdrawals were exercised in 1.3.83; deposits are the other money direction, and the question that matters is whether one on-chain transfer can be credited twice.
+
+**The live guards work.** Verified locally: `UNIQUE(txHash, logIndex)` on `ChainDeposit` rejects a replay outright, and both `depositAlreadyCredited` and `creditConfirmedDeposit` key on the tx hash, which real chain credits do write into the note. Also confirmed `persistStore` only ever **inserts** `Tx` rows and never deletes, so the database keeps full history — which matters, because the reliable guard queries the database while the in-memory array caps at 400.
+
+### It had already happened once
+
+Production holds **two deposit rows with the identical tx hash** and only **one** `ChainDeposit` row. One 10.00 USDT transfer, counted twice in the ledger.
+
+The arithmetic closes exactly:
+
+```
+2 deposits (ledger): 20.00 − 111.00 + 109.30 = 18.30
+1 deposit  (chain) : 10.00 − 111.00 + 109.30 =  8.30
+bill's real balance                          =  8.30
+```
+
+### Correcting Phase 20
+
+Phase 20 reported this drift as "the player is short". **That was wrong.** The balance is right to the cent; the *ledger* carries a phantom deposit row. Nobody is owed money — the deposit total is overstated by 10.00.
+
+Most likely a legacy-import artifact: `persistStore` inserts `Tx` by id, so one logical deposit re-imported under a second uuid produces two rows without a second balance credit. That also fits the balance being correct. *(Phase 24 disproved this — the two rows are 283 ms apart. It was a race in the credit path.)*
+
+The books now detect this class permanently: deposit rows grouped by note, any hash appearing more than once reported with the overstated amount. The duplicate row is **not** deleted — that is a money-ledger write and the owner's call.
+
+### Known gap, acceptable
+
+The demo credit path in `auth.ts` writes a note with no tx hash, so demo deposits are not idempotent. It only runs when `demoMoneyEnabled()`, which is false in production.
+
+## Phase 24 — Two clicks at once, and the deposit race (1.3.85)
+
+Money paths were pushed instead of read this time.
+
+### Can a player spend money they do not have
+
+Funded a seat with exactly 5.00 USDT, one click costing 1.00, then fired **30 clicks in the same instant** at a live round:
+
+```
+accepted            5
+rejected           25   all "Not enough balance. Invest first."
+balance after    0.00
+clicks on board     5
+```
+
+No overspend, never negative, board matches the accepted count. `withStore` runs every mutation through one promise queue, so the queue *is* the lock. Verified against a production build, not dev, so no compile-on-demand could serialise the burst by accident.
+
+### Does a tie cost anything
+
+One click on each of the four colours, so nothing loses:
+
+```
+staked            4.00
+settled as       push
+rake                 0
+balance after   15.00  (15.00 before)
+ledger        one refund row, 4.00, "Classic Pit round #5941 push"
+```
+
+Exact to the cent, no rake, and the money moves with a row behind it.
+
+### Is there really only one writer
+
+All of the above rests on a single process owning the store. Production runs `instances: 1, exec_mode: fork` and one `next-server` holds `huepot.db`. A second `next-server` on the box for three days is **a different app** — Docker container, `/app`, its own Postgres, port 3001. Not ours.
+
+### What the deposit duplicate actually was
+
+Phase 23 guessed a legacy-import artifact. **Wrong.** The two rows are 283 ms apart:
+
+```
+14:32:42.263Z  10.00  0x223d5b…
+14:32:42.546Z  10.00  0x223d5b…
+```
+
+Both well inside the newest-400 window, so no memory blindness — a race in `creditLog`. Two attempts on one log: the first won the `ChainDeposit` insert and credited; the second lost the insert, asked the Tx table whether a credit existed, found none *because the first had not persisted yet*, and credited too.
+
+Two holes, both closed:
+
+- **Crediting on a failed insert.** One recorded log now means one credit. A failed insert only proceeds when the row is older than ten minutes with still no credit — a real loss, not one in flight.
+- **A memory-only guard.** `creditConfirmedDeposit` checked `store.txs`, which holds 400 rows and is trimmed on the line below the check. It now falls back to the Tx table, the same pattern `hadClickTx` already uses. Harmless at 143 rows; a live double-credit past 400.
+
+The phantom row is still there. Deleting it is a money-ledger write and the owner's call; the books report it every time they are opened.
+
+## Next for the social layer
+
+Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.
+
+## Never again
+
+- Guarding money with an in-memory list that is trimmed on the next line.
+- Crediting an on-chain log because the ledger has not caught up yet.
+- Building a ranking on data that does not exist yet.
+- Calling a round with no clicks a take.
+- One landscape plate stretched across every screen shape.
+- Eleven full-screen layers stacked over the 3D world.
+- Invented flavor text scrolling in a marquee.
+- Two background photos blended with soft-light to make mud.
+- Star clip-paths that hide letters.
+- Virus meshes or scientific biology as the ball.
+- A second website style on How it works / Fairness / Sign in.
+- More 3D systems before the house reads as one place.

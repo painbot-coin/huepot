@@ -6,7 +6,7 @@ import { requirePageUser } from "@/lib/auth";
 export default async function NetworkPeoplePage() {
   await requirePageUser();
   return (
-    <Suspense fallback={<PitLoader label="Opening the pit…" />}>
+    <Suspense fallback={<PitLoader label="Opening the wing…" />}>
       <LazyNetworkClient />
     </Suspense>
   );

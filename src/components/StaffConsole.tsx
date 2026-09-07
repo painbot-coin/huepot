@@ -5,7 +5,28 @@ import { formatUsdt } from "@/lib/money";
 import type { Tx, Withdrawal } from "@/lib/types";
 import type { StaffUserRow } from "@/lib/staff";
 
-type Tab = "payouts" | "players" | "tables" | "ledger" | "reports" | "log";
+type Tab = "books" | "payouts" | "players" | "tables" | "ledger" | "reports" | "log";
+type BooksWindow = {
+  label: string;
+  clicks: number;
+  takes: number;
+  rake: number;
+  deposits: number;
+  seats: number;
+};
+type Books = {
+  totals: Record<string, number>;
+  owed: number;
+  implied: number;
+  drift: number;
+  doubleCredits: { groups: number; extra: number };
+  treasury: { usdt: number; bnb: number; address: string; ready: boolean };
+  cover: number;
+  withdrawals: { status: string; n: number; usdt: number }[];
+  players: { total: number; withBalance: number; everClicked: number };
+  today: BooksWindow;
+  week: BooksWindow;
+};
 type LogRow = {
   id: string;
   at: number;
@@ -64,6 +85,7 @@ export function StaffConsole() {
   const [txs, setTxs] = useState<(Tx & { username?: string })[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [house, setHouse] = useState<{ balance: number; percent: string } | null>(null);
+  const [books, setBooks] = useState<Books | null>(null);
   const [note, setNote] = useState("");
   const [amount, setAmount] = useState("");
 
@@ -132,6 +154,7 @@ export function StaffConsole() {
         treasury?: Treasury;
         inboxes?: InboxHold;
         sweeps?: SweepRow[];
+        books?: Books;
         you?: { operator?: string };
       };
       if (response.status === 401) {
@@ -150,6 +173,7 @@ export function StaffConsole() {
       if (data.treasury) setTreasury(data.treasury);
       if (data.inboxes) setInboxes(data.inboxes);
       if (data.sweeps) setSweeps(data.sweeps);
+      if (data.books) setBooks(data.books);
       if (data.you?.operator) setOperator(data.you.operator);
       setSignedIn(true);
       setTab(next);
@@ -273,7 +297,7 @@ export function StaffConsole() {
       ) : null}
       {signedIn ? (
       <div className="mt-6 flex flex-wrap gap-2">
-        {(["payouts", "players", "tables", "ledger", "reports", "log"] as Tab[]).map((item) => (
+        {(["books", "payouts", "players", "tables", "ledger", "reports", "log"] as Tab[]).map((item) => (
           <button
             className={`chip-btn ${tab === item ? "" : "chip-btn-ghost"}`}
             key={item}
@@ -284,6 +308,96 @@ export function StaffConsole() {
           </button>
         ))}
       </div>
+      ) : null}
+
+      {signedIn && tab === "books" && books ? (
+        <div className="mt-8 space-y-4">
+          <div className="rounded-2xl border border-white/8 px-4 py-3">
+            <p className="text-xs uppercase tracking-widest text-zinc-500">Cover</p>
+            <p
+              className={`mt-1 text-2xl ${books.cover < 0 ? "text-red-300" : "text-emerald-300"}`}
+            >
+              {formatUsdt(books.cover)} USDT
+            </p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Treasury {formatUsdt(books.treasury.usdt)} USDT minus{" "}
+              {formatUsdt(books.owed)} owed to players.
+              {books.cover < 0
+                ? " Negative: the house cannot pay everyone out."
+                : " Positive: player balances are covered."}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Gas {books.treasury.bnb.toFixed(4)} BNB ·{" "}
+              {books.treasury.ready ? "send wallet ready" : "send wallet not ready"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/8 px-4 py-3">
+            <p className="text-xs uppercase tracking-widest text-zinc-500">Reconciliation</p>
+            <p
+              className={`mt-1 text-2xl ${books.drift === 0 ? "text-emerald-300" : "text-amber-300"}`}
+            >
+              {books.drift === 0 ? "balanced" : `${formatUsdt(books.drift)} USDT drift`}
+            </p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Balances rebuilt from the ledger come to {formatUsdt(books.implied)} USDT.
+              {books.drift === 0
+                ? " Every balance matches its rows."
+                : " A balance moved without a matching row — check the accounts before trusting the totals."}
+            </p>
+            {books.doubleCredits?.groups ? (
+              <p className="mt-2 text-sm text-amber-300">
+                {books.doubleCredits.groups} on-chain deposit
+                {books.doubleCredits.groups === 1 ? "" : "s"} credited more than once
+                — the ledger claims {formatUsdt(books.doubleCredits.extra)} USDT that
+                arrived only once. Balances are unaffected; the deposit rows are.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-zinc-500">
+                No on-chain deposit appears twice.
+              </p>
+            )}
+          </div>
+
+          <ul className="space-y-2">
+            {[books.today, books.week].map((w) => (
+              <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={w.label}>
+                <span className="text-zinc-200">{w.label}</span> · {w.clicks} clicks ·{" "}
+                {w.takes} takes · rake {formatUsdt(w.rake)} · deposits{" "}
+                {formatUsdt(w.deposits)} · {w.seats} seat{w.seats === 1 ? "" : "s"}
+              </li>
+            ))}
+          </ul>
+
+          <ul className="space-y-2">
+            {Object.entries(books.totals).map(([line, value]) => (
+              <li className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={line}>
+                <span>{line}</span>
+                <span className="text-zinc-200">{formatUsdt(value)} USDT</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="text-sm text-zinc-400">
+            {books.players.total} account{books.players.total === 1 ? "" : "s"} ·{" "}
+            {books.players.everClicked} have ever clicked · {books.players.withBalance} hold a balance
+          </p>
+
+          <ul className="space-y-2">
+            {books.withdrawals.length === 0 ? (
+              <li className="text-sm text-zinc-500">No withdrawals have ever been requested.</li>
+            ) : (
+              books.withdrawals.map((row) => (
+                <li className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.status}>
+                  <span>{row.status}</span>
+                  <span className="text-zinc-200">
+                    {row.n} · {formatUsdt(row.usdt)} USDT
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
       ) : null}
 
       {signedIn && tab === "payouts" ? (

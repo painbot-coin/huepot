@@ -107,7 +107,10 @@ export function RoomFeed({
   return (
     <aside className="room-feed">
       <div className="room-feed-head">
-        <IconBell />
+        <span className="room-feed-title">
+          <IconBell />
+          Talk
+        </span>
         {onHide ? (
           <button aria-label="Hide talk" className="pit-ico desk-only" onClick={onHide} type="button">
             <IconHideRight />
@@ -156,7 +159,7 @@ export function RoomFeed({
           <input
             maxLength={240}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Message…"
+            placeholder="Speak at the table…"
             value={text}
           />
           <button aria-label="Send" disabled={busy || !text.trim()} type="submit">
@@ -164,17 +167,18 @@ export function RoomFeed({
           </button>
         </form>
       ) : (
-        <p className="room-chat-gate">
-          {user ? (
-            muted ? (
-              "The host muted you."
-            ) : (
-              <Link href="/signin">Sign in with Google to chat.</Link>
-            )
+        <form className="room-chat is-gated" onSubmit={(event) => event.preventDefault()}>
+          <input disabled placeholder={muted ? "The host muted you." : "Sign in to chat…"} />
+          {muted ? (
+            <button aria-label="Send" disabled type="button">
+              <IconSend />
+            </button>
           ) : (
-            <Link href="/signin">Sign in to chat.</Link>
+            <Link aria-label="Sign in to chat" className="room-chat-go" href="/signin">
+              <IconSend />
+            </Link>
           )}
-        </p>
+        </form>
       )}
       {error ? <p className="room-chat-error">{error}</p> : null}
     </aside>

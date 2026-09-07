@@ -3,6 +3,7 @@ import { SUPPORT_EMAIL } from "@/lib/config";
 export default function PrivacyPage() {
   return (
     <main className="prose-page">
+      <p className="hall-kicker">House law</p>
       <h1 className="font-display text-4xl text-white">Privacy</h1>
       <p>
         We store your email, username, Google account id, play

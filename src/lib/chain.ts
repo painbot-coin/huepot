@@ -379,6 +379,23 @@ async function depositAlreadyCredited(txHash: string) {
   return rows.length > 0;
 }
 
+/** A log recorded this recently may still have its credit in flight. */
+const REPAIR_AFTER_MS = 10 * 60 * 1000;
+
+/**
+ * True only when a recorded log has no credit and is old enough that no
+ * attempt can still be writing one.
+ */
+async function creditWentMissing(txHash: string, logIndex: number) {
+  const rows = await prisma.$queryRaw<{ createdAt: bigint }[]>`
+    SELECT createdAt FROM ChainDeposit
+     WHERE txHash = ${txHash} AND logIndex = ${logIndex} LIMIT 1
+  `;
+  if (!rows.length) return false;
+  if (Date.now() - Number(rows[0].createdAt) < REPAIR_AFTER_MS) return false;
+  return !(await depositAlreadyCredited(txHash));
+}
+
 async function creditLog(input: {
   userId: string;
   address: string;
@@ -400,21 +417,36 @@ async function creditLog(input: {
     inserted = false;
   }
 
-  if (!inserted && (await depositAlreadyCredited(txHash))) return;
+  // One recorded log, one credit. A failed insert means this log was already
+  // recorded, so its credit has landed or is landing on another attempt;
+  // crediting regardless is how a single deposit gets paid twice. Only a row
+  // too old for a credit to still be in flight is a real loss worth repairing.
+  if (!inserted && !(await creditWentMissing(txHash, input.logIndex))) return;
 
   const { withStore } = await import("@/lib/store");
   const { creditConfirmedDeposit } = await import("@/lib/ledger");
-  await withStore((store) => {
-    creditConfirmedDeposit(store, input.userId, input.amount, txHash);
-  });
+  await withStore((store) =>
+    creditConfirmedDeposit(store, input.userId, input.amount, txHash),
+  );
 }
+
+// Terminal states only. A failed send reverts `sending` back to `queued`
+// without touching the note, so noting `sending` would leave a queued row
+// claiming to be on its way.
+const CLAIM_NOTE: Partial<Record<WithdrawalStatus, string>> = {
+  paid: "Sent on chain",
+  rejected: "Rejected by staff · balance refunded",
+};
 
 async function claimWithdrawal(id: string, from: WithdrawalStatus | WithdrawalStatus[], to: WithdrawalStatus) {
   const allowed = (Array.isArray(from) ? from : [from]).map((status) => `'${esc(status)}'`).join(", ");
   const now = Date.now();
   const stamp = to === "sending" ? "" : `, resolvedAt = ${now}`;
+  // Move the note with the status. A rejected row still reading "Queued for
+  // send" is a misleading audit trail, and the books are read off these rows.
+  const note = CLAIM_NOTE[to] ? `, note = '${esc(CLAIM_NOTE[to]!)}'` : "";
   const changed = await prisma.$executeRawUnsafe(
-    `UPDATE Withdrawal SET status = '${esc(to)}'${stamp} WHERE id = '${esc(id)}' AND status IN (${allowed})`,
+    `UPDATE Withdrawal SET status = '${esc(to)}'${stamp}${note} WHERE id = '${esc(id)}' AND status IN (${allowed})`,
   );
   return Number(changed) > 0;
 }

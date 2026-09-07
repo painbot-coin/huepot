@@ -110,7 +110,7 @@ export function NetworkFeed() {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the feed…</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
       </NetworkChrome>
     );
   }
@@ -142,7 +142,7 @@ export function NetworkFeed() {
               className="field"
               maxLength={500}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Start a post"
+              placeholder="Speak to the wing"
               value={draft}
             />
             <button className="chip-btn" disabled={busy || draft.trim().length < 2} type="submit">
@@ -169,8 +169,8 @@ export function NetworkFeed() {
           {shown.length === 0 ? (
             <p className="mt-6 text-sm text-zinc-500">
               {tab === "recommended"
-                ? "No recommended posts yet. Recent posts from the whole pit will land here."
-                : "No posts yet. Anyone signed in can post, and everyone sees it."}
+                ? "No recommended lines yet. Recent words from the house land here."
+                : "No lines yet. Anyone signed in can speak, and the wing hears it."}
             </p>
           ) : (
             <ul className="mt-4 space-y-3">
@@ -188,10 +188,10 @@ export function NetworkFeed() {
           )}
         </section>
         <aside className="li-card li-suggest">
-          <p className="lobby-label">People you may know</p>
-          <p className="mt-2 text-xs text-zinc-500">Not connected yet. Send a request.</p>
+          <p className="lobby-label">In the pit</p>
+          <p className="mt-2 text-xs text-zinc-500">Not in your company yet. Send an ask.</p>
           {people.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">No other players in the pit yet.</p>
+            <p className="mt-4 text-sm text-zinc-500">No other seats in the house yet.</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {people.map((person) => (
@@ -237,7 +237,7 @@ function RelateButton({
   onRelate: (action: string, username: string) => void;
 }) {
   if (relation === "outgoing") {
-    return <span className="chip-btn chip-btn-ghost pointer-events-none">Pending</span>;
+    return <span className="chip-btn chip-btn-ghost pointer-events-none">Ask sent</span>;
   }
   if (relation === "incoming") {
     return (
@@ -259,7 +259,7 @@ function RelateButton({
       onClick={() => onRelate("request", username)}
       type="button"
     >
-      Connect
+      Ask
     </button>
   );
 }
