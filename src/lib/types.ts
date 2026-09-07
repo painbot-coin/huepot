@@ -105,6 +105,10 @@ export type PlayLimits = {
   dailyLossCap: number;
   coolOffUntil: number;
   selfExcludeUntil: number;
+  /** A looser cap the player has asked for. Null when nothing is waiting. */
+  pendingLossCap: number | null;
+  /** When that looser cap starts. Tightening never waits. */
+  pendingLossCapAt: number;
 };
 
 export type User = {
@@ -224,6 +228,8 @@ export type PublicUser = {
   blockMessage: string;
   dailyLossCap: number;
   playLossToday: number;
+  pendingLossCap: number | null;
+  pendingLossCapAt: number;
   ageConfirmed: boolean;
   inviteCode: string;
   inviteEarned: number;

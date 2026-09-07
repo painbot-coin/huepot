@@ -429,9 +429,19 @@ function LimitsCard({
       <p className="hall-kicker">Seat limits</p>
       <h2 className="font-display text-2xl text-white">Play limits</h2>
       <p className="mt-1 text-sm text-zinc-500">
-        Today’s play loss {formatUsdt(user.playLossToday)} USDT. Cool-off and
-        self-exclude cannot be shortened once they start.
+        Today’s play loss {formatUsdt(user.playLossToday)} USDT. A tighter cap
+        holds at once; a looser one waits a day. Cool-off and self-exclude
+        cannot be shortened once they start.
       </p>
+      {user.pendingLossCap != null ? (
+        <p className="mt-2 text-sm text-amber-300">
+          {user.pendingLossCap === 0
+            ? "No cap"
+            : `A cap of ${formatUsdt(user.pendingLossCap)} USDT`}{" "}
+          starts {new Date(user.pendingLossCapAt).toLocaleString()}. Until then{" "}
+          {formatUsdt(user.dailyLossCap)} USDT stands.
+        </p>
+      ) : null}
       <form
         onSubmit={(event) => {
           event.preventDefault();

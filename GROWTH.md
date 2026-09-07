@@ -503,6 +503,56 @@ rounds                         one per room
 
 No table is pruned of history it should keep: notices and events stay in the database, and only unusable login rows are deleted.
 
+## Phase 27 — A limit you cannot undo in the moment (1.3.89)
+
+The play limits had never been exercised. Most of them hold: a cool-off stops play *and* deposits, neither cool-off nor self-exclusion can be shortened, and `assertCanCash` deliberately still lets a self-excluded player withdraw — they should always be able to take their money out. Two things did not hold.
+
+### The cap could be undone the instant it bit
+
+```
+cap set to 2.00
+  click 1 : accepted
+  click 2 : accepted
+  click 3 : refused — "Daily loss cap is 2.00. Take a break or raise it tomorrow."
+raising the cap, right then:
+  accepted, cap is now 50.00
+  click straight after : ACCEPTED
+```
+
+The message said tomorrow. The code said now. A player chasing a loss could lift their own limit in one request, at the exact moment it existed to stop them.
+
+Tightening is what a player needs in the moment; loosening is what they need protecting from. So a stricter cap takes hold at once, and a looser one — including removing it — waits a day, with the pending change shown on the seat so nobody is guessing:
+
+```
+1. set a cap where there was none    cap 2.00, nothing pending
+2. click until it bites              refused at the cap
+3. raise it the moment it bites      cap still 2.00, 50.00 queued in 24.0h
+   click straight after              still refused
+4. remove the cap entirely           cap still 2.00, 0 queued in 24.0h
+   click straight after              still refused
+5. tighten to 1.00 instead           holds at once, the queued change dropped
+```
+
+The message now says what the code does.
+
+### A daily cap that was not daily
+
+`notePlayTx` kept one running total per player and only ever added to it. Nothing rolled off, so a day's loss stayed counted until the process restarted — a cap that quietly became permanent, and one that only looked right because deploys restart the process often.
+
+Loss is now kept in hourly buckets, summed over the window and walked in order so it holds at zero: a player who is ahead cannot bank the winnings as extra room to lose, but coming back from a win still counts. Verified on a clean window:
+
+```
+click 1: accepted   loss 1.00
+click 2: accepted   loss 2.00
+click 3: REFUSED    loss 2.00
+```
+
+### What cost the most time here
+
+Two test runs looked like failures and were not. Payouts kept landing in the window from rounds whose clicks I had cleared, so the day's net loss legitimately read zero and the cap correctly declined to bite. The measurement was wrong, not the house. Worth remembering: with one player in a pit, that player wins nearly every round back and only ever loses the rake, so a loss cap takes a long time to bite.
+
+Also worth knowing: `jsonError` masks anything matching `prisma|sqlite`, so a database fault surfaces as a bare "Request failed". That is right for players and slow for whoever is debugging.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

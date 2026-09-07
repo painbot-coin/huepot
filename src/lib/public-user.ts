@@ -1,4 +1,4 @@
-import { playBlock, playLossSince, userLimits } from "./limits";
+import { effectiveLossCap, playBlock, playLossSince, userLimits } from "./limits";
 import { fromCents } from "./money";
 import { unreadCount } from "./notifications";
 import {
@@ -33,10 +33,13 @@ export function toPublicUser(user: User, txs: PublicUser["txs"], store?: StoreDa
     blockKind: block?.kind ?? null,
     blockUntil: block?.until ? block.until : null,
     blockMessage: block?.message ?? "",
-    dailyLossCap: fromCents(limits.dailyLossCap),
+    dailyLossCap: fromCents(effectiveLossCap(limits)),
     playLossToday: store
       ? fromCents(playLossSince(store, user.id, Date.now() - 24 * 60 * 60 * 1000))
       : 0,
+    pendingLossCap:
+      limits.pendingLossCap == null ? null : fromCents(limits.pendingLossCap),
+    pendingLossCapAt: limits.pendingLossCapAt,
     ageConfirmed: Boolean(user.ageConfirmedAt),
     inviteCode: user.inviteCode || "",
     inviteEarned: fromCents(earned),
