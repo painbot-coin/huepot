@@ -405,12 +405,21 @@ function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound
  * pair is dropped, but only for that viewer — the events themselves are shared
  * and the round lines everyone needs stay put.
  */
-function feedFor(room: Room, userId: string | null) {
-  const events = room.events.slice(-80);
-  if (!userId) return events;
-  const hidden = blockedIds(userId);
-  if (!hidden.size) return events;
-  return events.filter((event) => !event.userId || !hidden.has(event.userId));
+function feedFor(store: StoreData, room: Room, userId: string | null) {
+  let events = room.events.slice(-80);
+  if (userId) {
+    const hidden = blockedIds(userId);
+    if (hidden.size) {
+      events = events.filter((event) => !event.userId || !hidden.has(event.userId));
+    }
+  }
+  // Copied rather than mutated: room.events is the stored list, and a face is
+  // only ever part of the payload.
+  return events.map((event) => {
+    const author = event.userId ? store.users[event.userId] : null;
+    const avatar = (author?.avatar ?? "").trim();
+    return avatar ? { ...event, avatar } : event;
+  });
 }
 
 function liveSitterIds(room: Room) {
@@ -592,7 +601,7 @@ export function getRoomState(
     user: publicUserFor(store, userId),
     round: toPublicRound(round, userId ?? "", room),
     room: toPublicRoom(store, room, userId),
-    feed: feedFor(room, userId),
+    feed: feedFor(store, room, userId),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),
@@ -617,7 +626,7 @@ export function snapshotRoomState(
     user: publicUserFor(store, userId),
     round: toPublicRound(room.round, userId ?? "", room),
     room: toPublicRoom(store, room, userId),
-    feed: feedFor(room, userId),
+    feed: feedFor(store, room, userId),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),

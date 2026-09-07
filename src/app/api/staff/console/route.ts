@@ -10,6 +10,7 @@ import {
 } from "@/lib/chain";
 import {
   hideReportedChat,
+  listReportedPlayers,
   listReports,
   setReportStatus,
 } from "@/lib/reports";
@@ -73,7 +74,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ rooms, house, you });
     }
     if (tab === "reports") {
-      return NextResponse.json({ reports: await listReports(), house, you });
+      return NextResponse.json({
+        reports: await listReports(),
+        reported: await listReportedPlayers(),
+        house,
+        you,
+      });
     }
     if (tab === "wire") {
       return NextResponse.json({
@@ -171,7 +177,10 @@ export async function POST(request: Request) {
         await setReportStatus(row.id, "dismissed");
       }
       await writeStaffLog(actor, body.action, body.id, `/${row.roomSlug}`);
-      return NextResponse.json({ reports: await listReports() });
+      return NextResponse.json({
+        reports: await listReports(),
+        reported: await listReportedPlayers(),
+      });
     }
     if (
       body.action === "wire-publish" ||

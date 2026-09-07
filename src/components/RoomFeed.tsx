@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { Avatar } from "@/components/Avatar";
 import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useChatScroll } from "@/components/useChatScroll";
@@ -121,7 +122,9 @@ export function RoomFeed({
         {visible.map((item) =>
           item.kind === "chat" ? (
             <article className="news-chat" key={item.id}>
-              <span className="news-ava">{(item.username ?? "p").slice(0, 1).toUpperCase()}</span>
+              <span className="news-ava">
+                <Avatar avatar={item.avatar} username={item.username ?? "player"} />
+              </span>
               <div>
                 <header>
                   <b>@{item.username ?? "player"}</b>
@@ -159,7 +162,7 @@ export function RoomFeed({
           <input
             maxLength={240}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Speak at the table…"
+            placeholder="Speak at the tableâ€¦"
             value={text}
           />
           <button aria-label="Send" disabled={busy || !text.trim()} type="submit">
@@ -168,7 +171,7 @@ export function RoomFeed({
         </form>
       ) : (
         <form className="room-chat is-gated" onSubmit={(event) => event.preventDefault()}>
-          <input disabled placeholder={muted ? "The host muted you." : "Sign in to chat…"} />
+          <input disabled placeholder={muted ? "The host muted you." : "Sign in to chatâ€¦"} />
           {muted ? (
             <button aria-label="Send" disabled type="button">
               <IconSend />

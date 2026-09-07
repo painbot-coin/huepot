@@ -6,6 +6,14 @@ import type { Tx, Withdrawal } from "@/lib/types";
 import type { StaffUserRow } from "@/lib/staff";
 
 type Tab = "books" | "payouts" | "players" | "tables" | "ledger" | "reports" | "wire" | "log";
+type ReportedPlayer = {
+  username: string;
+  open: number;
+  total: number;
+  hidden: number;
+  reporters: number;
+  lastAt: number;
+};
 type HeldNews = {
   id: string;
   source: string;
@@ -91,6 +99,7 @@ export function StaffConsole() {
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [txs, setTxs] = useState<(Tx & { username?: string })[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
+  const [reported, setReported] = useState<ReportedPlayer[]>([]);
   const [held, setHeld] = useState<HeldNews[]>([]);
   const [heldCount, setHeldCount] = useState(0);
   const [house, setHouse] = useState<{ balance: number; percent: string } | null>(null);
@@ -157,7 +166,8 @@ export function StaffConsole() {
         rooms?: RoomRow[];
         txs?: (Tx & { username?: string })[];
         reports?: ReportRow[];
-        held?: HeldNews[];
+        reported?: ReportedPlayer[];
+      held?: HeldNews[];
         heldCount?: number;
         logs?: LogRow[];
         house?: { balance: number; percent: string };
@@ -178,6 +188,7 @@ export function StaffConsole() {
       if (data.rooms) setRooms(data.rooms);
       if (data.txs) setTxs(data.txs);
       if (data.reports) setReports(data.reports);
+      if (data.reported) setReported(data.reported);
       if (data.held) setHeld(data.held);
       if (typeof data.heldCount === "number") setHeldCount(data.heldCount);
       if (data.logs) setLogs(data.logs);
@@ -212,7 +223,8 @@ export function StaffConsole() {
         users?: StaffUserRow[];
         rooms?: RoomRow[];
         reports?: ReportRow[];
-        held?: HeldNews[];
+        reported?: ReportedPlayer[];
+      held?: HeldNews[];
         heldCount?: number;
         treasury?: Treasury;
         inboxes?: InboxHold;
@@ -227,6 +239,7 @@ export function StaffConsole() {
       if (data.users) setUsers(data.users);
       if (data.rooms) setRooms(data.rooms);
       if (data.reports) setReports(data.reports);
+      if (data.reported) setReported(data.reported);
       if (data.held) setHeld(data.held);
       if (typeof data.heldCount === "number") setHeldCount(data.heldCount);
       if (data.treasury) setTreasury(data.treasury);
@@ -608,6 +621,31 @@ export function StaffConsole() {
             ))
           )}
         </ul>
+      ) : null}
+
+      {signedIn && tab === "reports" && reported.length ? (
+        <div className="mt-8">
+          <p className="text-xs uppercase tracking-widest text-zinc-500">
+            By player, most-complained first
+          </p>
+          <ul className="mt-3 space-y-2">
+            {reported.map((row) => (
+              <li
+                className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400"
+                key={row.username}
+              >
+                <p className="text-zinc-200">
+                  @{row.username} · {row.reporters} separate reporter
+                  {row.reporters === 1 ? "" : "s"}
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-widest">
+                  {row.open} open · {row.total} in total · {row.hidden} hidden ·
+                  last {new Date(row.lastAt).toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {signedIn && tab === "reports" ? (

@@ -75,6 +75,8 @@ export type RoomEvent = {
   kind: RoomEventKind;
   userId: string | null;
   username: string | null;
+  /** Filled in per viewer when the feed is built. Never stored. */
+  avatar?: string;
   body: string;
   createdAt: number;
 };

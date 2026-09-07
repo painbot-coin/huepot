@@ -991,6 +991,44 @@ Two of those checks had to be rewritten before they meant anything. One asserted
 
 The risk that prompted this is gone in the shape that mattered: nothing appears under the house's name unless someone put it there. What remains is a queue that needs attention — headlines pile up unseen if nobody opens the tab, which is a much better failure than the alternative.
 
+## Phase 39 — The last of the unblocked list (1.3.99)
+
+Two leftovers, both flagged in earlier phases and both finishable without anything from outside.
+
+### A face on a pit chat line
+
+The last surface showing a name and a single letter. Events are stored rows carrying a username and an id, so the face is attached when the feed is built for a viewer rather than stored on the row — copied, not mutated, because `room.events` is the persisted list and a face is only ever part of the payload.
+
+```
+the chat line is in the feed                  ok
+the chat line carries the face   hue:ember    ok
+round lines with no author carry no face      ok
+```
+
+That third check matters more than it looks: the same list carries round and payout lines with no author, and a blank circle beside "Round #9191 settled" would be worse than nothing.
+
+### Reports that add up
+
+A report was one row, and one row cannot tell an annoyed player from a pattern. The reports tab now leads with a per-player view sorted by **how many separate people** complained, which is the count that survives one person clicking three times.
+
+```
+three reports against one player      3
+two separate reporters, not three     2
+open and hidden split                 2 open, 1 hidden
+most-complained sorts first           A before B
+```
+
+The individual rows are still underneath, because acting on a report still means reading the line that was reported.
+
+## Where this stops without you
+
+Everything left in the plan is blocked on something only the owner can supply:
+
+- **Phase 33, images that cannot hurt anyone.** Re-encoding needs an image codec added as a dependency, and none of it can be exercised end to end until a bucket exists. EXIF stripping is worth doing the day uploads are real.
+- **Phase 34, email.** Needs a transactional provider and a verified sender. Until then a player who queues a withdrawal learns nothing until they come back to the site.
+- **Phase 38, standings.** The aggregation is written and stays shut. One person has clicked in production; a leaderboard of one advertises an empty house.
+- **The upload path itself.** Inert at 503 until `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET` and `SPACES_REGION` exist. Avatars work today only as house colours.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

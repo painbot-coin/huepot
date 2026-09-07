@@ -103,6 +103,53 @@ export async function listReports() {
   );
 }
 
+export type ReportedPlayer = {
+  username: string;
+  open: number;
+  total: number;
+  hidden: number;
+  reporters: number;
+  lastAt: number;
+};
+
+/**
+ * Reports grouped by who was reported, because one row at a time cannot tell
+ * a single annoyed player from a pattern. Sorted by how many separate people
+ * complained, which is the signal that survives one person clicking twice.
+ */
+export async function listReportedPlayers(): Promise<ReportedPlayer[]> {
+  await ensureReportTables();
+  const rows = await prisma.$queryRawUnsafe<
+    {
+      username: string;
+      open: number | bigint;
+      total: number | bigint;
+      hidden: number | bigint;
+      reporters: number | bigint;
+      lastAt: string | number | bigint;
+    }[]
+  >(`
+    SELECT username,
+           SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) AS open,
+           COUNT(*) AS total,
+           SUM(CASE WHEN status = 'hidden' THEN 1 ELSE 0 END) AS hidden,
+           COUNT(DISTINCT reporterId) AS reporters,
+           CAST(MAX(createdAt) AS TEXT) AS lastAt
+      FROM ChatReport
+     GROUP BY username
+     ORDER BY reporters DESC, open DESC, lastAt DESC
+     LIMIT 40
+  `);
+  return rows.map((row) => ({
+    username: row.username,
+    open: Number(row.open),
+    total: Number(row.total),
+    hidden: Number(row.hidden),
+    reporters: Number(row.reporters),
+    lastAt: Number(row.lastAt),
+  }));
+}
+
 export async function setReportStatus(id: string, status: ChatReport["status"]) {
   await ensureReportTables();
   await prisma.$executeRawUnsafe(
