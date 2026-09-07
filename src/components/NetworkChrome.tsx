@@ -1,14 +1,55 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { MouseEvent, ReactNode } from "react";
+import { hueHexOf } from "@/lib/hues";
 import { openMessageDock } from "@/lib/message-dock";
 import type { NetworkYou } from "@/lib/types";
 
 export function initials(name: string) {
   const clean = name.replace(/[^a-zA-Z0-9]/g, "");
   return (clean.slice(0, 2) || "HP").toUpperCase();
+}
+
+/**
+ * A player's face. An uploaded picture when there is one, a house colour
+ * behind their initials when they picked one, and initials otherwise â€” so a
+ * seat is never blank and nobody is required to upload anything.
+ */
+export function Avatar({
+  username,
+  avatar,
+  size,
+}: {
+  username: string;
+  avatar?: string;
+  size?: "sm" | "lg";
+}) {
+  const cls = `li-avatar${size ? ` is-${size}` : ""}`;
+  const value = (avatar ?? "").trim();
+
+  if (value.startsWith("http")) {
+    return (
+      <span className={`${cls} has-pic`}>
+        {/* Sized by CSS and served from our own bucket, so next/image would
+            only add a proxy hop. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img alt="" src={value} />
+      </span>
+    );
+  }
+  if (value.startsWith("hue:")) {
+    const hex = hueHexOf(value.slice(4));
+    if (hex) {
+      return (
+        <span className={`${cls} has-hue`} style={{ background: hex }}>
+          {initials(username)}
+        </span>
+      );
+    }
+  }
+  return <span className={cls}>{initials(username)}</span>;
 }
 
 export function NetworkChrome({
@@ -27,12 +68,12 @@ export function NetworkChrome({
     { href: "/network", label: "Board", match: path === "/network" },
     {
       href: "/network/people",
-      label: you?.pendingIn ? `Company · ${you.pendingIn}` : "Company",
+      label: you?.pendingIn ? `Company Â· ${you.pendingIn}` : "Company",
       match: path.startsWith("/network/people"),
     },
     {
       href: "/network/messages",
-      label: you?.unreadMessages ? `Letters · ${you.unreadMessages}` : "Letters",
+      label: you?.unreadMessages ? `Letters Â· ${you.unreadMessages}` : "Letters",
       match: path.startsWith("/network/messages"),
     },
     { href: me, label: "Seat", match: onMe },

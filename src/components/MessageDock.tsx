@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { initials } from "@/components/NetworkChrome";
+import { Avatar } from "@/components/NetworkChrome";
 import { useChatScroll } from "@/components/useChatScroll";
 import { MESSAGE_OPEN, openMessageDock } from "@/lib/message-dock";
 import type { NetworkMessage, NetworkThread } from "@/lib/types";
@@ -204,7 +204,7 @@ export function MessageDock() {
               }}
               type="button"
             >
-              ×
+              Ã—
             </button>
           </header>
           <ul className="msg-bubbles" onScroll={onScroll} ref={scroller}>
@@ -232,7 +232,7 @@ export function MessageDock() {
               value={draft}
             />
             <button disabled={busy || !draft.trim()} type="submit">
-              {busy ? "Sending…" : "Send"}
+              {busy ? "Sendingâ€¦" : "Send"}
             </button>
           </form>
           {error ? <p className="msg-error">{error}</p> : null}
@@ -260,7 +260,7 @@ export function MessageDock() {
                 +
               </button>
               <button aria-label="Minimize messaging" onClick={() => setOpen(false)} type="button">
-                –
+                â€“
               </button>
             </span>
           </header>
@@ -278,7 +278,7 @@ export function MessageDock() {
                 hits.map((name) => (
                   <li key={name}>
                     <button onClick={() => openChat(name)} type="button">
-                      <span className="li-avatar is-sm">{initials(name)}</span>
+                      <Avatar size="sm" username={name} />
                       <span>@{name}</span>
                     </button>
                   </li>
@@ -297,7 +297,7 @@ export function MessageDock() {
                       onClick={() => openChat(thread.username)}
                       type="button"
                     >
-                      <span className="li-avatar is-sm">{initials(thread.username)}</span>
+                      <Avatar avatar={thread.avatar} size="sm" username={thread.username} />
                       <span>
                         <strong>@{thread.username}</strong>
                         <em>{thread.lastBody}</em>

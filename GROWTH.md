@@ -784,6 +784,54 @@ Twelve uploads per account per ten minutes, counted in memory.
 
 `storageConfigured()` is false until `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET` and `SPACES_REGION` are set, and the route answers 503 until then. Nothing about the signing can be proven against a live bucket without credentials, which is the one part of this phase that is argued rather than measured — though a 403 from Spaces would now mean credentials, not signing.
 
+## Phase 32 — A face on the seat (1.3.93)
+
+Every avatar in the house was two letters in a circle. A feed of initials reads like a spreadsheet.
+
+### One field, three shapes
+
+A face is a single string on the player, and it is deliberately not a table:
+
+```
+""              initials, the default
+"hue:azure"     initials on a house colour
+"https://…"     a picture, and only from our own bucket
+```
+
+The colour option matters as much as the upload. Nobody should be made to find a photograph to stop looking anonymous, and it costs no storage, no moderation and no bandwidth.
+
+Stored in the same `auth` JSON as headline, about and location, so there is no migration — eight touch points in `store.ts`, mirroring `location` exactly. Verified the boring way: set a colour, restart the process, read it back.
+
+### Where a face may come from
+
+An avatar URL is checked against the bucket's own origin, not matched loosely:
+
+```
+our bucket over https                          accepted
+another bucket in the same region              refused
+huepot-test.fra1.digitaloceanspaces.com.evil.com  refused
+a foreign host                                 refused
+our host over plain http                       refused
+a colour that is not a house colour            refused
+data: and javascript: URLs                     refused
+```
+
+The lookalike host is the one that matters: `startsWith` or `includes` would have waved it through. Comparing `URL.origin` is what makes it a real check. A foreign URL is refused rather than stored because it would be a tracking pixel on every page that face appears on, and a broken face the day that host disappears.
+
+Those refusals were tested twice. The first run passed while proving nothing — with no bucket configured, every URL failed early on "uploads are not switched on" and the origin rule never ran. The second run set dummy Spaces values, which is enough because validation only reads config to compute an origin and never contacts a bucket. Same masking trap as Phase 31, caught by the same habit of reading *why* a check passed.
+
+### The picker, and the parts kept apart
+
+Editing a profile now offers initials, the eight house colours, and Upload. A picked file uploads immediately but Save is still the only thing that commits, so a mis-click is not a new face.
+
+`hues.ts` holds the colour list on its own because `avatar.ts` reaches into storage config, and that has no business in a browser bundle. One list, shared by the picker and the validator, with the hex read from `colors.ts` rather than copied into CSS — three of the eight were wrong when I did copy them.
+
+Nine call sites now share one `Avatar` component: profile, feed sidebar, composer, people lists, posts, message threads and the dock.
+
+### Still to come
+
+Seats in the pit and take pages still show a name without a face; both carry a username in payloads that would each need widening. And no real picture has been through this yet — the upload route answers 503 until Spaces credentials exist, so what is proven here is the colour path end to end and the URL rules, not a photograph on a profile.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

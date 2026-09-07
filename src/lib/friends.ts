@@ -140,6 +140,7 @@ function toCard(store: StoreData, viewerId: string, user: User, at: number): Net
   const row = findPair(viewerId, user.id);
   return {
     username: user.username,
+    avatar: (user.avatar ?? "").trim(),
     headline: headlineOf(user),
     createdAt: user.createdAt,
     online: isOnline(user.id, at),

@@ -4397,6 +4397,26 @@ body:has(.pit-app.is-take) .site-header {
   letter-spacing: 0.06em;
 }
 
+/* An uploaded picture fills the circle instead of the initials sitting in it. */
+.li-avatar.has-pic {
+  overflow: hidden;
+  background: #16131f;
+  padding: 0;
+}
+
+.li-avatar.has-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A house colour behind the initials, for players who would rather not upload.
+   The colour itself comes from colors.ts so there is one source for it. */
+.li-avatar.has-hue {
+  color: #0b0908;
+}
+
 .li-avatar.is-sm {
   width: 36px;
   height: 36px;
@@ -5685,3 +5705,30 @@ body:has(.app-page) .site-footer {
   }
 }
 
+
+.avatar-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 175, 106, 0.28);
+  cursor: pointer;
+}
+
+.avatar-swatch.is-initials {
+  background: #2a2318;
+  color: #ffd27a;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.avatar-swatch.is-on {
+  outline: 2px solid #ffd27a;
+  outline-offset: 2px;
+}

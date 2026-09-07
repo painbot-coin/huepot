@@ -1,4 +1,4 @@
-import type { ColorId } from "./colors";
+﻿import type { ColorId } from "./colors";
 import type { NetworkId } from "./networks";
 import type { PlayerRecord } from "./record";
 
@@ -135,6 +135,8 @@ export type User = {
   headline: string;
   about: string;
   location: string;
+  /** "" for initials, "hue:<id>" for a house colour, or an uploaded URL. */
+  avatar?: string;
 };
 
 export type Session = {
@@ -372,6 +374,7 @@ export type Friendship = {
 
 export type NetworkCard = {
   username: string;
+  avatar: string;
   headline: string;
   createdAt: number;
   online: boolean;
@@ -383,6 +386,7 @@ export type NetworkCard = {
 
 export type NetworkYou = {
   username: string;
+  avatar: string;
   headline: string;
   pendingIn: number;
   unreadMessages: number;
@@ -401,17 +405,25 @@ export type NetworkState = {
 export type NetworkPost = {
   id: string;
   username: string;
+  avatar: string;
   headline: string;
   body: string;
   createdAt: number;
   likes: number;
   liked: boolean;
   relation: FriendRelation;
-  comments: { id: string; username: string; body: string; createdAt: number }[];
+  comments: {
+    id: string;
+    username: string;
+    avatar: string;
+    body: string;
+    createdAt: number;
+  }[];
 };
 
 export type NetworkThread = {
   username: string;
+  avatar: string;
   headline: string;
   lastBody: string;
   lastAt: number;
@@ -428,6 +440,7 @@ export type NetworkMessage = {
 
 export type NetworkProfile = {
   username: string;
+  avatar: string;
   headline: string;
   about: string;
   location: string;

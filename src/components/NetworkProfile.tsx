@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
-import { NetworkChrome, SignInGate, initials } from "@/components/NetworkChrome";
+import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import { hueRule, levelFor, nextRankFor } from "@/lib/coin";
+import { AVATAR_HUES, hueHexOf } from "@/lib/hues";
 import { formatUsdt } from "@/lib/money";
 import type { PlayerRecord } from "@/lib/record";
 import type { TaskProgress } from "@/lib/tasks";
@@ -38,7 +39,7 @@ function SeatRecord({ record, you }: { record: PlayerRecord; you: boolean }) {
         <div>
           <p className="seat-coin-value">{record.coin.toLocaleString()} HUE</p>
           <p className="seat-coin-rank">
-            Level {level.level} · {level.title}
+            Level {level.level} Â· {level.title}
           </p>
         </div>
         <p className="seat-coin-note">
@@ -101,7 +102,7 @@ function TaskList({
       <p className="task-head">
         <span>{title}</span>
         <em>
-          {done}/{tasks.length} · {resets}
+          {done}/{tasks.length} Â· {resets}
         </em>
       </p>
       <ul className="task-list">
@@ -134,6 +135,8 @@ export function NetworkProfile({ username }: { username: string }) {
   const [headline, setHeadline] = useState("");
   const [about, setAbout] = useState("");
   const [location, setLocation] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [busyPic, setBusyPic] = useState(false);
 
   async function load() {
     const response = await fetch(`/api/network/profile?u=${encodeURIComponent(username)}`);
@@ -156,6 +159,7 @@ export function NetworkProfile({ username }: { username: string }) {
       setHeadline(data.profile.headline === "Huepot player" ? "" : data.profile.headline);
       setAbout(data.profile.about);
       setLocation(data.profile.location);
+    setAvatar(data.profile.avatar);
     }
   }
 
@@ -165,13 +169,32 @@ export function NetworkProfile({ username }: { username: string }) {
       .finally(() => setBooted(true));
   }, [username]);
 
+  async function pickFile(file?: File) {
+    if (!file) return;
+    setBusyPic(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch("/api/upload", { method: "POST", body: form });
+      const data = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !data.url) throw new Error(data.error || "Could not send that picture");
+      // Chosen but not saved yet, so Save is still the one thing that commits.
+      setAvatar(data.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send that picture");
+    } finally {
+      setBusyPic(false);
+    }
+  }
+
   async function save() {
     setError("");
     try {
       const response = await fetch("/api/network/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ headline, about, location }),
+        body: JSON.stringify({ headline, about, location, avatar }),
       });
       const data = (await response.json()) as { you?: NetworkYou; profile?: Profile; error?: string };
       if (!response.ok) throw new Error(data.error || "Could not save");
@@ -203,7 +226,7 @@ export function NetworkProfile({ username }: { username: string }) {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening profile…</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening profileâ€¦</p>
       </NetworkChrome>
     );
   }
@@ -211,7 +234,7 @@ export function NetworkProfile({ username }: { username: string }) {
   if (!profile) {
     return (
       <NetworkChrome you={you}>
-        <p className="px-4 py-16 text-center text-zinc-400">{error || "Opening profile…"}</p>
+        <p className="px-4 py-16 text-center text-zinc-400">{error || "Opening profileâ€¦"}</p>
       </NetworkChrome>
     );
   }
@@ -223,18 +246,18 @@ export function NetworkProfile({ username }: { username: string }) {
           <div className="li-card overflow-hidden">
             <div className="li-cover is-tall" />
             <div className="li-profile">
-              <div className="li-avatar is-lg">{initials(profile.username)}</div>
+              <Avatar avatar={profile.avatar} size="lg" username={profile.username} />
               <h1 className="font-display text-3xl text-white">@{profile.username}</h1>
               <p className="li-head">{profile.headline}</p>
               {profile.location ? <p className="text-sm text-zinc-500">{profile.location}</p> : null}
               <p className="mt-2 text-xs text-zinc-500">
-                {profile.friends} in company ·{" "}
+                {profile.friends} in company Â·{" "}
                 {profile.online
                   ? profile.room
-                    ? `Online · ${profile.room.name}`
+                    ? `Online Â· ${profile.room.name}`
                     : "Online"
                   : `Last seen ${ageLabel(profile.lastSeen)}`}
-                {` · Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
+                {` Â· Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
               </p>
               <SeatRecord record={profile.record} you={profile.you} />
               <div className="mt-4 flex flex-wrap gap-2">
@@ -282,6 +305,37 @@ export function NetworkProfile({ username }: { username: string }) {
             <p className="lobby-label">About</p>
             {edit ? (
               <div className="mt-3 space-y-3">
+                <p className="lobby-label">Your face</p>
+                <div className="avatar-pick">
+                  <Avatar avatar={avatar} size="sm" username={profile.username} />
+                  <button
+                    className={`avatar-swatch is-initials${avatar === "" ? " is-on" : ""}`}
+                    onClick={() => setAvatar("")}
+                    title="Just initials"
+                    type="button"
+                  >
+                    Aa
+                  </button>
+                  {AVATAR_HUES.map((id) => (
+                    <button
+                      className={`avatar-swatch${avatar === `hue:${id}` ? " is-on" : ""}`}
+                      key={id}
+                      onClick={() => setAvatar(`hue:${id}`)}
+                      style={{ background: hueHexOf(id) }}
+                      title={id}
+                      type="button"
+                    />
+                  ))}
+                  <label className="chip-btn chip-btn-ghost cursor-pointer">
+                    {busyPic ? "Sending…" : "Upload"}
+                    <input
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(event) => void pickFile(event.target.files?.[0])}
+                      type="file"
+                    />
+                  </label>
+                </div>
                 <input
                   className="field"
                   maxLength={80}
@@ -325,7 +379,7 @@ export function NetworkProfile({ username }: { username: string }) {
                     <span>
                       {post.likes} like{post.likes === 1 ? "" : "s"}
                       {post.comments.length
-                        ? ` · ${post.comments.length} comment${post.comments.length === 1 ? "" : "s"}`
+                        ? ` Â· ${post.comments.length} comment${post.comments.length === 1 ? "" : "s"}`
                         : ""}
                     </span>
                   </li>

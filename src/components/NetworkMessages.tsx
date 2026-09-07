@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { NetworkChrome, SignInGate, initials } from "@/components/NetworkChrome";
+import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import { useChatScroll } from "@/components/useChatScroll";
 import type { NetworkMessage, NetworkThread, NetworkYou } from "@/lib/types";
 
@@ -91,10 +91,10 @@ export function NetworkMessages() {
         <main className="li-main is-wide">
           <aside className="li-card li-inbox">
             <p className="lobby-label">Letters</p>
-            <p className="mt-3 text-sm text-zinc-500">Opening letters…</p>
+            <p className="mt-3 text-sm text-zinc-500">Opening lettersâ€¦</p>
           </aside>
           <section className="li-card li-chat">
-            <p className="text-sm text-zinc-500">Opening this chat…</p>
+            <p className="text-sm text-zinc-500">Opening this chatâ€¦</p>
           </section>
         </main>
       </NetworkChrome>
@@ -118,7 +118,7 @@ export function NetworkMessages() {
                     href={`/network/messages?with=${encodeURIComponent(thread.username)}`}
                     onClick={() => setPeer(thread.username)}
                   >
-                    <span className="li-avatar is-sm">{initials(thread.username)}</span>
+                    <Avatar avatar={thread.avatar} size="sm" username={thread.username} />
                     <span>
                       <strong>@{thread.username}</strong>
                       <em>{thread.lastBody}</em>
@@ -166,7 +166,7 @@ export function NetworkMessages() {
                   value={draft}
                 />
                 <button className="chip-btn" disabled={busy || !draft.trim()} type="submit">
-                  {busy ? "Sending…" : "Send"}
+                  {busy ? "Sendingâ€¦" : "Send"}
                 </button>
               </form>
             </>

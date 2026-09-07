@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       headline?: string;
       about?: string;
       location?: string;
+      avatar?: string;
     };
     await readyFriends();
     await readySocial();

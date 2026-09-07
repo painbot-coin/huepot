@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import {
   findPlayer,
   friendCount,
@@ -8,6 +8,7 @@ import {
   playerRelation,
   seatedAt,
 } from "@/lib/friends";
+import { avatarOf, parseAvatar } from "./avatar";
 import { isHouseUser } from "@/lib/house";
 import { playBlock } from "@/lib/limits";
 import { notify } from "@/lib/notifications";
@@ -108,6 +109,7 @@ export async function refreshUnread(userId: string) {
 export function youPayload(viewer: User) {
   return {
     username: viewer.username,
+    avatar: avatarOf(viewer),
     headline: headlineOf(viewer),
     pendingIn: pendingInCount(viewer.id),
     unreadMessages: unreadCache.get(viewer.id) ?? 0,
@@ -120,6 +122,7 @@ export function publicProfile(store: StoreData, viewer: User, username: string):
   const user = self ? viewer : findPlayer(store, username);
   return {
     username: user.username,
+    avatar: avatarOf(user),
     headline: headlineOf(user),
     about: (user.about ?? "").trim(),
     location: (user.location ?? "").trim(),
@@ -137,11 +140,18 @@ export function publicProfile(store: StoreData, viewer: User, username: string):
 export function saveProfile(
   store: StoreData,
   user: User,
-  input: { headline?: string; about?: string; location?: string },
+  input: {
+    headline?: string;
+    about?: string;
+    location?: string;
+    avatar?: string;
+  },
 ) {
   if (typeof input.headline === "string") user.headline = clean(input.headline, HEADLINE_MAX);
   if (typeof input.about === "string") user.about = input.about.trim().slice(0, ABOUT_MAX);
   if (typeof input.location === "string") user.location = clean(input.location, LOCATION_MAX);
+  // Refuses anything that is not a house colour or a file from our own bucket.
+  if (typeof input.avatar === "string") user.avatar = parseAvatar(input.avatar);
   return publicProfile(store, user, user.username);
 }
 
@@ -169,6 +179,7 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
       {
         id: post.id,
         username: author.username,
+        avatar: avatarOf(author),
         headline: headlineOf(author),
         body: post.body,
         createdAt: Number(post.createdAt),
@@ -185,6 +196,7 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
               {
                 id: item.id,
                 username: who.username,
+                avatar: avatarOf(who),
                 body: item.body,
                 createdAt: Number(item.createdAt),
               },
@@ -328,6 +340,7 @@ export async function listInbox(store: StoreData, viewer: User): Promise<Network
     if (!other || isHouseUser(other)) continue;
     threads.set(otherId, {
       username: other.username,
+      avatar: avatarOf(other),
       headline: headlineOf(other),
       lastBody: row.body,
       lastAt: Number(row.createdAt),

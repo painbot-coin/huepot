@@ -1,4 +1,4 @@
-import { mkdir, readFile } from "fs/promises";
+﻿import { mkdir, readFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { ensureFairTables, flushSettledRounds, loadRoundFair } from "@/lib/fairness-db";
@@ -113,6 +113,7 @@ function userFromRow(
     headline: "",
     about: "",
     location: "",
+    avatar: "",
   };
 }
 
@@ -264,6 +265,7 @@ async function loadUserAuth() {
           headline: "",
           about: "",
           location: "",
+          avatar: "",
         });
         return [row.id, parsed] as const;
       }),
@@ -281,6 +283,7 @@ async function loadUserAuth() {
         headline: string;
         about: string;
         location: string;
+        avatar: string;
       }
     >();
   }
@@ -575,6 +578,7 @@ async function readStore(): Promise<StoreData> {
     user.headline = extra.headline ?? "";
     user.about = extra.about ?? "";
     user.location = extra.location ?? "";
+    user.avatar = extra.avatar ?? "";
   }
   const sessionExtra = await loadSessionExtra();
   for (const session of Object.values(store.sessions)) {
@@ -651,6 +655,7 @@ async function persistStore(prev: StoreData, next: StoreData) {
           headline: user.headline ?? "",
           about: user.about ?? "",
           location: user.location ?? "",
+          avatar: user.avatar ?? "",
         });
         if (
           !same(before?.ageConfirmedAt, user.ageConfirmedAt) ||
@@ -660,7 +665,8 @@ async function persistStore(prev: StoreData, next: StoreData) {
           !same(before?.invitedBy, user.invitedBy) ||
           !same(before?.headline, user.headline) ||
           !same(before?.about, user.about) ||
-          !same(before?.location, user.location)
+          !same(before?.location, user.location) ||
+          !same(before?.avatar, user.avatar)
         ) {
           await tx.$executeRawUnsafe(
             `UPDATE User SET auth = '${authJson.replace(/'/g, "''")}' WHERE id = '${user.id.replace(/'/g, "''")}'`,
@@ -1016,6 +1022,7 @@ async function importJsonStore() {
       user.headline ??= "";
       user.about ??= "";
       user.location ??= "";
+      user.avatar ??= "";
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;
@@ -1036,6 +1043,7 @@ async function importJsonStore() {
       user.headline ??= "";
       user.about ??= "";
       user.location ??= "";
+      user.avatar ??= "";
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;

@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
-import { NetworkChrome, SignInGate, initials } from "@/components/NetworkChrome";
+import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import type { NetworkCard, NetworkState, NetworkTab } from "@/lib/types";
 
 function ageLabel(at: number | null, now: number) {
@@ -110,7 +110,7 @@ export function NetworkClient() {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening the wingâ€¦</p>
       </NetworkChrome>
     );
   }
@@ -169,7 +169,7 @@ export function NetworkClient() {
           [
             { id: "pit", label: "In the pit" },
             { id: "friends", label: "Company" },
-            { id: "requests", label: `Asks${state?.pendingIn ? ` · ${state.pendingIn}` : ""}` },
+            { id: "requests", label: `Asks${state?.pendingIn ? ` Â· ${state.pendingIn}` : ""}` },
           ] as { id: NetworkTab; label: string }[]
         ).map((item) => (
           <button
@@ -196,7 +196,7 @@ export function NetworkClient() {
       {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
 
       {!state ? (
-        <p className="mt-10 text-center text-zinc-500">Opening the wing…</p>
+        <p className="mt-10 text-center text-zinc-500">Opening the wingâ€¦</p>
       ) : state.cards.length === 0 ? (
         <p className="mt-10 text-sm text-zinc-500">
           {tab === "friends"
@@ -247,7 +247,7 @@ function PlayerCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-white">
-            <span className="li-avatar is-sm">{initials(player.username)}</span>
+            <Avatar avatar={player.avatar} size="sm" username={player.username} />
             <span>
               <span
                 className={`mr-2 inline-block h-2 w-2 rounded-full ${
@@ -263,10 +263,10 @@ function PlayerCard({
           <p className="mt-1 text-xs text-zinc-500">
             {player.online
               ? player.room
-                ? `Online · sitting ${player.room.name}`
+                ? `Online Â· sitting ${player.room.name}`
                 : "Online"
-              : `Offline · ${ageLabel(player.lastSeen, now)}`}
-            {` · ${player.friends} in company · since ${sinceLabel(player.createdAt)}`}
+              : `Offline Â· ${ageLabel(player.lastSeen, now)}`}
+            {` Â· ${player.friends} in company Â· since ${sinceLabel(player.createdAt)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

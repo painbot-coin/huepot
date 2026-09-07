@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { NetworkChrome, SignInGate, initials } from "@/components/NetworkChrome";
+import { Avatar, NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import type { FriendRelation, NetworkCard, NetworkPost, NetworkYou } from "@/lib/types";
 
 type FeedTab = "recent" | "recommended";
@@ -110,7 +110,7 @@ export function NetworkFeed() {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening the wingâ€¦</p>
       </NetworkChrome>
     );
   }
@@ -123,9 +123,9 @@ export function NetworkFeed() {
       <main className="li-main is-feed">
         <aside className="li-card li-side">
           <div className="li-cover" />
-          <div className="li-avatar">{initials(you?.username ?? "you")}</div>
+          <Avatar avatar={you?.avatar} username={you?.username ?? "you"} />
           <Link className="li-name" href={you ? `/network/u/${encodeURIComponent(you.username)}` : "/network"}>
-            @{you?.username ?? "…"}
+            @{you?.username ?? "â€¦"}
           </Link>
           <p className="li-head">{you?.headline ?? "Huepot player"}</p>
         </aside>
@@ -137,7 +137,7 @@ export function NetworkFeed() {
               void act({ action: "post", body: draft });
             }}
           >
-            <div className="li-avatar is-sm">{initials(you?.username ?? "you")}</div>
+            <Avatar avatar={you?.avatar} size="sm" username={you?.username ?? "you"} />
             <input
               className="field"
               maxLength={500}
@@ -200,7 +200,7 @@ export function NetworkFeed() {
                     className="li-suggest-who"
                     href={`/network/u/${encodeURIComponent(person.username)}`}
                   >
-                    <span className="li-avatar is-sm">{initials(person.username)}</span>
+                    <Avatar avatar={person.avatar} size="sm" username={person.username} />
                     <span>
                       <strong>@{person.username}</strong>
                       <em>{person.headline}</em>
@@ -282,14 +282,14 @@ function PostCard({
   return (
     <li className="li-card li-post">
       <div className="li-post-top">
-        <div className="li-avatar is-sm">{initials(post.username)}</div>
+        <Avatar avatar={post.avatar} size="sm" username={post.username} />
         <div className="min-w-0 flex-1">
           <Link className="li-name" href={`/network/u/${encodeURIComponent(post.username)}`}>
             @{post.username}
           </Link>
           <p className="li-head">
             {post.headline}
-            <span className="li-when"> · {whenLabel(post.createdAt)}</span>
+            <span className="li-when"> Â· {whenLabel(post.createdAt)}</span>
           </p>
         </div>
         {own ? null : (
@@ -304,7 +304,7 @@ function PostCard({
           onClick={() => onAct({ action: "like", postId: post.id })}
           type="button"
         >
-          {post.liked ? "Liked" : "Like"} · {post.likes}
+          {post.liked ? "Liked" : "Like"} Â· {post.likes}
         </button>
       </div>
       {post.comments.length > 0 ? (
