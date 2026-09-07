@@ -154,9 +154,10 @@ export async function readBooks(): Promise<Books> {
   // Rebuild every balance from its rows and compare. Money leaving a balance
   // without a Tx row is the one accounting fault that hides everything else,
   // so it gets computed every time the books are opened.
-  // Out: withdraw, click, rake. In: everything else. Matches the account ledger.
+  // Out: withdraw, click. In: everything else. A rake row is written only on
+  // the house account, where it is the house take arriving, not money leaving.
   const [impliedRow] = await prisma.$queryRawUnsafe<{ cents: number | null }[]>(
-    `SELECT SUM(CASE WHEN type IN ('withdraw','click','rake') THEN -amount ELSE amount END) AS cents
+    `SELECT SUM(CASE WHEN type IN ('withdraw','click') THEN -amount ELSE amount END) AS cents
        FROM Tx`,
   );
   const implied = fromCents(num(impliedRow?.cents));
@@ -166,8 +167,7 @@ export async function readBooks(): Promise<Books> {
   const drift = fromCents(num(allBalances?.cents)) - implied;
 
   // One on-chain transfer must appear once. A repeated hash means the ledger
-  // counted a deposit that only arrived once — found exactly this in
-  // production, a duplicate 10.00 row from an early migration.
+  // counted a deposit that only arrived once.
   let doubleCredits = { groups: 0, extra: 0 };
   try {
     const dupes = await prisma.$queryRawUnsafe<

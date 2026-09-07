@@ -377,7 +377,35 @@ Two holes, both closed:
 - **Crediting on a failed insert.** One recorded log now means one credit. A failed insert only proceeds when the row is older than ten minutes with still no credit — a real loss, not one in flight.
 - **A memory-only guard.** `creditConfirmedDeposit` checked `store.txs`, which holds 400 rows and is trimmed on the line below the check. It now falls back to the Tx table, the same pattern `hadClickTx` already uses. Harmless at 143 rows; a live double-credit past 400.
 
-The phantom row is still there. Deleting it is a money-ledger write and the owner's call; the books report it every time they are opened.
+### The phantom row is gone (1.3.86)
+
+Removed on the owner's call, with the app stopped so the in-memory store could not write it back, and the database copied first:
+
+```
+player            bill
+balance before    8.30
+deposit rows      2  (10.00 each)
+on-chain transfers 1
+dropping          fdb92ebc-da01-467e-9a4e-6945d8165b3c
+deposit rows now  1
+balance after     8.30
+```
+
+The balance never moved, which is the whole point — the row was the lie, not the money.
+
+### Which uncovered a false alarm in the books
+
+With the duplicate gone, `drift` still read 3.40. It reconciles per account like this:
+
+```
+account   balance   from rows     gap   rows
+bill         8.30        8.30    0.00    131
+house        1.70       -1.70    3.40     11
+```
+
+bill — the only real player — is exact to the cent: 10.00 deposited plus 109.30 taken minus 111.00 clicked is 8.30. The whole gap sat on the house, and the doubling gives it away: 1.70 of rake counted as −1.70.
+
+`implied` treated `rake` as money leaving. A rake row is only ever written on the house account, where it is the take arriving. Fixed, and `drift` now reads 0.00 — which matters, because a reconciliation that always shows a number is a reconciliation nobody reads.
 
 ## Next for the social layer
 
