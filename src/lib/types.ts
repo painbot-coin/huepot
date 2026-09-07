@@ -337,6 +337,14 @@ export type PublicTake = {
   names: string;
   amount: number;
   at: number;
+  /** Round number, which is how a take is matched to who was paid for it. */
+  number: number;
+};
+
+/** Who was paid for a take. Derived from the payout rows, never stored. */
+export type TakeWinner = {
+  username: string;
+  amount: number;
 };
 
 export type SearchHit = {

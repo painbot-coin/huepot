@@ -10,8 +10,10 @@ import {
   listPendingSettled,
   listSettledRounds,
 } from "./fairness-db";
+import { prisma } from "./db";
+import { isHouseUser } from "./house";
 import { fromCents } from "./money";
-import type { PublicTake, Room, Round, StoreData } from "./types";
+import type { PublicTake, Room, Round, StoreData, TakeWinner } from "./types";
 
 export { formatTakeLine, takeLine } from "./take-copy";
 
@@ -27,6 +29,7 @@ export function takeFromSettled(row: PublicSettledRound): PublicTake | null {
     names: row.winners.map((id) => colorById(id).name).join(" & "),
     amount,
     at: row.settledAt,
+    number: row.number,
   };
 }
 
@@ -43,6 +46,7 @@ export function takeFromLive(room: Room, round: Round): PublicTake | null {
     names: result.winners.map((id) => colorById(id).name).join(" & "),
     amount,
     at: round.revealUntil != null ? round.revealUntil - REVEAL_SECONDS * 1000 : Date.now(),
+    number: round.number,
   };
 }
 
@@ -68,6 +72,42 @@ export async function listPublicTakes(live: PublicTake[], limit = 6) {
     if (take) byId.set(take.id, take);
   }
   return [...byId.values()].sort((a, b) => b.at - a.at).slice(0, Math.max(1, Math.min(12, limit)));
+}
+
+/**
+ * Who was paid for a take. A payout row is noted with the room, the round and
+ * the winning colours, which is exactly what a take already carries, so the
+ * note can be matched whole — no wildcard, and it works for every round ever
+ * settled without storing anything new.
+ */
+export async function takeWinners(
+  take: PublicTake,
+  store: StoreData,
+): Promise<TakeWinner[]> {
+  const note = `${take.roomName} round #${take.number} ${take.names} take`;
+  const cents = new Map<string, number>();
+
+  for (const tx of store.txs) {
+    if (tx.type === "payout" && tx.note === note) {
+      cents.set(tx.playerId, (cents.get(tx.playerId) ?? 0) + tx.amount);
+    }
+  }
+  if (!cents.size) {
+    const rows = await prisma.$queryRaw<{ playerId: string; amount: number }[]>`
+      SELECT playerId, amount FROM Tx WHERE type = 'payout' AND note = ${note}
+    `;
+    for (const row of rows) {
+      cents.set(row.playerId, (cents.get(row.playerId) ?? 0) + Number(row.amount));
+    }
+  }
+
+  const winners: TakeWinner[] = [];
+  for (const [playerId, amount] of cents) {
+    const user = store.users[playerId];
+    if (!user || isHouseUser(user)) continue;
+    winners.push({ username: user.username, amount: fromCents(amount) });
+  }
+  return winners.sort((a, b) => b.amount - a.amount || a.username.localeCompare(b.username));
 }
 
 export async function getPublicTake(id: string, store: StoreData) {

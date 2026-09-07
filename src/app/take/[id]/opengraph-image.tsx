@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 import { COLORS } from "@/lib/colors";
 import { formatUsdt } from "@/lib/money";
 import { withStoreRead } from "@/lib/store";
-import { getPublicTake } from "@/lib/takes";
+import { getPublicTake, takeWinners } from "@/lib/takes";
 
 export const runtime = "nodejs";
 export const alt = "Huepot take";
@@ -32,13 +32,28 @@ export default async function TakeImage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const take = await withStoreRead((store) => getPublicTake(id, store));
+  const found = await withStoreRead(async (store) => {
+    const take = await getPublicTake(id, store);
+    if (!take) return null;
+    return { take, winners: await takeWinners(take, store) };
+  });
   const font = await cinzel();
 
-  const names = take?.names ?? "Same price. Biggest color takes.";
+  const take = found?.take ?? null;
+  const winners = found?.winners ?? [];
+  // A name is the brag. The colour is how it was won, so it goes underneath.
+  const who =
+    winners.length === 1
+      ? winners[0].username
+      : winners.length === 2
+        ? `${winners[0].username} and ${winners[1].username}`
+        : winners.length
+          ? `${winners[0].username} and ${winners.length - 1} others`
+          : (take?.names ?? "Same price. Biggest color takes.");
   const room = take?.roomName ?? "Huepot";
   const amount = take ? formatUsdt(take.amount) : "";
   const hue = hueOf(take?.names ?? "");
+  const onHue = take && winners.length ? `on ${take.names}` : "";
 
   return new ImageResponse(
     (
@@ -106,11 +121,24 @@ export default async function TakeImage({
                 color: hue,
               }}
             >
-              {take ? `${names} took` : names}
+              {take ? `${who} took` : who}
             </div>
             {amount ? (
               <div style={{ display: "flex", fontSize: 116, lineHeight: 1, marginTop: 4 }}>
                 {`${amount} USDT`}
+              </div>
+            ) : null}
+            {onHue ? (
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 30,
+                  letterSpacing: 6,
+                  marginTop: 12,
+                  color: "#9a9aa8",
+                }}
+              >
+                {onHue.toUpperCase()}
               </div>
             ) : null}
           </div>

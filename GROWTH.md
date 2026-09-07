@@ -698,6 +698,45 @@ after 1.1s         200
 
 `parseChat` blanks `http://`, `https://` and `www.` links. A bare `bit.ly/x` or `huepot.net.evil.com` passes through. Tightening that trades false positives against scam links, which is a product call rather than a defect, so it stands as written.
 
+## Phase 30 — The brag gets a name (1.3.91)
+
+A take page said **"Azure took 7.90 USDT"**. A colour cannot brag. For a house built for people who bet, the shareable moment is who won, and the page was the one surface that left the player out.
+
+This was deferred twice as needing a schema change and a backfill on a live money database. It needed neither.
+
+### The ledger already knew
+
+Every payout is written with the room, the round and the winning colours:
+
+```
+Classic Pit round #8584 Azure take
+```
+
+A take already carries the room name and those exact colour names, built by the same `join(" & ")`. Add the round number and the note can be matched **whole** — an equality, not a `LIKE`, so no wildcard can be smuggled through a room name. Same trick as the record: derived, retroactive over every round ever settled, nothing stored.
+
+### What it reads like now
+
+```
+headline  devguru13580 took the pot
+pot       2.95 USDT
+under     on Crimson · round #5955
+title     devguru13580 took 2.95 USDT · Classic Pit
+```
+
+The name links to that player's record, which closes the loop the record opened in Phase 12: a take points at a player, and the player's seat shows what else they have taken. The share card leads with the name in the winning colour and keeps the colour underneath as how it was won.
+
+The arithmetic checks out on the test round: two clicks on crimson, one on azure. Crimson takes, so 2.00 of stake comes back plus azure's 1.00 less the 5% rake — 2.95.
+
+### Where it falls back, on purpose
+
+A name is shown only when the payout rows still name one. Ten local rounds had lost their payout rows to earlier limits testing, and each fell back to the old colour headline rather than showing an empty one. That matters on live data, where a renamed room or a removed account would break the match — the page degrades to what it said before instead of breaking.
+
+Ties on the winning colour list every winner with their share, since a split take has more than one person to name.
+
+### What was not touched
+
+Nothing about who is shown that was not already public: usernames appear in chat, on seats, in the lobby and on public profiles. The house is filtered out of winners — its cut is a `rake` row, not a `payout`, so it never appeared anyway.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.
