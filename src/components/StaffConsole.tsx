@@ -1,11 +1,18 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { formatUsdt } from "@/lib/money";
 import type { Tx, Withdrawal } from "@/lib/types";
 import type { StaffUserRow } from "@/lib/staff";
 
-type Tab = "books" | "payouts" | "players" | "tables" | "ledger" | "reports" | "log";
+type Tab = "books" | "payouts" | "players" | "tables" | "ledger" | "reports" | "wire" | "log";
+type HeldNews = {
+  id: string;
+  source: string;
+  tag: string;
+  title: string;
+  url: string;
+};
 type BooksWindow = {
   label: string;
   clicks: number;
@@ -84,6 +91,8 @@ export function StaffConsole() {
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [txs, setTxs] = useState<(Tx & { username?: string })[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
+  const [held, setHeld] = useState<HeldNews[]>([]);
+  const [heldCount, setHeldCount] = useState(0);
   const [house, setHouse] = useState<{ balance: number; percent: string } | null>(null);
   const [books, setBooks] = useState<Books | null>(null);
   const [note, setNote] = useState("");
@@ -148,6 +157,8 @@ export function StaffConsole() {
         rooms?: RoomRow[];
         txs?: (Tx & { username?: string })[];
         reports?: ReportRow[];
+        held?: HeldNews[];
+        heldCount?: number;
         logs?: LogRow[];
         house?: { balance: number; percent: string };
         canSend?: boolean;
@@ -167,6 +178,8 @@ export function StaffConsole() {
       if (data.rooms) setRooms(data.rooms);
       if (data.txs) setTxs(data.txs);
       if (data.reports) setReports(data.reports);
+      if (data.held) setHeld(data.held);
+      if (typeof data.heldCount === "number") setHeldCount(data.heldCount);
       if (data.logs) setLogs(data.logs);
       if (data.house) setHouse(data.house);
       if (typeof data.canSend === "boolean") setCanSend(data.canSend);
@@ -199,6 +212,8 @@ export function StaffConsole() {
         users?: StaffUserRow[];
         rooms?: RoomRow[];
         reports?: ReportRow[];
+        held?: HeldNews[];
+        heldCount?: number;
         treasury?: Treasury;
         inboxes?: InboxHold;
         sweeps?: SweepRow[];
@@ -212,6 +227,8 @@ export function StaffConsole() {
       if (data.users) setUsers(data.users);
       if (data.rooms) setRooms(data.rooms);
       if (data.reports) setReports(data.reports);
+      if (data.held) setHeld(data.held);
+      if (typeof data.heldCount === "number") setHeldCount(data.heldCount);
       if (data.treasury) setTreasury(data.treasury);
       if (data.inboxes) setInboxes(data.inboxes);
       if (data.sweeps) setSweeps(data.sweeps);
@@ -270,34 +287,34 @@ export function StaffConsole() {
             value={secret}
           />
           <button className="chip-btn justify-center whitespace-nowrap" disabled={busy || !secret} type="submit">
-            {busy ? "Opening…" : "Sign in"}
+            {busy ? "Openingâ€¦" : "Sign in"}
           </button>
         </form>
       )}
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
       {house ? (
         <p className="mt-4 text-sm text-zinc-300">
-          House bank {formatUsdt(house.balance)} USDT · {house.percent} of each losing pot.
+          House bank {formatUsdt(house.balance)} USDT Â· {house.percent} of each losing pot.
         </p>
       ) : null}
       {treasury?.address ? (
         <p className="mt-2 break-all text-sm text-zinc-300">
-          Send wallet {treasury.address} · {formatUsdt(treasury.usdt)} USDT · {treasury.bnb.toFixed(4)} BNB
+          Send wallet {treasury.address} Â· {formatUsdt(treasury.usdt)} USDT Â· {treasury.bnb.toFixed(4)} BNB
           {treasury.ready
-            ? " · funded"
-            : " · fund this address on BNB Chain with BEP-20 USDT and a little BNB"}
+            ? " Â· funded"
+            : " Â· fund this address on BNB Chain with BEP-20 USDT and a little BNB"}
         </p>
       ) : null}
       {inboxes ? (
         <p className="mt-2 text-sm text-zinc-300">
           Player inboxes {formatUsdt(inboxes.usdt)} USDT
-          {inboxes.count ? ` · ${inboxes.count} address${inboxes.count === 1 ? "" : "es"}` : ""}
+          {inboxes.count ? ` Â· ${inboxes.count} address${inboxes.count === 1 ? "" : "es"}` : ""}
           . Deposits sit there until swept. After a sweep, house take stays in the send wallet.
         </p>
       ) : null}
       {signedIn ? (
       <div className="mt-6 flex flex-wrap gap-2">
-        {(["books", "payouts", "players", "tables", "ledger", "reports", "log"] as Tab[]).map((item) => (
+        {(["books", "payouts", "players", "tables", "ledger", "reports", "wire", "log"] as Tab[]).map((item) => (
           <button
             className={`chip-btn ${tab === item ? "" : "chip-btn-ghost"}`}
             key={item}
@@ -327,7 +344,7 @@ export function StaffConsole() {
                 : " Positive: player balances are covered."}
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              Gas {books.treasury.bnb.toFixed(4)} BNB ·{" "}
+              Gas {books.treasury.bnb.toFixed(4)} BNB Â·{" "}
               {books.treasury.ready ? "send wallet ready" : "send wallet not ready"}
             </p>
           </div>
@@ -343,13 +360,13 @@ export function StaffConsole() {
               Balances rebuilt from the ledger come to {formatUsdt(books.implied)} USDT.
               {books.drift === 0
                 ? " Every balance matches its rows."
-                : " A balance moved without a matching row — check the accounts before trusting the totals."}
+                : " A balance moved without a matching row â€” check the accounts before trusting the totals."}
             </p>
             {books.doubleCredits?.groups ? (
               <p className="mt-2 text-sm text-amber-300">
                 {books.doubleCredits.groups} on-chain deposit
                 {books.doubleCredits.groups === 1 ? "" : "s"} credited more than once
-                — the ledger claims {formatUsdt(books.doubleCredits.extra)} USDT that
+                â€” the ledger claims {formatUsdt(books.doubleCredits.extra)} USDT that
                 arrived only once. Balances are unaffected; the deposit rows are.
               </p>
             ) : (
@@ -362,9 +379,9 @@ export function StaffConsole() {
           <ul className="space-y-2">
             {[books.today, books.week].map((w) => (
               <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={w.label}>
-                <span className="text-zinc-200">{w.label}</span> · {w.clicks} clicks ·{" "}
-                {w.takes} takes · rake {formatUsdt(w.rake)} · deposits{" "}
-                {formatUsdt(w.deposits)} · {w.seats} seat{w.seats === 1 ? "" : "s"}
+                <span className="text-zinc-200">{w.label}</span> Â· {w.clicks} clicks Â·{" "}
+                {w.takes} takes Â· rake {formatUsdt(w.rake)} Â· deposits{" "}
+                {formatUsdt(w.deposits)} Â· {w.seats} seat{w.seats === 1 ? "" : "s"}
               </li>
             ))}
           </ul>
@@ -379,8 +396,8 @@ export function StaffConsole() {
           </ul>
 
           <p className="text-sm text-zinc-400">
-            {books.players.total} account{books.players.total === 1 ? "" : "s"} ·{" "}
-            {books.players.everClicked} have ever clicked · {books.players.withBalance} hold a balance
+            {books.players.total} account{books.players.total === 1 ? "" : "s"} Â·{" "}
+            {books.players.everClicked} have ever clicked Â· {books.players.withBalance} hold a balance
           </p>
 
           <ul className="space-y-2">
@@ -391,7 +408,7 @@ export function StaffConsole() {
                 <li className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.status}>
                   <span>{row.status}</span>
                   <span className="text-zinc-200">
-                    {row.n} · {formatUsdt(row.usdt)} USDT
+                    {row.n} Â· {formatUsdt(row.usdt)} USDT
                   </span>
                 </li>
               ))
@@ -409,7 +426,7 @@ export function StaffConsole() {
             onClick={() => void act({ action: "sweep" })}
             type="button"
           >
-            {busy ? "Sweeping…" : "Sweep inboxes to send wallet"}
+            {busy ? "Sweepingâ€¦" : "Sweep inboxes to send wallet"}
           </button>
         ) : null}
         {sweeps.length ? (
@@ -423,7 +440,7 @@ export function StaffConsole() {
                   rel="noreferrer"
                   target="_blank"
                 >
-                  {row.txHash.slice(0, 10)}…{row.txHash.slice(-6)}
+                  {row.txHash.slice(0, 10)}â€¦{row.txHash.slice(-6)}
                 </a>
               </li>
             ))}
@@ -435,7 +452,7 @@ export function StaffConsole() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-zinc-200">
-                    @{row.username ?? "player"} · {formatUsdt(row.amount)} USDT
+                    @{row.username ?? "player"} Â· {formatUsdt(row.amount)} USDT
                   </p>
                   <p className="mt-1 break-all font-mono text-xs">{row.address}</p>
                   <p className="mt-1 text-xs uppercase tracking-widest">{row.status}</p>
@@ -446,7 +463,7 @@ export function StaffConsole() {
                       rel="noreferrer"
                       target="_blank"
                     >
-                      {row.txHash.slice(0, 10)}…{row.txHash.slice(-6)}
+                      {row.txHash.slice(0, 10)}â€¦{row.txHash.slice(-6)}
                     </a>
                   ) : null}
                 </div>
@@ -496,15 +513,15 @@ export function StaffConsole() {
           <input
             className="field mt-3"
             onChange={(event) => setAmount(event.target.value)}
-            placeholder="Adjust amount (+ or −)"
+            placeholder="Adjust amount (+ or âˆ’)"
             value={amount}
           />
           <ul className="mt-4 space-y-2">
             {users.map((user) => (
               <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={user.id}>
                 <p className="text-zinc-200">
-                  @{user.username} · {formatUsdt(user.balance)} USDT
-                  {user.frozen ? " · frozen" : ""}
+                  @{user.username} Â· {formatUsdt(user.balance)} USDT
+                  {user.frozen ? " Â· frozen" : ""}
                 </p>
                 <p className="mt-1 text-xs">{user.email}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -538,10 +555,10 @@ export function StaffConsole() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-zinc-200">
-                    {room.name} · round #{room.roundNumber} · {room.status}
+                    {room.name} Â· round #{room.roundNumber} Â· {room.status}
                   </p>
                   <p className="mt-1 text-xs">
-                    {formatUsdt(room.pot)} USDT · {room.players} seated
+                    {formatUsdt(room.pot)} USDT Â· {room.players} seated
                   </p>
                 </div>
                 {room.live ? (
@@ -565,7 +582,7 @@ export function StaffConsole() {
           {txs.map((tx) => (
             <li className="flex justify-between gap-3 rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={tx.id}>
               <span>
-                @{tx.username ?? "player"} · {tx.note}
+                @{tx.username ?? "player"} Â· {tx.note}
               </span>
               <span className="text-zinc-200">{formatUsdt(tx.amount)}</span>
             </li>
@@ -581,11 +598,11 @@ export function StaffConsole() {
             logs.map((row) => (
               <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.id}>
                 <p className="text-zinc-200">
-                  {row.operator} · {row.action} · {row.target}
+                  {row.operator} Â· {row.action} Â· {row.target}
                 </p>
                 <p className="mt-1 text-xs">
-                  {new Date(row.at).toLocaleString()} · {row.ip}
-                  {row.note ? ` · ${row.note}` : ""}
+                  {new Date(row.at).toLocaleString()} Â· {row.ip}
+                  {row.note ? ` Â· ${row.note}` : ""}
                 </p>
               </li>
             ))
@@ -598,7 +615,7 @@ export function StaffConsole() {
           {reports.map((row) => (
             <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.id}>
               <p className="text-zinc-200">
-                @{row.username} · /{row.roomSlug}
+                @{row.username} Â· /{row.roomSlug}
               </p>
               <p className="mt-1">{row.body}</p>
               <p className="mt-1 text-xs uppercase tracking-widest">{row.status}</p>
@@ -625,6 +642,62 @@ export function StaffConsole() {
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {signedIn && tab === "wire" ? (
+        <div className="mt-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-zinc-400">
+              {heldCount} headline{heldCount === 1 ? "" : "s"} waiting. Nothing
+              reaches the wire until it is published here.
+            </p>
+            <button
+              className="chip-btn chip-btn-ghost"
+              disabled={busy}
+              onClick={() => void act({ action: "wire-fetch" })}
+              type="button"
+            >
+              {busy ? "Fetchingâ€¦" : "Fetch now"}
+            </button>
+          </div>
+          <ul className="mt-4 space-y-2">
+            {held.map((row) => (
+              <li
+                className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400"
+                key={row.id}
+              >
+                <p className="text-zinc-200">{row.title}</p>
+                <p className="mt-1 text-xs uppercase tracking-widest">
+                  {row.source} Â· {row.tag}
+                </p>
+                <p className="mt-1 break-all text-xs text-zinc-500">{row.url}</p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    className="chip-btn"
+                    disabled={busy}
+                    onClick={() => void act({ action: "wire-publish", id: row.id })}
+                    type="button"
+                  >
+                    Publish
+                  </button>
+                  <button
+                    className="chip-btn chip-btn-ghost"
+                    disabled={busy}
+                    onClick={() => void act({ action: "wire-drop", id: row.id })}
+                    type="button"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {held.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">
+              Nothing waiting. Headlines arrive within a quarter of an hour.
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </main>
   );

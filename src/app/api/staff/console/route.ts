@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import {
   houseWalletStatus,
   inboxHoldings,
@@ -14,6 +14,13 @@ import {
   setReportStatus,
 } from "@/lib/reports";
 import { readBooks } from "@/lib/books";
+import {
+  countHeldNews,
+  fetchNewsOnce,
+  hideNewsItem,
+  listHeldNews,
+  releaseNewsItem,
+} from "@/lib/news";
 import { staffKillRound } from "@/lib/game";
 import { ensureHouseUser, rakeBps, rakePercentLabel } from "@/lib/house";
 import { jsonError } from "@/lib/http";
@@ -67,6 +74,14 @@ export async function GET(request: Request) {
     }
     if (tab === "reports") {
       return NextResponse.json({ reports: await listReports(), house, you });
+    }
+    if (tab === "wire") {
+      return NextResponse.json({
+        held: await listHeldNews(),
+        heldCount: await countHeldNews(),
+        house,
+        you,
+      });
     }
     if (tab === "books") {
       return NextResponse.json({ books: await readBooks(), house, you });
@@ -139,7 +154,7 @@ export async function POST(request: Request) {
         const user = store.users[body.userId!];
         return searchStaffUsers(store, user?.username ?? body.userId!);
       });
-      await writeStaffLog(actor, "adjust", body.userId, `${body.amount} · ${body.note ?? ""}`);
+      await writeStaffLog(actor, "adjust", body.userId, `${body.amount} Â· ${body.note ?? ""}`);
       return NextResponse.json({ users });
     }
     if (body.action === "hide-report" || body.action === "dismiss-report") {
@@ -157,6 +172,21 @@ export async function POST(request: Request) {
       }
       await writeStaffLog(actor, body.action, body.id, `/${row.roomSlug}`);
       return NextResponse.json({ reports: await listReports() });
+    }
+    if (
+      body.action === "wire-publish" ||
+      body.action === "wire-drop" ||
+      body.action === "wire-fetch"
+    ) {
+      if (body.action === "wire-fetch") {
+        await fetchNewsOnce();
+      } else {
+        if (!body.id) throw new Error("Pick a headline.");
+        if (body.action === "wire-publish") await releaseNewsItem(body.id);
+        else await hideNewsItem(body.id);
+        await writeStaffLog(actor, body.action, body.id, "");
+      }
+      return NextResponse.json({ held: await listHeldNews(), heldCount: await countHeldNews() });
     }
     if (body.action === "kill") {
       if (!body.slug) throw new Error("Pick a table.");

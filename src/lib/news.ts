@@ -1,11 +1,16 @@
-import { createHash } from "node:crypto";
+﻿import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 
 /**
- * Betting and crypto headlines, fetched on a timer and published as they
- * arrive. Deliberately narrow in what it takes: a headline, a link, the source
- * name and the feed's own image. Never an article body — reposting someone
+ * Betting and crypto headlines, fetched on a timer and held for one click
+ * before they reach the wire. Deliberately narrow in what it takes: a
+ * headline, a link, the source
+ * name and the feed's own image. Never an article body â€” reposting someone
  * else's writing is republishing it, and a link is not.
+ *
+ * Fetching is unattended; publishing is not. An unwatched feed will eventually
+ * offer a fixed-match tip or a scam promotion, and the house name goes on
+ * whatever appears on the wire.
  *
  * Writes straight to its own table and never touches the in-memory store, so a
  * fetch cannot sit in the lane that settles rounds.
@@ -57,6 +62,15 @@ export async function ensureNewsTables() {
       hidden INTEGER NOT NULL DEFAULT 0
     )
   `);
+  try {
+    // Defaults to 'live' so the rows already on the wire stay on it. New rows
+    // are inserted as 'held' explicitly, which is what makes this a gate.
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE NewsItem ADD COLUMN status TEXT NOT NULL DEFAULT 'live'",
+    );
+  } catch {
+    /* column already exists */
+  }
   ready = true;
 }
 
@@ -158,9 +172,9 @@ async function saveItems(items: NewsItem[]) {
     // the dedupe needs no extra query.
     const done = await prisma.$executeRaw`
       INSERT OR IGNORE INTO NewsItem
-        (id, source, tag, title, url, image, publishedAt, fetchedAt, hidden)
+        (id, source, tag, title, url, image, publishedAt, fetchedAt, hidden, status)
       VALUES (${item.id}, ${item.source}, ${item.tag}, ${item.title}, ${item.url},
-              ${item.image}, ${item.publishedAt}, ${now}, 0)
+              ${item.image}, ${item.publishedAt}, ${now}, 0, 'held')
     `;
     added += done;
   }
@@ -193,24 +207,50 @@ export async function fetchNewsOnce(): Promise<FetchReport[]> {
   return reports;
 }
 
-export async function listNews(limit = 24, tag?: string) {
+type Row = Omit<NewsItem, "publishedAt"> & { publishedAt: string };
+
+/** What the hall sees: released, and not pulled since. */
+export async function listNews(limit = 24) {
   await ensureNewsTables();
   const take = Math.max(1, Math.min(60, Math.floor(limit)));
-  const rows = tag
-    ? await prisma.$queryRaw<
-        (Omit<NewsItem, "publishedAt"> & { publishedAt: string })[]
-      >`SELECT id, source, tag, title, url, image, CAST(publishedAt AS TEXT) AS publishedAt
-          FROM NewsItem WHERE hidden = 0 AND tag = ${tag}
-         ORDER BY publishedAt DESC LIMIT ${take}`
-    : await prisma.$queryRaw<
-        (Omit<NewsItem, "publishedAt"> & { publishedAt: string })[]
-      >`SELECT id, source, tag, title, url, image, CAST(publishedAt AS TEXT) AS publishedAt
-          FROM NewsItem WHERE hidden = 0
-         ORDER BY publishedAt DESC LIMIT ${take}`;
+  const rows = await prisma.$queryRaw<Row[]>`
+    SELECT id, source, tag, title, url, image, CAST(publishedAt AS TEXT) AS publishedAt
+      FROM NewsItem WHERE hidden = 0 AND status = 'live'
+     ORDER BY publishedAt DESC LIMIT ${take}
+  `;
   return rows.map((row) => ({ ...row, publishedAt: Number(row.publishedAt) }));
 }
 
-/** Publishing is automatic, so removal has to be one step and immediate. */
+/** What is waiting on a decision. Oldest first, so nothing sits forgotten. */
+export async function listHeldNews(limit = 60) {
+  await ensureNewsTables();
+  const take = Math.max(1, Math.min(120, Math.floor(limit)));
+  const rows = await prisma.$queryRaw<Row[]>`
+    SELECT id, source, tag, title, url, image, CAST(publishedAt AS TEXT) AS publishedAt
+      FROM NewsItem WHERE hidden = 0 AND status = 'held'
+     ORDER BY publishedAt ASC LIMIT ${take}
+  `;
+  return rows.map((row) => ({ ...row, publishedAt: Number(row.publishedAt) }));
+}
+
+export async function countHeldNews() {
+  await ensureNewsTables();
+  const rows = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) AS n FROM NewsItem WHERE hidden = 0 AND status = 'held'
+  `;
+  return Number(rows[0]?.n ?? 0);
+}
+
+/** Puts one headline on the wire. */
+export async function releaseNewsItem(id: string) {
+  await ensureNewsTables();
+  const done = await prisma.$executeRaw`
+    UPDATE NewsItem SET status = 'live' WHERE id = ${id} AND status = 'held'
+  `;
+  if (!done) throw new Error("That headline is not waiting.");
+}
+
+/** Removal is one step and immediate, whether it is live or still waiting. */
 export async function hideNewsItem(id: string) {
   await ensureNewsTables();
   await prisma.$executeRaw`UPDATE NewsItem SET hidden = 1 WHERE id = ${id}`;

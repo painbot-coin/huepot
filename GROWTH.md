@@ -968,9 +968,28 @@ Checked on the stored rows, not on the promise of them: every link https, no tra
 
 Five items per source per run, every fifteen minutes. Eight feeds of thirty would bury the hall. It writes straight to its own table and never touches the in-memory store, so a fetch cannot sit in the lane that settles rounds — the same rule the chain watcher follows. A manual refresh exists for staff or the admin secret, never for a visitor, because it makes outbound requests.
 
-### The part that is still a risk
+### The gate went in after all (1.3.98)
 
-Publishing is unattended. Sooner or later this will put a fixed-match tip, a scam promotion or a competitor's advert on the wire under the house's name at three in the morning. `hideNewsItem` removes one immediately, but nothing stops it going up. That was the owner's decision, made with the risk stated; the recommendation remains a one-click release.
+Publishing unattended lasted one version. Fetching is still automatic; reaching the wire is not. A new headline lands as `held` and a person publishes it, or discards it, from a **wire** tab in the staff console.
+
+The migration matters as much as the gate: the column defaults to `live`, so the thirty headlines already on the wire stayed on it, while every new row is inserted as `held` explicitly. Nothing was retroactively unpublished.
+
+```
+already-published items stayed live      17
+fetch found new items                    19
+all of them waiting, none published      19 held
+live count did not grow                  17 -> 12 (only the five removed)
+the wire page did not change             12 -> 12 headlines
+console shows the waiting queue          19
+publish one                              live 12 -> 13, held 19 -> 18
+the wire grew by exactly one             12 -> 13
+discard one                              gone for good
+the queue is staff only                  401
+```
+
+Two of those checks had to be rewritten before they meant anything. One asserted that the queue held *exactly* what this run fetched — but the fifteen-minute timer fetches too, so the count was legitimately higher and the check failed on a true system. The other looked for the published headline's text on the page, which never matched because an apostrophe arrives HTML-escaped. Replaced by "the wire grew by exactly one", which is the property actually worth holding.
+
+The risk that prompted this is gone in the shape that mattered: nothing appears under the house's name unless someone put it there. What remains is a queue that needs attention — headlines pile up unseen if nobody opens the tab, which is a much better failure than the alternative.
 
 ## Next for the social layer
 
