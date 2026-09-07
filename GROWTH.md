@@ -553,6 +553,75 @@ Two test runs looked like failures and were not. Payouts kept landing in the win
 
 Also worth knowing: `jsonError` masks anything matching `prisma|sqlite`, so a database fault surfaces as a bare "Request failed". That is right for players and slow for whoever is debugging.
 
+## Phase 28 — The address a caller chose for itself (1.3.90)
+
+Went looking for what a stranger can see and do. Most of it holds:
+
+- The session cookie is `httpOnly`, `sameSite: lax`, `secure` in production, and `signout` deletes the session server-side rather than only clearing the cookie.
+- A public profile carries username, headline, location, presence, friend count and the betting record. No balance, no email, no wallet, no transaction notes.
+- Staff is a separate world: its own `sameSite: strict` cookie, sessions in the database, four hour expiry, a secret compared in constant time, and a player session grants none of it.
+
+Then the client IP turned out to be whatever the caller said it was.
+
+### What the two sides were doing
+
+nginx, for huepot.net:
+
+```
+proxy_set_header X-Real-IP $remote_addr;                      # the true address
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  # appends what arrived
+```
+
+The app, compiled:
+
+```js
+let b = a.get("x-forwarded-for") ?? "";
+return (b.split(",")[0]?.trim() || a.get("x-real-ip")?.trim() || "") ... || "unknown"
+```
+
+`$proxy_add_x_forwarded_for` appends the real address to whatever the caller sent, and the app read the **first** entry — the caller's. It preferred the one header a caller controls over the one it cannot.
+
+Proven against a live gate allowing `198.51.100.4` only, from `203.0.113.7`:
+
+```
+claiming 1.1.1.1 (not allowed)   BLOCKED     <- the gate is real and reading the claim
+claiming 198.51.100.4            through     <- walked past it
+claiming 127.0.0.1               through     <- and this works against any list
+```
+
+`127.0.0.1` is allowed unconditionally so the owner can reach staff over a tunnel, which made it a skeleton key for every allowlist.
+
+### What it reached
+
+That one value gated four things: the staff IP allowlist, staff session pinning, the chain-scan trigger, and the staff page. It also keyed the login limiter and was written into the staff audit log — an attacker-chosen address in the record of who did what.
+
+### The fix
+
+Prefer `X-Real-IP`, which the proxy overwrites and a caller cannot set. Fall back to the **last** `X-Forwarded-For` entry, the hop the proxy added, rather than the first. After:
+
+```
+honest request from 198.51.100.4   through
+claiming 198.51.100.4              BLOCKED
+claiming 127.0.0.1                 BLOCKED
+```
+
+And the limiter now counts the caller, not the claim:
+
+```
+attempt 8 claiming 10.0.0.8: 403 Wrong staff secret
+attempt 9 claiming 10.0.0.9: 429 Too many failed staff sign-ins
+```
+
+Twelve rotating claims used to be twelve separate counts.
+
+### Still open, and the owner's call
+
+`STAFF_IPS` is **not set in production**, so the allowlist is off and a 64 character `ADMIN_SECRET` is the only thing holding the staff door. Worth setting now that it would actually hold — it did not before this fix.
+
+### Note to whoever tests this next
+
+Three runs of this said "no gap" and were wrong: a stale `next start` from an earlier phase still held port 3000 and answered every request. Kill the old server and confirm the port is free before trusting a security result. Also `staffIpAllowed` returns true when `STAFF_IPS` is empty, so an unconfigured gate looks identical to a passed one.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

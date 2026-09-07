@@ -36,9 +36,20 @@ export function requestIp(request: Request) {
 }
 
 export function requestIpFromHeaders(headers: Headers) {
-  const forwarded = headers.get("x-forwarded-for") ?? "";
-  const first = forwarded.split(",")[0]?.trim();
-  const raw = first || headers.get("x-real-ip")?.trim() || "";
+  // The proxy overwrites X-Real-IP with the address it is actually talking to,
+  // so it is the one value a caller cannot choose. X-Forwarded-For is appended
+  // to whatever arrived, which leaves its first entry in the caller's hands and
+  // its last entry as the hop the proxy added.
+  const real = headers.get("x-real-ip")?.trim();
+  if (real) return cleanIp(real);
+  const chain = (headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return cleanIp(chain[chain.length - 1] ?? "");
+}
+
+function cleanIp(raw: string) {
   return raw.replace(/^::ffff:/, "") || "unknown";
 }
 
