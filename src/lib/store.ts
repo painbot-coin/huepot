@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { ensureFairTables, flushSettledRounds, loadRoundFair } from "@/lib/fairness-db";
 import { emptyLimits } from "@/lib/limits";
 import { publishRoom } from "@/lib/live";
+import { NOTICE_CAP } from "@/lib/notifications";
 import { ROOM_EVENT_CAP, ensureRooms } from "@/lib/rooms";
 import type {
   Notice,
@@ -362,7 +363,10 @@ async function readStore(): Promise<StoreData> {
         read: number | boolean;
         createdAt: string;
       }[]
-    >("SELECT id, userId, kind, title, body, href, read, CAST(createdAt AS TEXT) as createdAt FROM Notice ORDER BY createdAt ASC"),
+    >(
+      `SELECT id, userId, kind, title, body, href, read, CAST(createdAt AS TEXT) as createdAt
+         FROM Notice ORDER BY createdAt DESC LIMIT ${NOTICE_CAP}`,
+    ),
     prisma.$queryRawUnsafe<
       {
         id: string;
@@ -468,19 +472,26 @@ async function readStore(): Promise<StoreData> {
       wallets: walletsByUser.get(user.id) ?? [],
     });
   }
+  // An expired session or state cannot be used to sign anyone in, so carrying
+  // it only adds to what every write clones and serialises.
+  const loadedAt = Date.now();
   for (const session of sessionRows) {
+    const expiresAt = ms(session.expiresAt);
+    if (expiresAt < loadedAt) continue;
     store.sessions[session.token] = {
       token: session.token,
       userId: session.userId,
-      expiresAt: ms(session.expiresAt),
+      expiresAt,
       createdAt: 0,
       userAgent: "",
     };
   }
   for (const item of oauthRows) {
+    const expiresAt = ms(item.expiresAt);
+    if (expiresAt < loadedAt) continue;
     store.oauthStates[item.state] = {
       state: item.state,
-      expiresAt: ms(item.expiresAt),
+      expiresAt,
     };
   }
   store.notifications = noticeRows.map(
@@ -1110,6 +1121,7 @@ async function ensureDb() {
       await ensureSocialTables();
       await ensureStaffTables();
       await migrateMoneyToCents();
+      await dropExpiredLogins();
       const { warmPlayLoss } = await import("@/lib/limits");
       const { warmInviteTotals } = await import("@/lib/referrals");
       await warmPlayLoss();
@@ -1123,6 +1135,21 @@ async function ensureDb() {
     });
   }
   await boot;
+}
+
+/**
+ * Sessions and OAuth states are only ever written, never cleared, so a year of
+ * logins would be read at every boot for no one. An expired row cannot sign
+ * anyone in, which is what makes dropping it safe.
+ */
+async function dropExpiredLogins() {
+  const now = Date.now();
+  try {
+    await prisma.$executeRawUnsafe(`DELETE FROM Session WHERE expiresAt < ${now}`);
+    await prisma.$executeRawUnsafe(`DELETE FROM OAuthState WHERE expiresAt < ${now}`);
+  } catch {
+    /* nothing to clear */
+  }
 }
 
 let liveStore: StoreData | null = null;

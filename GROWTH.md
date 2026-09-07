@@ -462,6 +462,47 @@ Nothing was deleted: all 43,722 rows are still in the database, `persistStore` o
 
 Every request — reads included — takes the same lane, because `getRoomState` ticks the round and may settle it. The store is a single process by design, which is what makes the queue a lock at all. That ceiling is now ~169 req/s per box instead of 5, but it is still a single lane, and the next wall is the same one.
 
+## Phase 26 — What else the store was carrying (1.3.88)
+
+Phase 25 fixed room events. The same shape existed three more times, and one of them was showing players the wrong thing.
+
+### The inbox was serving the oldest notices
+
+`notify` prepends and keeps the newest 500. `readStore` read **every** notice, oldest first. `userNotices` filters without sorting, and the route takes the first 40 — so after every restart a player's inbox showed their forty *oldest* notices until enough new ones arrived to push them out.
+
+Two changes, because one of them should not have needed the other:
+
+- Notices load newest first, capped at `NOTICE_CAP`, matching the writer.
+- `userNotices` sorts. Callers treat the head of that list as "the latest", so the order is now guaranteed rather than inherited from how the array happened to be built.
+
+### Logins were never cleared
+
+Every sign-in writes a `Session` row and nothing ever removed one. Expired rows were read at boot and cloned on every write forever. An expired session cannot sign anyone in, which is what makes clearing it safe: expired sessions and OAuth states are dropped once at boot, and expired rows are skipped when loading.
+
+Verified against a seeded pair:
+
+```
+valid session still signs in : yes
+expired session rows left    : 0  (seeded 1)
+valid session rows left      : 1  (seeded 1)
+inbox order as served        : newest first
+```
+
+### Where the store now stands
+
+Everything the store holds is bounded except the things that should grow with the house — accounts, their wallets, and the rooms themselves:
+
+```
+users, wallets, rooms, seats   grow with the house, as they should
+sessions, oauth states         live rows only
+notices                        newest NOTICE_CAP
+room events                    newest ROOM_EVENT_CAP per room
+txs                            newest 800
+rounds                         one per room
+```
+
+No table is pruned of history it should keep: notices and events stay in the database, and only unusable login rows are deleted.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

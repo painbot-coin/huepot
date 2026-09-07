@@ -1,5 +1,12 @@
 import type { Notice, NoticeKind, StoreData } from "./types";
 
+/**
+ * How many notices the store carries. An inbox shows 40, and the store is
+ * deep-cloned on every write, so older ones are cost without a reader.
+ * Rows past this stay in the database.
+ */
+export const NOTICE_CAP = 500;
+
 export function notify(
   store: StoreData,
   userId: string,
@@ -16,12 +23,16 @@ export function notify(
     createdAt: Date.now(),
   };
   store.notifications.unshift(notice);
-  store.notifications = store.notifications.slice(0, 500);
+  store.notifications = store.notifications.slice(0, NOTICE_CAP);
   return notice;
 }
 
 export function userNotices(store: StoreData, userId: string) {
-  return store.notifications.filter((item) => item.userId === userId);
+  // Callers take the first several as "the latest", so the order is sorted
+  // here rather than left to how the list happened to be built.
+  return store.notifications
+    .filter((item) => item.userId === userId)
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function unreadCount(store: StoreData, userId: string) {
