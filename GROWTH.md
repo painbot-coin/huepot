@@ -892,6 +892,47 @@ The balance guard failed its first run and the account actually closed. The caus
 
 Verified properly the second time, with a demo deposit through the app: the closure was refused, it named the amount, and the account still signed in afterwards.
 
+## Phase 37 — Block someone, and mean it (1.3.96)
+
+The only way to get away from another player was a host mute inside one custom room. In a house with public records, a shared feed, direct messages and chat, that is not a way out.
+
+A block is now house-wide, stored as a status on the existing pair row rather than a new table, so a block replaces any friendship or pending request between the two. A request left standing behind a block is not a block.
+
+### What it does, and what it does not say
+
+```
+B messages A                             200
+A blocks B                               200
+B messages A                             400  You cannot reach that player
+A messages B                             400  You cannot reach that player
+B sends a friend request                 400  You cannot reach that player
+B is gone from A's feed                  ok
+the thread is gone from A's inbox        ok
+A's view of B                            blocked
+B's view of A                            blocked-by
+B tries to unblock itself                400  You cannot reach that player
+A lifts it                               200
+B can reach A again                      200
+```
+
+Three deliberate choices in there. Reaching is refused **both** ways, because a block the blocker can still shout through is theatre. The blocked side is never told, and every refusal uses the same wording as a normal failure, so a block cannot be detected by probing. And only the side that set it can lift it — `blocked-by` reads as no relation everywhere a relation is shown.
+
+Chat in a pit is filtered per viewer rather than per room: the events are shared, so a blocked player's lines are dropped for the one viewer while the round lines everyone needs stay put.
+
+### The fixture that cost the most
+
+Testing a block needs two real accounts, and this house has one player and the house itself. Building the second by hand ran into three separate walls, each worth writing down:
+
+- `SELECT *` on `User` fails, because this driver cannot read a BigInt column without a cast. The row was copied inside SQLite in the end so those values never round-trip through JS.
+- The account still could not sign in, and every request answered a bare `Request failed`. `jsonError` masks anything matching `passwordHash` or `WALLET_SECRET`, so the real cause was invisible: the seeded account had no `Wallet` rows, which every real Google signup gets at sign-in. Copying them fixed it.
+- One check read `threads` where the route returns `inbox`, so "the thread is gone from A's inbox" passed against an empty array — it was verifying nothing. Corrected, and it now fails first and passes after.
+
+That last one is the same lesson as Phases 31 and 32, for the third time: a check that passes because it looked in the wrong place is worse than no check, because it buys false confidence.
+
+### Not done here
+
+Images in direct messages wait on Spaces credentials. The moderation queue is still one report per row rather than counts per player, and a word filter staff can edit is not built.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

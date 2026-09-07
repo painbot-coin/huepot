@@ -9,6 +9,7 @@ import {
   seatedAt,
 } from "@/lib/friends";
 import { avatarOf, parseAvatar } from "./avatar";
+import { blockedBetween, blockedIds } from "./friends";
 import { isHouseUser } from "@/lib/house";
 import { playBlock } from "@/lib/limits";
 import { notify } from "@/lib/notifications";
@@ -171,9 +172,13 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
         `SELECT id, postId, userId, body, CAST(createdAt AS TEXT) as createdAt FROM NetworkComment WHERE postId IN (${ids}) ORDER BY createdAt ASC`,
       )
     : [];
+  // One list for the whole batch: a blocked pair drops out of the feed and out
+  // of each other's comment threads.
+  const hidden = blockedIds(viewer.id);
   return posts.flatMap((post) => {
     const author = store.users[post.userId];
     if (!author || isHouseUser(author)) return [];
+    if (hidden.has(author.id)) return [];
     const postLikes = likes.filter((item) => item.postId === post.id);
     return [
       {
@@ -191,7 +196,7 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
           .slice(-4)
           .flatMap((item) => {
             const who = store.users[item.userId];
-            if (!who) return [];
+            if (!who || hidden.has(who.id)) return [];
             return [
               {
                 id: item.id,
@@ -329,6 +334,8 @@ export async function listInbox(store: StoreData, viewer: User): Promise<Network
     `SELECT fromId, toId, body, CAST(createdAt AS TEXT) as createdAt, read FROM NetworkMessage WHERE fromId='${esc(viewer.id)}' OR toId='${esc(viewer.id)}' ORDER BY createdAt DESC LIMIT 400`,
   );
   const threads = new Map<string, NetworkThread>();
+  // A blocked pair's thread leaves the inbox. The messages stay in the table.
+  const hiddenIds = blockedIds(viewer.id);
   for (const row of rows) {
     const otherId = row.fromId === viewer.id ? row.toId : row.fromId;
     if (threads.has(otherId)) {
@@ -338,6 +345,7 @@ export async function listInbox(store: StoreData, viewer: User): Promise<Network
     }
     const other = store.users[otherId];
     if (!other || isHouseUser(other)) continue;
+    if (hiddenIds.has(otherId)) continue;
     threads.set(otherId, {
       username: other.username,
       avatar: avatarOf(other),
@@ -381,6 +389,11 @@ export async function sendMessage(store: StoreData, viewer: User, username: stri
   assertCanSocialize(viewer);
   const other = findPlayer(store, username);
   if (other.id === viewer.id) throw new Error("Message someone else.");
+  // Blocks run both ways for reaching someone, and the wording does not say
+  // which side asked for it.
+  if (blockedBetween(viewer.id, other.id)) {
+    throw new Error("You cannot reach that player.");
+  }
   const body = raw.trim().slice(0, MESSAGE_MAX);
   if (body.length < 1) throw new Error("Write a message.");
   const since = dayStart();

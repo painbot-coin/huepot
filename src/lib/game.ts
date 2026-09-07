@@ -18,6 +18,7 @@ import {
 } from "./rooms";
 import { ensureRoundSeed } from "./fairness";
 import { queueSettledRound } from "./fairness-db";
+import { blockedIds } from "./friends";
 import { assertCanPlay, notePlayTx } from "./limits";
 import { HOUSE_USER_ID, ensureHouseUser, isHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
 import { payInviteRake, ensureInviteCode, hadClickTx, nudgeFirstClickInvite } from "./referrals";
@@ -399,6 +400,19 @@ function toPublicRound(round: Round, playerId: string, room?: Room): PublicRound
   };
 }
 
+/**
+ * The room feed as one viewer should see it. Chat from someone in a blocked
+ * pair is dropped, but only for that viewer — the events themselves are shared
+ * and the round lines everyone needs stay put.
+ */
+function feedFor(room: Room, userId: string | null) {
+  const events = room.events.slice(-80);
+  if (!userId) return events;
+  const hidden = blockedIds(userId);
+  if (!hidden.size) return events;
+  return events.filter((event) => !event.userId || !hidden.has(event.userId));
+}
+
 function liveSitterIds(room: Room) {
   const round = room.round;
   if (!round) return [];
@@ -578,7 +592,7 @@ export function getRoomState(
     user: publicUserFor(store, userId),
     round: toPublicRound(round, userId ?? "", room),
     room: toPublicRoom(store, room, userId),
-    feed: room.events.slice(-80),
+    feed: feedFor(room, userId),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),
@@ -603,7 +617,7 @@ export function snapshotRoomState(
     user: publicUserFor(store, userId),
     round: toPublicRound(room.round, userId ?? "", room),
     room: toPublicRoom(store, room, userId),
-    feed: room.events.slice(-80),
+    feed: feedFor(room, userId),
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),

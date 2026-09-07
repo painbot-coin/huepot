@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { getSessionToken, requireUser } from "@/lib/auth";
 import {
   acceptFriendRequest,
@@ -6,6 +6,8 @@ import {
   listNetwork,
   readyFriends,
   sendFriendRequest,
+  blockPlayer,
+  unblockPlayer,
   unfriend,
 } from "@/lib/friends";
 import { jsonError } from "@/lib/http";
@@ -77,6 +79,8 @@ export async function POST(request: Request) {
       else if (action === "accept") await acceptFriendRequest(store, user, username);
       else if (action === "ignore") await ignoreFriendRequest(store, user, username);
       else if (action === "unfriend") await unfriend(store, user, username);
+      else if (action === "block") await blockPlayer(store, user, username);
+      else if (action === "unblock") await unblockPlayer(store, user, username);
       else throw new Error("Unknown network action.");
       const data = listNetwork(
         store,

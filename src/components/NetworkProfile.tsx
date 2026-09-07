@@ -297,6 +297,15 @@ export function NetworkProfile({ username }: { username: string }) {
                         Remove connection
                       </button>
                     ) : null}
+                    {profile.relation === "blocked" ? (
+                      <button className="chip-btn chip-btn-ghost" onClick={() => void act("unblock")} type="button">
+                        Unblock
+                      </button>
+                    ) : (
+                      <button className="chip-btn chip-btn-ghost" onClick={() => void act("block")} type="button">
+                        Block
+                      </button>
+                    )}
                   </>
                 )}
               </div>

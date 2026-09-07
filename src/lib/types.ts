@@ -24,8 +24,16 @@ export type NoticeKind =
   | "friend"
   | "message"
   | "post";
-export type FriendStatus = "pending" | "accepted" | "declined";
-export type FriendRelation = "none" | "outgoing" | "incoming" | "friends";
+export type FriendStatus = "pending" | "accepted" | "declined" | "blocked";
+export type FriendRelation =
+  | "none"
+  | "outgoing"
+  | "incoming"
+  | "friends"
+  /** You blocked them. */
+  | "blocked"
+  /** They blocked you. Reads as "none" everywhere, so a block is not a signal. */
+  | "blocked-by";
 export type NetworkTab = "pit" | "friends" | "requests";
 export type RoomKind = "basic" | "custom";
 export type RoomEventKind = "chat" | "system" | "payout" | "refund" | "round" | "join";

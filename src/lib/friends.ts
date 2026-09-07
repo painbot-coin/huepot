@@ -91,8 +91,31 @@ function findPair(a: string, b: string) {
 
 function relationFor(row: Friendship | null, viewerId: string): FriendRelation {
   if (!row || row.status === "declined") return "none";
+  if (row.status === "blocked") {
+    return row.fromId === viewerId ? "blocked" : "blocked-by";
+  }
   if (row.status === "accepted") return "friends";
   return row.fromId === viewerId ? "outgoing" : "incoming";
+}
+
+/**
+ * True when either of these two has blocked the other. A block is symmetric in
+ * what it hides — the point is that the pair stop seeing each other — but the
+ * side that asked for it is the only side that can lift it.
+ */
+export function blockedBetween(a: string, b: string) {
+  return findPair(a, b)?.status === "blocked";
+}
+
+/** Everyone this account has blocked or been blocked by. */
+export function blockedIds(userId: string) {
+  const out = new Set<string>();
+  for (const row of allRows()) {
+    if (row.status !== "blocked") continue;
+    if (row.lowId === userId) out.add(row.highId);
+    else if (row.highId === userId) out.add(row.lowId);
+  }
+  return out;
 }
 
 async function insertRow(row: Friendship) {
@@ -180,7 +203,12 @@ export function listNetwork(
   touchPresence(viewer.id, at);
   const q = query.trim().toLowerCase();
   const focusName = focus.trim().toLowerCase();
-  const people = visibleUsers(store).filter((user) => user.id !== viewer.id);
+  // A blocked pair should not turn up in each other's lists at all, whichever
+  // side asked for it.
+  const hidden = blockedIds(viewer.id);
+  const people = visibleUsers(store).filter(
+    (user) => user.id !== viewer.id && !hidden.has(user.id),
+  );
 
   let picked = people;
   if (tab === "friends") {
@@ -212,6 +240,9 @@ export function listNetwork(
       incoming: 1,
       outgoing: 2,
       friends: 3,
+      // Filtered out above; here only so the map stays exhaustive.
+      blocked: 4,
+      "blocked-by": 4,
     };
     limited.sort((a, b) => {
       const rel = order[a.relation] - order[b.relation];
@@ -297,6 +328,8 @@ export async function sendFriendRequest(store: StoreData, viewer: User, username
   const target = requirePlayer(store, username);
   if (target.id === viewer.id) throw new Error("You cannot add yourself.");
   const existing = findPair(viewer.id, target.id);
+  // Worded the same either way, so a request cannot be used to detect a block.
+  if (existing?.status === "blocked") throw new Error("You cannot reach that player.");
   if (existing?.status === "accepted") throw new Error("You are already friends.");
   if (existing?.status === "pending") {
     throw new Error(existing.fromId === viewer.id ? "Request already sent." : "They already sent you a request.");
@@ -376,5 +409,43 @@ export async function unfriend(_store: StoreData, viewer: User, username: string
   if (!row || row.status !== "accepted") {
     throw new Error("You are not friends.");
   }
+  await deleteRow(row.id);
+}
+
+/**
+ * Blocks a player across the whole house. Any friendship or pending request
+ * between them is replaced, because a block that leaves a request standing is
+ * not a block. The blocked player is not told: telling them turns a quiet
+ * exit into an argument.
+ */
+export async function blockPlayer(store: StoreData, viewer: User, username: string) {
+  const target = requirePlayer(store, username);
+  if (target.id === viewer.id) throw new Error("You cannot block yourself.");
+  const [lowId, highId] = pairIds(viewer.id, target.id);
+  const existing = findPair(viewer.id, target.id);
+  if (existing?.status === "blocked") {
+    if (existing.fromId === viewer.id) throw new Error("You already blocked them.");
+    // They blocked first. Recording a second block would let them unblock ours.
+    throw new Error("You cannot reach that player.");
+  }
+  if (existing) await deleteRow(existing.id);
+  const row: Friendship = {
+    id: crypto.randomUUID(),
+    lowId,
+    highId,
+    fromId: viewer.id,
+    status: "blocked",
+    createdAt: Date.now(),
+    resolvedAt: Date.now(),
+  };
+  await insertRow(row);
+}
+
+/** Only the side that asked for the block can lift it. */
+export async function unblockPlayer(store: StoreData, viewer: User, username: string) {
+  const target = requirePlayer(store, username);
+  const row = findPair(viewer.id, target.id);
+  if (!row || row.status !== "blocked") throw new Error("They are not blocked.");
+  if (row.fromId !== viewer.id) throw new Error("You cannot reach that player.");
   await deleteRow(row.id);
 }
