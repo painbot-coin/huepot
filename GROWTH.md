@@ -737,6 +737,53 @@ Ties on the winning colour list every winner with their share, since a split tak
 
 Nothing about who is shown that was not already public: usernames appear in chat, on seats, in the lobby and on public profiles. The house is filtered out of winners — its cut is a `rake` row, not a `payout`, so it never appeared anyway.
 
+## Phase 31 — Somewhere to put a file (1.3.92)
+
+Avatars, pictures in chat and news thumbnails all wait on the same missing thing: the house had nowhere to put a file. Nothing in the app had ever accepted an upload.
+
+It is a bucket rather than the droplet disk on purpose. The SQLite file and every backup already share that disk, and player content has to outlive a rebuild.
+
+### Signed by hand, and checked against AWS
+
+DigitalOcean Spaces speaks S3, so requests are signed with Signature Version 4. That is written here rather than pulled from a vendor SDK — the whole app runs on four dependencies, and signing is a hash chain that can be checked against AWS's own worked example instead of trusted:
+
+```
+canonical request is byte-identical to the one AWS prints   ok
+canonical request hashes to the value AWS publishes         ok
+string to sign carries the right scope                      ok
+signature matches the value AWS publishes                   ok
+```
+
+The pure chain lives in `sigv4.ts` with no app imports, which is what makes it runnable on its own.
+
+That check earned its keep immediately: it failed the first time, and the structural steps passing while only the final HMAC differed pointed straight at the input rather than the code. AWS redacts the secret in that example, and the value that reproduces their signature is the slash variant of the standard example key, not the plus one. One character of test data, no bug.
+
+### What the route refuses, and in which order
+
+```
+no session                              401  Sign in to continue
+no file, or the wrong field name         400  Attach an image to upload
+a PHP script claiming image/png          415  not a JPEG, PNG or WebP
+an SVG                                  415  not a JPEG, PNG or WebP
+5 MB against a 4 MB cap                 413  keep the image under 4 MB
+a real PNG, JPEG or WebP                     reaches the upload step
+```
+
+Type is decided by the first bytes, never the `content-type` header, because a header is a claim the caller makes. SVG is refused outright: a browser executes it, so an avatar could carry script.
+
+The order matters and the first pass had it wrong. The "storage is not switched on" check sat at the top, so every single refusal returned 503 and the test could not tell a rejected SVG from a missing bucket — nine checks passed and verified nothing. Validation now runs first, and 503 is reachable only by a request that was otherwise fine.
+
+### Two things kept away from the money path
+
+- **The store queue is not held while bytes move.** Auth reads through `withStoreRead`, then the upload happens outside it. A 4 MB body must not sit in the one lane every round settlement shares.
+- **Keys are content addressed.** The same picture twice is one object, and a key cannot be guessed from an account id.
+
+Twelve uploads per account per ten minutes, counted in memory.
+
+### Not switched on yet
+
+`storageConfigured()` is false until `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET` and `SPACES_REGION` are set, and the route answers 503 until then. Nothing about the signing can be proven against a live bucket without credentials, which is the one part of this phase that is argued rather than measured — though a 403 from Spaces would now mean credentials, not signing.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

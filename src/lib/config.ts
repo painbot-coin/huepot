@@ -91,3 +91,23 @@ export function withdrawKey() {
 export function withdrawSendEnabled() {
   return Boolean(withdrawKey() && chainRpcUrl());
 }
+
+/** Biggest file the upload route will take, before any re-encoding. */
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+/** What a player may upload. Checked against the bytes, not the header. */
+export const UPLOAD_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+export function spacesConfig() {
+  const bucket = (process.env.SPACES_BUCKET ?? "").trim();
+  const region = (process.env.SPACES_REGION ?? "").trim();
+  const key = (process.env.SPACES_KEY ?? "").trim();
+  const secret = (process.env.SPACES_SECRET ?? "").trim();
+  // Serving through a CDN is optional; without one the origin serves the file.
+  const cdn = (process.env.SPACES_CDN ?? "").replace(/\/$/, "").trim();
+  return { bucket, region, key, secret, cdn };
+}
+
+export function storageConfigured() {
+  const { bucket, region, key, secret } = spacesConfig();
+  return Boolean(bucket && region && key && secret);
+}
