@@ -5750,3 +5750,40 @@ body:has(.app-page) .site-footer {
 .take-page .li-avatar.is-lg {
   margin: 0 0 0.6rem;
 }
+
+.wire-list {
+  margin: 1.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.wire-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  background: var(--house-panel);
+  border: 1px solid rgba(212, 175, 106, 0.14);
+}
+
+.wire-list a {
+  color: #f0e9dc;
+  text-decoration: none;
+  flex: 1 1 24rem;
+}
+
+.wire-list a:hover {
+  color: #ffd27a;
+}
+
+.wire-meta {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(228, 216, 198, 0.5);
+  white-space: nowrap;
+}

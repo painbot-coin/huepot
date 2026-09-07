@@ -933,6 +933,45 @@ That last one is the same lesson as Phases 31 and 32, for the third time: a chec
 
 Images in direct messages wait on Spaces credentials. The moderation queue is still one report per row rather than counts per player, and a word filter staff can edit is not built.
 
+## Phase 36 — The wire (1.3.97)
+
+Asked for at the start and left until last, because it is the one item that could embarrass the house rather than break it. The owner chose fully automatic publishing over a review queue, against the recommendation here. That is recorded, and the safety went into what the fetcher is *able* to do rather than into a gate.
+
+### What it takes, and what it refuses to take
+
+A headline, a link, the source name and the feed's own picture. **Never an article body.** Reposting someone else's writing is republishing it; a headline and a link out is a citation. Every row keeps its source, and every link on the page carries `nofollow` and opens out.
+
+Eight feeds, each one checked from the server before it went in the list — five crypto, three sport. The parser was written against real XML rather than an idealised feed, which mattered:
+
+- `<link>` arrives wrapped in CDATA with a campaign string attached, while `<guid>` holds the clean article URL. The guid wins when it looks like a URL.
+- Tracking parameters are stripped anyway. They are noise, and they would make one article look new every time the campaign string changed.
+- The picture is in `media:content`, or an `enclosure`, or buried in the description HTML. All three are tried.
+
+### What the first real run produced
+
+```
+Cointelegraph      found 5  added 5
+Decrypt            found 5  added 5
+CoinDesk           found 5  added 5
+CoinJournal        found 5  added 5
+Bitcoin Magazine   found 5  added 5
+Sky Sports         found 5  added 5
+BBC Sport          found 0  added 0  fetch failed
+Guardian Sport     found 0  added 0  fetch failed
+```
+
+The two failures are the same feeds that answer from the droplet but not from the machine that ran the test, which is exactly why one dead feed cannot stop the others.
+
+Checked on the stored rows, not on the promise of them: every link https, no tracking parameters left, titles decoded with no markup, no duplicate links, all thirty carrying an image, a real headline on the page — and a second fetch adding **nothing**, because the row key is the hash of the cleaned URL and dedupe needs no extra query.
+
+### Kept away from the game
+
+Five items per source per run, every fifteen minutes. Eight feeds of thirty would bury the hall. It writes straight to its own table and never touches the in-memory store, so a fetch cannot sit in the lane that settles rounds — the same rule the chain watcher follows. A manual refresh exists for staff or the admin secret, never for a visitor, because it makes outbound requests.
+
+### The part that is still a risk
+
+Publishing is unattended. Sooner or later this will put a fixed-match tip, a scam promotion or a competitor's advert on the wire under the house's name at three in the morning. `hideNewsItem` removes one immediately, but nothing stops it going up. That was the owner's decision, made with the risk stated; the recommendation remains a one-click release.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.
