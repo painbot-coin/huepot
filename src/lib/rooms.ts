@@ -16,7 +16,7 @@ import {
   ROUND_SECONDS,
 } from "./config";
 import { fromCents, toCents } from "./money";
-import type { Room, RoomEvent, RoomEventKind, Round, StoreData } from "./types";
+import type { Room, RoomEventKind, Round, StoreData } from "./types";
 
 export type BasicRoomDef = {
   slug: string;
@@ -222,6 +222,13 @@ export function isQuietRoundLine(body: string) {
   return /had no clicks/.test(body) || /is live\.?$/.test(body);
 }
 
+/**
+ * How many events a room carries in memory. The feed shows the newest 80, and
+ * the store is deep-cloned and serialised on every write, so anything kept
+ * beyond this is paid for on every request. Older rows stay in the database.
+ */
+export const ROOM_EVENT_CAP = 120;
+
 export function postRoomEvent(
   room: Room,
   input: {
@@ -239,7 +246,7 @@ export function postRoomEvent(
     body: input.body,
     createdAt: Date.now(),
   });
-  room.events = room.events.slice(-120);
+  room.events = room.events.slice(-ROOM_EVENT_CAP);
 }
 
 export function slugifyRoomName(name: string) {

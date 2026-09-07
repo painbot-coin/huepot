@@ -407,6 +407,61 @@ bill — the only real player — is exact to the cent: 10.00 deposited plus 109
 
 `implied` treated `rake` as money leaving. A rake row is only ever written on the house account, where it is the take arriving. Fixed, and `drift` now reads 0.00 — which matters, because a reconciliation that always shows a number is a reconciliation nobody reads.
 
+## Phase 25 — The house under a crowd (1.3.87)
+
+The queue that keeps money safe is also the only lane every request drives in. Nobody had timed it.
+
+### What it cost, measured on the live box
+
+```
+no store at all                p50    6 ms
+withStore, tiny payload        p50  134 ms
+withStore, room state          p50  133 ms
+withStore via the read path    p50   29 ms
+```
+
+The payload is irrelevant — `/api/auth/me` returns one object and still took 134 ms. The cost was the machinery: `withStore` deep-clones the whole store, then `persistStore` opens by serialising it **twice** to decide whether anything changed.
+
+Twenty clients polling at once, as a crowd would:
+
+```
+slowest client   2700 ms
+all served in    2806 ms
+ceiling            ~7 req/s
+```
+
+Seven requests a second, with eleven accounts on the books. That is the wall, and it was already here.
+
+### What was actually in memory
+
+`postRoomEvent` trims a room to 120 events, but only when that room posts. A room that goes quiet carries its whole history for the life of the process:
+
+```
+classic 5171 · lightning 2784 · duo 2308 · high 1874 · crazy 1870 · fog 232
+```
+
+14,239 events, about 1.6 MB of text, cloned and serialised on every single request. The local copy had 43,722.
+
+### The fix
+
+A room now loads only its newest `ROOM_EVENT_CAP` events — the same cap the writer already enforces, named once so the two cannot drift — and the query takes only that many per room, so boot does not slow down as the table grows. Measured on the local copy, 43,722 events:
+
+```
+                before    after
+p50            182.5 ms   6.0 ms
+p95            229.4 ms   8.8 ms
+20 at once     3498 ms   118 ms
+ceiling           5 r/s   169 r/s
+```
+
+Thirty times the headroom, and it no longer degrades as history accumulates.
+
+Nothing was deleted: all 43,722 rows are still in the database, `persistStore` only ever inserts events, and clients still receive the same 80-line feed.
+
+### Still true, and worth knowing
+
+Every request — reads included — takes the same lane, because `getRoomState` ticks the round and may settle it. The store is a single process by design, which is what makes the queue a lock at all. That ceiling is now ~169 req/s per box instead of 5, but it is still a single lane, and the next wall is the same one.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

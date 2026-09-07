@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { ensureFairTables, flushSettledRounds, loadRoundFair } from "@/lib/fairness-db";
 import { emptyLimits } from "@/lib/limits";
 import { publishRoom } from "@/lib/live";
-import { ensureRooms } from "@/lib/rooms";
+import { ROOM_EVENT_CAP, ensureRooms } from "@/lib/rooms";
 import type {
   Notice,
   Room,
@@ -401,7 +401,16 @@ async function readStore(): Promise<StoreData> {
         body: string;
         createdAt: string;
       }[]
-    >("SELECT id, roomId, kind, userId, username, body, CAST(createdAt AS TEXT) as createdAt FROM RoomEvent ORDER BY createdAt ASC"),
+    >(
+      // Only the newest events per room are ever read, so boot does not get
+      // slower as the table grows.
+      `SELECT id, roomId, kind, userId, username, body, createdAt FROM (
+         SELECT id, roomId, kind, userId, username, body,
+                CAST(createdAt AS TEXT) AS createdAt,
+                ROW_NUMBER() OVER (PARTITION BY roomId ORDER BY createdAt DESC) AS rn
+           FROM RoomEvent
+       ) WHERE rn <= ${ROOM_EVENT_CAP} ORDER BY createdAt ASC`,
+    ),
     prisma.$queryRawUnsafe<
       {
         id: string;
@@ -440,6 +449,14 @@ async function readStore(): Promise<StoreData> {
     const list = eventsByRoom.get(event.roomId) ?? [];
     list.push(event);
     eventsByRoom.set(event.roomId, list);
+  }
+  // A room posting an event trims itself to the cap, but a room that has gone
+  // quiet would otherwise carry its whole history for as long as the process
+  // lives, and every write clones and serialises all of it.
+  for (const [roomId, list] of eventsByRoom) {
+    if (list.length > ROOM_EVENT_CAP) {
+      eventsByRoom.set(roomId, list.slice(-ROOM_EVENT_CAP));
+    }
   }
   const roundByRoom = new Map(roundRows.map((row) => [row.roomId, row]));
 
