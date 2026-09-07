@@ -849,6 +849,49 @@ No real picture has been through any of this. The upload route answers 503 until
 
 Pit chat lines still show a name alone. Those come from stored `RoomEvent` rows that carry a username and no id, so a face there needs either a wider row or a lookup at render — worth doing deliberately, not as a side effect of this.
 
+## Phase 35 — The account belongs to the player (1.3.95)
+
+### First, a correction to the plan
+
+The plan said "no session list, no username change". Both already existed — `/api/account/security` lists devices, kicks one, kicks the others, and renames. Reading the code before building saved rewriting a working feature, which is the whole argument for reading it first.
+
+What was actually missing: a rename could be repeated without limit and left no trace, there was no way to take your data out, and no way to close the seat.
+
+### A name has to settle
+
+Records are public and chat is public, so a name that churns freely is a way to shed a reputation or borrow someone else's. A change now waits thirty days and the old name is kept:
+
+```
+a rename with nothing pending        200
+a second rename straight after       400  You can change your name again on 10/7/2026
+the old name kept on the account     pastNames ["devguru13580"]
+```
+
+### Taking the data out
+
+`/api/account/export` hands over the account, play limits, the full ledger, the derived record, and everything posted, as a named download. Amounts are in USDT rather than cents, to match what was on screen. The player id comes from the session and never from the request.
+
+An export line read `amount: 10000`, which looked like a missing conversion. The stored row is 1,000,000 cents — a 10,000 USDT demo deposit in the dev database — so it was right. Worth the thirty seconds to check rather than ship a guess about money.
+
+### Closing a seat, and what closing does not touch
+
+Transaction rows stay exactly where they are. They are the house's books as much as the player's, and the accounting has to keep reconciling after someone leaves. What goes is the seat: profile text, avatar, and every session.
+
+Two refusals matter more than the closure:
+
+```
+the wrong confirmation                 400  Type your username exactly to confirm
+a balance of 25.00 USDT                400  There is 25.00 USDT on this account. Withdraw it first
+```
+
+Closing over a balance would destroy a claim on real money, so it cannot be done — withdraw first. Closure also has to survive signing in again, or it is only a logout, so the Google path refuses a closed account and points at support. Reopening is a support decision.
+
+### The test that closed the account
+
+The balance guard failed its first run and the account actually closed. The cause was the test, not the guard: the balance was set straight into the database while the server held the store in memory, so the app saw zero. Money has to go in through the app for the running store to know about it — the same trap as Phase 21, and it cost an account that had to be reopened by hand.
+
+Verified properly the second time, with a demo deposit through the app: the closure was refused, it named the amount, and the account still signed in afterwards.
+
 ## Next for the social layer
 
 Standings across the house are the obvious follow-on, and the aggregation is already written — but hold until more than one person has clicked, otherwise it ships as a table of one.

@@ -499,6 +499,8 @@ function LimitsCard({
 
 function SecurityCard({ user: _user }: { user: PublicUser }) {
   const [sessions, setSessions] = useState<PublicSession[]>([]);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -511,6 +513,25 @@ function SecurityCard({ user: _user }: { user: PublicUser }) {
   useEffect(() => {
     void loadSessions();
   }, []);
+
+  async function closeSeat() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/account/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not close the account");
+      window.location.href = "/";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not close the account");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function post(body: Record<string, string>) {
     setBusy(true);
@@ -577,6 +598,62 @@ function SecurityCard({ user: _user }: { user: PublicUser }) {
           </li>
         ))}
       </ul>
+
+      <h3 className="mt-8 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        Your data
+      </h3>
+      <p className="mt-2 text-sm text-zinc-500">
+        Everything the house holds about this seat, as a file: the ledger, the
+        play record, your limits, and anything you posted.
+      </p>
+      <p className="mt-3">
+        <a className="chip-btn chip-btn-ghost" href="/api/account/export">
+          Download my data
+        </a>
+      </p>
+
+      <h3 className="mt-8 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        Close this account
+      </h3>
+      <p className="mt-2 text-sm text-zinc-500">
+        The seat, the profile and every device go. Transaction rows stay, because
+        they are the house books too. Withdraw any balance first.
+      </p>
+      {closeOpen ? (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <input
+            className="field"
+            onChange={(event) => setConfirm(event.target.value)}
+            placeholder="Type your username"
+            value={confirm}
+          />
+          <button
+            className="chip-btn"
+            disabled={busy || !confirm.trim()}
+            onClick={() => void closeSeat()}
+            type="button"
+          >
+            {busy ? "Closing…" : "Close for good"}
+          </button>
+          <button
+            className="chip-btn chip-btn-ghost"
+            onClick={() => setCloseOpen(false)}
+            type="button"
+          >
+            Keep it
+          </button>
+        </div>
+      ) : (
+        <p className="mt-3">
+          <button
+            className="chip-btn chip-btn-ghost"
+            onClick={() => setCloseOpen(true)}
+            type="button"
+          >
+            Close my account
+          </button>
+        </p>
+      )}
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
     </section>
   );

@@ -114,6 +114,9 @@ function userFromRow(
     about: "",
     location: "",
     avatar: "",
+    nameChangedAt: 0,
+    pastNames: [] as string[],
+    closedAt: 0,
   };
 }
 
@@ -266,6 +269,9 @@ async function loadUserAuth() {
           about: "",
           location: "",
           avatar: "",
+          nameChangedAt: 0,
+          pastNames: [] as string[],
+          closedAt: 0,
         });
         return [row.id, parsed] as const;
       }),
@@ -284,6 +290,9 @@ async function loadUserAuth() {
         about: string;
         location: string;
         avatar: string;
+        nameChangedAt: number;
+        pastNames: string[];
+        closedAt: number;
       }
     >();
   }
@@ -579,6 +588,9 @@ async function readStore(): Promise<StoreData> {
     user.about = extra.about ?? "";
     user.location = extra.location ?? "";
     user.avatar = extra.avatar ?? "";
+    user.nameChangedAt = extra.nameChangedAt ?? 0;
+    user.pastNames = extra.pastNames ?? [];
+    user.closedAt = extra.closedAt ?? 0;
   }
   const sessionExtra = await loadSessionExtra();
   for (const session of Object.values(store.sessions)) {
@@ -656,6 +668,9 @@ async function persistStore(prev: StoreData, next: StoreData) {
           about: user.about ?? "",
           location: user.location ?? "",
           avatar: user.avatar ?? "",
+          nameChangedAt: user.nameChangedAt ?? 0,
+          pastNames: user.pastNames ?? [],
+          closedAt: user.closedAt ?? 0,
         });
         if (
           !same(before?.ageConfirmedAt, user.ageConfirmedAt) ||
@@ -666,7 +681,10 @@ async function persistStore(prev: StoreData, next: StoreData) {
           !same(before?.headline, user.headline) ||
           !same(before?.about, user.about) ||
           !same(before?.location, user.location) ||
-          !same(before?.avatar, user.avatar)
+          !same(before?.avatar, user.avatar) ||
+          !same(before?.nameChangedAt, user.nameChangedAt) ||
+          !same(before?.pastNames, user.pastNames) ||
+          !same(before?.closedAt, user.closedAt)
         ) {
           await tx.$executeRawUnsafe(
             `UPDATE User SET auth = '${authJson.replace(/'/g, "''")}' WHERE id = '${user.id.replace(/'/g, "''")}'`,
@@ -1023,6 +1041,9 @@ async function importJsonStore() {
       user.about ??= "";
       user.location ??= "";
       user.avatar ??= "";
+      user.nameChangedAt ??= 0;
+      user.pastNames ??= [];
+      user.closedAt ??= 0;
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;
@@ -1044,6 +1065,9 @@ async function importJsonStore() {
       user.about ??= "";
       user.location ??= "";
       user.avatar ??= "";
+      user.nameChangedAt ??= 0;
+      user.pastNames ??= [];
+      user.closedAt ??= 0;
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;

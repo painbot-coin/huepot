@@ -142,6 +142,12 @@ export function loginWithGoogle(
     findUserByGoogleId(store, profile.googleId) ||
     findUserByLogin(store, profile.email);
 
+  // Closing an account has to survive signing in again, or it is only a
+  // logout. Reopening one is a support decision, not a sign-in.
+  if (user?.closedAt) {
+    throw new Error("This account was closed. Contact support to reopen it.");
+  }
+
   if (!user) {
     const local = profile.email.split("@")[0] || "player";
     user = newUser({
@@ -247,10 +253,28 @@ export function confirmAge(user: User) {
   if (!user.ageConfirmedAt) user.ageConfirmedAt = nowMs();
 }
 
+/**
+ * How long a name has to settle before it can change again. Records here are
+ * public and chat is public, so a name that can churn freely is a way to
+ * shed a reputation or to borrow someone else's.
+ */
+export const RENAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function renameAllowedAt(user: User) {
+  const last = user.nameChangedAt ?? 0;
+  return last ? last + RENAME_COOLDOWN_MS : 0;
+}
+
 export function changeUsername(store: StoreData, user: User, raw: string) {
   const username = normalizeUsername(raw);
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
     throw new Error("Username must be 3–20 letters, numbers, or _.");
+  }
+  const allowedAt = renameAllowedAt(user);
+  if (allowedAt > nowMs()) {
+    throw new Error(
+      `You can change your name again on ${new Date(allowedAt).toLocaleDateString()}.`,
+    );
   }
   if (username.toLowerCase() === HOUSE_USERNAME) {
     throw new Error("That email or username is already in use.");
@@ -262,7 +286,38 @@ export function changeUsername(store: StoreData, user: User, raw: string) {
   if (taken && taken.id !== user.id) {
     throw new Error("That email or username is already in use.");
   }
+  // The old name is kept so a profile can say who this used to be.
+  user.pastNames = [user.username, ...(user.pastNames ?? [])].slice(0, 5);
+  user.nameChangedAt = nowMs();
   user.username = username;
+}
+
+/**
+ * Closes an account at the player's request. Transaction rows stay exactly
+ * where they are — they are the house's books as much as the player's — but
+ * the seat, the profile text and every session go.
+ *
+ * Refused while there is money on the account. Closing over a balance would
+ * destroy a claim on real funds, so it has to be withdrawn first.
+ */
+export function closeAccount(store: StoreData, user: User, confirmation: string) {
+  if (user.closedAt) throw new Error("This account is already closed.");
+  if (normalizeUsername(confirmation) !== user.username.toLowerCase()) {
+    throw new Error("Type your username exactly to confirm.");
+  }
+  if (user.balance > 0) {
+    throw new Error(
+      `There is ${formatCents(user.balance)} USDT on this account. Withdraw it first.`,
+    );
+  }
+  user.closedAt = nowMs();
+  user.headline = "";
+  user.about = "";
+  user.location = "";
+  user.avatar = "";
+  for (const [token, session] of Object.entries(store.sessions)) {
+    if (session.userId === user.id) delete store.sessions[token];
+  }
 }
 
 export function listPublicSessions(store: StoreData, userId: string, currentToken: string) {
@@ -342,7 +397,9 @@ export function userFromToken(store: StoreData, token: string | undefined) {
   const session = store.sessions[token];
   if (!session || session.expiresAt < nowMs()) return null;
   const user = store.users[session.userId];
-  return user ?? null;
+  // A closed account has no seat, whatever cookie is presented.
+  if (!user || user.closedAt) return null;
+  return user;
 }
 
 export function requireUser(store: StoreData, token: string | undefined) {

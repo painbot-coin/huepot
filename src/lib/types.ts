@@ -137,6 +137,12 @@ export type User = {
   location: string;
   /** "" for initials, "hue:<id>" for a house colour, or an uploaded URL. */
   avatar?: string;
+  /** When the name last changed, so it cannot be churned. */
+  nameChangedAt?: number;
+  /** Names this account used before, newest first. */
+  pastNames?: string[];
+  /** Set when the player closed the account. Money rows stay; the seat does not. */
+  closedAt?: number;
 };
 
 export type Session = {
