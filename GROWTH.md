@@ -614,9 +614,29 @@ attempt 9 claiming 10.0.0.9: 429 Too many failed staff sign-ins
 
 Twelve rotating claims used to be twelve separate counts.
 
-### Still open, and the owner's call
+### Staff is now loopback only
 
-`STAFF_IPS` is **not set in production**, so the allowlist is off and a 64 character `ADMIN_SECRET` is the only thing holding the staff door. Worth setting now that it would actually hold — it did not before this fix.
+`STAFF_IPS=127.0.0.1` in production, chosen over pinning a public address because there is no address to keep current and nothing to lock the owner out of when an ISP changes it. The list being non-empty is what turns the gate on; loopback is what stays allowed.
+
+From outside, every shape of the old bypass is refused before a secret is even asked for:
+
+```
+no spoof headers                       403 Staff is closed from this network
+X-Forwarded-For: 127.0.0.1             403 Staff is closed from this network
+X-Forwarded-For: 127.0.0.1, 8.8.8.8    403 Staff is closed from this network
+X-Real-IP: 127.0.0.1                   403 Staff is closed from this network
+```
+
+The last one is refused because nginx overwrites `X-Real-IP` with the address it is talking to, which is the whole reason it can be trusted.
+
+**The way in**, since the door is now shut from the internet — `next start` binds to `127.0.0.1:3000`, so the tunnel lands where the app is listening:
+
+```
+ssh -i ~/.ssh/huepot_we4u -L 3000:127.0.0.1:3000 root@159.223.173.219
+# then open http://localhost:3000/staff
+```
+
+Verified before trusting it: the tunnel route reaches the staff sign-in while the public route does not. The previous `.env.local` is kept at `/root/env.local.before-staffips`, and the rollback runs automatically if the tunnel route ever fails that check.
 
 ### Note to whoever tests this next
 
