@@ -5,6 +5,11 @@ const chainNode = path.join(process.cwd(), "src/lib/chain.ts");
 const chainEdge = path.join(process.cwd(), "src/lib/chain.edge.ts");
 
 const nextConfig: NextConfig = {
+  // A build normally rewrites .next underneath the process still serving from
+  // it, which leaves a window where a route that has not been loaded yet
+  // cannot find its manifest. Setting this lets a deploy build somewhere else
+  // and move the finished directory into place in one step.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   serverExternalPackages: ["@prisma/client", "prisma"],
   async redirects() {
     return [

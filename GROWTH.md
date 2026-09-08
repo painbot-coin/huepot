@@ -1020,6 +1020,40 @@ most-complained sorts first           A before B
 
 The individual rows are still underneath, because acting on a report still means reading the line that was reported.
 
+## Phase 40 — Deploying without a bad minute (1.4.0)
+
+Found while verifying an earlier deploy, offered, and left unfixed until now: the error log carried `client reference manifest for route "/signin" does not exist` and a missing `500.html`. Those looked like live breakage and were not — sixty requests to those routes produced no new errors, and every page rendered.
+
+They came from the deploy itself. `next build` rewrites `.next` while the old process is still reading it, so for a few seconds a route that process has not loaded yet cannot find its manifest. It heals the moment pm2 restarts onto the finished build. With one player that is invisible; with traffic it is a handful of error pages on every deploy, and the sign-in page was one of them.
+
+`distDir` now honours an environment variable, so a deploy builds into `.next-build` and moves the finished directory into place in one rename instead of overwriting the directory being read.
+
+### The first fix was wrong, and measuring said so
+
+Build elsewhere, swap, then restart. Four routes hammered continuously through it:
+
+```
+requests   1000
+not 200      24   all connection refused
+manifest errors written   12
+```
+
+Still twelve. The swap had traded one inconsistency for another: between the rename and the restart, the **old** process reads the **new** build's manifests, does not recognise the `BUILD_ID` inside them, and answers with the same invariant error. Milliseconds of overlap was enough.
+
+So the process is stopped *before* the swap, not after. It never sees the new files at all. Measured again:
+
+```
+requests             1136
+served 200           1104
+refused, down          32
+answered but wrong      0
+manifest errors added   0   (12 before, 12 after)
+```
+
+Nothing broken is served now. What remains is about nine seconds of genuine unavailability while the process restarts, which visitors see as a 502 from nginx. That is not free, and it is not fixable while one process owns the money — there is no second instance to hand traffic to, and adding one would break the write queue that makes concurrent clicks safe. A brief honest 502 beats a page that loads wrong.
+
+The script also refuses to swap a build with no `BUILD_ID`, keeps the previous build in `.next-prev`, and rolls back to it if the home page does not answer 200 — a bad build should cost a rollback, not a night.
+
 ## Where this stops without you
 
 Everything left in the plan is blocked on something only the owner can supply:
