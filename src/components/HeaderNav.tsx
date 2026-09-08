@@ -56,6 +56,9 @@ export function HeaderNav({ user }: { user: PublicUser | null }) {
         <Link className="nav-link" href="/how-it-works">
           Rite
         </Link>
+        <Link className="nav-link" href="/news">
+          Wire
+        </Link>
         <SoundToggle className="pit-ico header-sound" />
         {path !== "/signin" ? (
           <Link className="chip-btn" href="/signin">
@@ -70,6 +73,9 @@ export function HeaderNav({ user }: { user: PublicUser | null }) {
     <>
       <Link className="nav-link" href="/how-it-works">
         Rite
+      </Link>
+      <Link className="nav-link" href="/news">
+        Wire
       </Link>
       <Link className="nav-link" href="/network">
         Wing
