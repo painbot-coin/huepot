@@ -1,5 +1,6 @@
-import { createHash, randomBytes, timingSafeEqual } from "crypto";
+﻿import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { clientIpFromHeaders } from "@/lib/client-ip";
 import { adminSecret, cookieSecure } from "@/lib/config";
 import { prisma } from "@/lib/db";
 
@@ -32,26 +33,12 @@ export function staffIps() {
 }
 
 export function requestIp(request: Request) {
-  return requestIpFromHeaders(request.headers);
+  return clientIpFromHeaders(request.headers);
 }
 
-export function requestIpFromHeaders(headers: Headers) {
-  // The proxy overwrites X-Real-IP with the address it is actually talking to,
-  // so it is the one value a caller cannot choose. X-Forwarded-For is appended
-  // to whatever arrived, which leaves its first entry in the caller's hands and
-  // its last entry as the hop the proxy added.
-  const real = headers.get("x-real-ip")?.trim();
-  if (real) return cleanIp(real);
-  const chain = (headers.get("x-forwarded-for") ?? "")
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  return cleanIp(chain[chain.length - 1] ?? "");
-}
-
-function cleanIp(raw: string) {
-  return raw.replace(/^::ffff:/, "") || "unknown";
-}
+// Lives in client-ip.ts so middleware can use it too; re-exported here because
+// the staff gate is where it is mostly read from.
+export { clientIpFromHeaders as requestIpFromHeaders };
 
 export function staffIpAllowed(ip: string) {
   const allowed = staffIps();
