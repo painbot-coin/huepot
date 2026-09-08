@@ -1154,6 +1154,7 @@ async function ensureDb() {
       await ensureStaffTables();
       await migrateMoneyToCents();
       await dropExpiredLogins();
+      await pruneRoomEvents();
       const { warmPlayLoss } = await import("@/lib/limits");
       const { warmInviteTotals } = await import("@/lib/referrals");
       await warmPlayLoss();
@@ -1161,6 +1162,8 @@ async function ensureDb() {
       const { startSitWindowWatcher } = await import("@/lib/sit-windows");
       const { ensureNewsTables, startNewsWatcher } = await import("@/lib/news");
       await ensureNewsTables();
+      // Last, so every table it indexes already exists.
+      await ensureIndexes();
       startChainWatcher();
       startSitWindowWatcher();
       startNewsWatcher();
@@ -1170,6 +1173,66 @@ async function ensureDb() {
     });
   }
   await boot;
+}
+
+/**
+ * The indexes the hot reads want.
+ *
+ * Every one of these queries was a full table scan plus a temp B-tree sort:
+ * the fairness ledger, a room's feed, a player's money, a player's notices and
+ * the news wire. At the sizes involved that cost twenty-odd milliseconds each,
+ * which sounds survivable until you remember all of it runs through the one
+ * request lane that makes concurrent clicks safe. The cost also grows straight
+ * with the row count.
+ *
+ * Names follow Prisma's own convention so the schema file and the live database
+ * agree about what exists, and a later `db push` has nothing to churn.
+ */
+async function ensureIndexes() {
+  const indexes = [
+    "CREATE INDEX IF NOT EXISTS SettledRound_kind_settledAt_idx ON SettledRound(kind, settledAt)",
+    "CREATE INDEX IF NOT EXISTS SettledRound_roomSlug_settledAt_idx ON SettledRound(roomSlug, settledAt)",
+    "CREATE INDEX IF NOT EXISTS RoomEvent_roomId_createdAt_idx ON RoomEvent(roomId, createdAt)",
+    "CREATE INDEX IF NOT EXISTS Tx_playerId_createdAt_idx ON Tx(playerId, createdAt)",
+    "CREATE INDEX IF NOT EXISTS Tx_type_createdAt_idx ON Tx(type, createdAt)",
+    "CREATE INDEX IF NOT EXISTS Notice_userId_createdAt_idx ON Notice(userId, createdAt)",
+    "CREATE INDEX IF NOT EXISTS Withdrawal_userId_createdAt_idx ON Withdrawal(userId, createdAt)",
+    "CREATE INDEX IF NOT EXISTS Withdrawal_status_idx ON Withdrawal(status)",
+    "CREATE INDEX IF NOT EXISTS ChainDeposit_userId_idx ON ChainDeposit(userId)",
+    "CREATE INDEX IF NOT EXISTS Session_expiresAt_idx ON Session(expiresAt)",
+    "CREATE INDEX IF NOT EXISTS NewsItem_status_publishedAt_idx ON NewsItem(status, publishedAt)",
+  ];
+  for (const sql of indexes) {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+    } catch {
+      // A table this index belongs to may not exist yet on a fresh database.
+      // The next boot creates it, and a missing index only costs speed.
+    }
+  }
+}
+
+/**
+ * Room events are written forever and read back only 120 at a time per room,
+ * so everything past that window is dead weight in a table the feed has to
+ * sort. Kept well above the read cap: the point is to bound the table, not to
+ * trim it to the minimum.
+ */
+const ROOM_EVENT_KEEP = 400;
+
+async function pruneRoomEvents() {
+  try {
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM RoomEvent WHERE id IN (
+         SELECT id FROM (
+           SELECT id, ROW_NUMBER() OVER (PARTITION BY roomId ORDER BY createdAt DESC) AS seat
+             FROM RoomEvent
+         ) WHERE seat > ${ROOM_EVENT_KEEP}
+       )`,
+    );
+  } catch {
+    /* nothing to trim */
+  }
 }
 
 /**

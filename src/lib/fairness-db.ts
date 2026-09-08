@@ -8,6 +8,12 @@ const pending: PublicSettledRound[] = [];
 export function queueSettledRound(room: Room, round: Round, settledAt: number) {
   sealRound(round);
   if (!round.result || !round.serverSeed || !round.seedCommit || !round.fairHash) return;
+  // A round nobody clicked has no bet, no pot and no payout, so there is
+  // nothing in it for anyone to verify — the ledger already hides them. Six
+  // rooms tick around the clock regardless of who is seated, and storing those
+  // was 99.94% of this table: 32,490 rows against 19 real takes. Rounds that
+  // moved money — take, push, void — are always kept.
+  if (round.result.kind === "empty") return;
   pending.push({
     id: round.id,
     roomSlug: room.slug,
@@ -127,13 +133,18 @@ export async function listSettledRounds(slug?: string, take = 40, kind?: string)
   return rows.map(fromRow);
 }
 
+/**
+ * Rounds that had a bet in them. Empties are excluded rather than counted,
+ * so the number means the same thing before and after the rows written under
+ * the old behaviour are pruned.
+ */
 export async function countSettledRounds(slug?: string) {
   await ensureFairTables();
   try {
     const rows = await prisma.$queryRawUnsafe<{ n: number | bigint }[]>(
       slug
-        ? `SELECT COUNT(*) AS n FROM SettledRound WHERE roomSlug = '${esc(slug)}'`
-        : "SELECT COUNT(*) AS n FROM SettledRound",
+        ? `SELECT COUNT(*) AS n FROM SettledRound WHERE kind != 'empty' AND roomSlug = '${esc(slug)}'`
+        : "SELECT COUNT(*) AS n FROM SettledRound WHERE kind != 'empty'",
     );
     return Number(rows[0]?.n ?? 0);
   } catch {

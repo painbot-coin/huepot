@@ -61,8 +61,8 @@ export function FairnessClient({ slug }: { slug?: string }) {
         {!loaded
           ? "Opening the book…"
           : settled > 0
-            ? `${settled.toLocaleString()} rounds settled in this house. The takes are listed below — a round nobody clicked has no payout to check.`
-            : "No rounds have settled yet."}
+            ? `${settled.toLocaleString()} rounds with a bet have settled in this house. The takes are listed below. A round nobody clicked is not written down, because there is nothing in it to check.`
+            : "No rounds with a bet have settled yet."}
       </p>
 
       <ul className="ledger-list">

@@ -1174,11 +1174,12 @@ function ResultCard({
   }
 
   if (result.kind === "empty") {
+    // No ledger link: a round nobody clicked is not written to the book,
+    // because there is no bet or payout in it to check.
     return (
       <div className="result-card is-quiet">
         <p className="hall-kicker">The round</p>
         Nobody clicked that round. The pot stays empty.
-        {sheet}
       </div>
     );
   }

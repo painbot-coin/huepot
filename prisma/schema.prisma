@@ -46,6 +46,8 @@ model Session {
   createdAt BigInt @default(0)
   userAgent String @default("")
   user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }
 
 model OAuthState {
@@ -63,6 +65,8 @@ model Notice {
   read      Boolean @default(false)
   createdAt BigInt
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model Tx {
@@ -73,6 +77,9 @@ model Tx {
   createdAt BigInt
   note      String
   user      User   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+  @@index([type, createdAt])
 }
 
 model Room {
@@ -116,6 +123,8 @@ model RoomEvent {
   body      String
   createdAt BigInt
   room      Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
 }
 
 model Round {
@@ -158,6 +167,7 @@ model ChainDeposit {
   createdAt   BigInt
 
   @@unique([txHash, logIndex])
+  @@index([userId])
 }
 
 model Withdrawal {
@@ -171,6 +181,9 @@ model Withdrawal {
   resolvedAt BigInt?
   note       String @default("")
   txHash     String @default("")
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 model SettledRound {
@@ -194,4 +207,7 @@ model SettledRound {
   paidCount              Int
   moneyCents             Int    @default(0)
   rake                   Int    @default(0)
+
+  @@index([kind, settledAt])
+  @@index([roomSlug, settledAt])
 }
