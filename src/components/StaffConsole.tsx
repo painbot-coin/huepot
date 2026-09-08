@@ -104,6 +104,8 @@ export function StaffConsole() {
   const [heldCount, setHeldCount] = useState(0);
   const [house, setHouse] = useState<{ balance: number; percent: string } | null>(null);
   const [books, setBooks] = useState<Books | null>(null);
+  const [mail, setMail] = useState<{ queued: number; sent: number; failed: number } | null>(null);
+  const [emailOn, setEmailOn] = useState(false);
   const [note, setNote] = useState("");
   const [amount, setAmount] = useState("");
 
@@ -176,6 +178,8 @@ export function StaffConsole() {
         inboxes?: InboxHold;
         sweeps?: SweepRow[];
         books?: Books;
+        mail?: { queued: number; sent: number; failed: number };
+        emailOn?: boolean;
         you?: { operator?: string };
       };
       if (response.status === 401) {
@@ -198,6 +202,8 @@ export function StaffConsole() {
       if (data.inboxes) setInboxes(data.inboxes);
       if (data.sweeps) setSweeps(data.sweeps);
       if (data.books) setBooks(data.books);
+      if (data.mail) setMail(data.mail);
+      if (typeof data.emailOn === "boolean") setEmailOn(data.emailOn);
       if (data.you?.operator) setOperator(data.you.operator);
       setSignedIn(true);
       setTab(next);
@@ -360,6 +366,33 @@ export function StaffConsole() {
               Gas {books.treasury.bnb.toFixed(4)} BNB Â·{" "}
               {books.treasury.ready ? "send wallet ready" : "send wallet not ready"}
             </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/8 px-4 py-3">
+            <p className="text-xs uppercase tracking-widest text-zinc-500">Receipts</p>
+            <p
+              className={`mt-1 text-2xl ${mail && mail.failed > 0 ? "text-amber-300" : "text-zinc-200"}`}
+            >
+              {!emailOn
+                ? "no mail configured"
+                : mail && mail.failed > 0
+                  ? `${mail.failed} undelivered`
+                  : `${mail?.sent ?? 0} sent`}
+            </p>
+            <p className="mt-1 text-sm text-zinc-400">
+              {!emailOn
+                ? "A player who is not on the site cannot be told their money moved. Set EMAIL_PROVIDER, EMAIL_KEY and EMAIL_FROM to turn this on."
+                : `${mail?.queued ?? 0} waiting, ${mail?.sent ?? 0} sent, ${mail?.failed ?? 0} gave up after five tries.`}
+            </p>
+            {emailOn ? (
+              <button
+                className="mt-2 text-sm underline"
+                onClick={() => void act({ action: "mail-drain" })}
+                type="button"
+              >
+                Send what is waiting now
+              </button>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-white/8 px-4 py-3">

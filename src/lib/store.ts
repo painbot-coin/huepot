@@ -1,6 +1,7 @@
-﻿import { mkdir, readFile } from "fs/promises";
+import { mkdir, readFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
+import { flushEmails } from "@/lib/email";
 import { ensureFairTables, flushSettledRounds, loadRoundFair } from "@/lib/fairness-db";
 import { emptyLimits } from "@/lib/limits";
 import { publishRoom } from "@/lib/live";
@@ -629,6 +630,7 @@ function roundRow(roomId: string, round: Round) {
 async function persistStore(prev: StoreData, next: StoreData) {
   if (same(prev, next)) {
     await flushSettledRounds();
+    await flushEmails();
     return;
   }
 
@@ -891,6 +893,7 @@ async function persistStore(prev: StoreData, next: StoreData) {
     { timeout: 20_000 },
   );
   await flushSettledRounds();
+  await flushEmails();
 }
 
 async function writeStore(store: StoreData) {
@@ -1161,12 +1164,15 @@ async function ensureDb() {
       await warmInviteTotals();
       const { startSitWindowWatcher } = await import("@/lib/sit-windows");
       const { ensureNewsTables, startNewsWatcher } = await import("@/lib/news");
+      const { ensureEmailTables, startEmailDrainer } = await import("@/lib/email");
       await ensureNewsTables();
+      await ensureEmailTables();
       // Last, so every table it indexes already exists.
       await ensureIndexes();
       startChainWatcher();
       startSitWindowWatcher();
       startNewsWatcher();
+      startEmailDrainer();
     })().catch((error) => {
       boot = null;
       throw error;

@@ -1,5 +1,7 @@
 import { LIVE_CHAIN_ID } from "@/lib/config";
 import { prisma } from "@/lib/db";
+import { queueEmail } from "@/lib/email";
+import { depositCreditedMail, withdrawReturnedMail } from "@/lib/email-copy";
 import { notePlayTx } from "@/lib/limits";
 import { formatCents } from "@/lib/money";
 import { networkById } from "@/lib/networks";
@@ -48,6 +50,13 @@ export async function creditConfirmedDeposit(
     body: `${formatCents(credit)} USDT on ${network.name} is in your bank. Classic sits 20:00 UTC. Fog cup Sunday 21:00 UTC.`,
     href: "/rooms/classic",
   });
+  const mail = depositCreditedMail({
+    username: user.username,
+    cents: credit,
+    network: network.name,
+    txHash,
+  });
+  queueEmail({ userId, to: user.email, kind: "deposit", ...mail });
   return true;
 }
 
@@ -76,5 +85,11 @@ export function refundQueuedWithdraw(
     title: "Withdraw returned",
     body: `${formatCents(credit)} USDT was put back in your bank.`,
     href: "/withdraw",
+  });
+  queueEmail({
+    userId,
+    to: user.email,
+    kind: "withdraw-returned",
+    ...withdrawReturnedMail({ username: user.username, cents: credit }),
   });
 }

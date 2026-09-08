@@ -22,6 +22,8 @@ import { formatCents, toCents } from "./money";
 import { isNetworkId, networkById, validateAddress } from "./networks";
 import { notify } from "./notifications";
 import { newSessionToken } from "./password";
+import { queueEmail } from "./email";
+import { withdrawQueuedMail } from "./email-copy";
 import { applyInviteOnSignup, ensureInviteCode } from "./referrals";
 import { toPublicUser } from "./public-user";
 import { withStore, withStoreRead } from "./store";
@@ -268,7 +270,7 @@ export function renameAllowedAt(user: User) {
 export function changeUsername(store: StoreData, user: User, raw: string) {
   const username = normalizeUsername(raw);
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-    throw new Error("Username must be 3–20 letters, numbers, or _.");
+    throw new Error("Username must be 3â€“20 letters, numbers, or _.");
   }
   const allowedAt = renameAllowedAt(user);
   if (allowedAt > nowMs()) {
@@ -294,7 +296,7 @@ export function changeUsername(store: StoreData, user: User, raw: string) {
 
 /**
  * Closes an account at the player's request. Transaction rows stay exactly
- * where they are — they are the house's books as much as the player's — but
+ * where they are â€” they are the house's books as much as the player's â€” but
  * the seat, the profile text and every session go.
  *
  * Refused while there is money on the account. Closing over a balance would
@@ -495,7 +497,7 @@ export function withdrawFromNetwork(
   const payoutId = queuedId ?? crypto.randomUUID();
   user.balance -= debit;
   user.withdrawAddress = cleaned;
-  const short = `${cleaned.slice(0, 6)}…${cleaned.slice(-4)}`;
+  const short = `${cleaned.slice(0, 6)}â€¦${cleaned.slice(-4)}`;
   store.txs.unshift({
     id: payoutId,
     playerId: user.id,
@@ -503,7 +505,7 @@ export function withdrawFromNetwork(
     amount: debit,
     createdAt: nowMs(),
     note: live
-      ? `Queued · ${network.name} ${short}`
+      ? `Queued Â· ${network.name} ${short}`
       : `To ${network.name} ${short} (demo)`,
   });
   store.txs = store.txs.slice(0, 400);
@@ -515,5 +517,20 @@ export function withdrawFromNetwork(
       : `${formatCents(debit)} USDT to ${network.name}.`,
     href: "/withdraw",
   });
+  // Only for a real send. A demo cash-out is not money and should not arrive
+  // in someone's inbox looking like a receipt.
+  if (live) {
+    queueEmail({
+      userId: user.id,
+      to: user.email,
+      kind: "withdraw-queued",
+      ...withdrawQueuedMail({
+        username: user.username,
+        cents: debit,
+        network: network.name,
+        address: cleaned,
+      }),
+    });
+  }
   return { id: payoutId, amount: debit, address: cleaned };
 }

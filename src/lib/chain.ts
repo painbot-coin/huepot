@@ -893,6 +893,8 @@ async function announcePayout(
   const cents = Math.round(Number(amount));
   const { withStore } = await import("@/lib/store");
   const { notify } = await import("@/lib/notifications");
+  const { queueEmail } = await import("@/lib/email");
+  const { withdrawPaidMail } = await import("@/lib/email-copy");
   await withStore((store) => {
     const row = store.txs.find((item) => item.id === payoutId);
     if (row && action === "paid") {
@@ -911,6 +913,23 @@ async function announcePayout(
           : `${formatCents(cents)} USDT was put back in your bank.`,
       href: "/withdraw",
     });
+    // Only the paid side. A rejection is already mailed from
+    // refundQueuedWithdraw, and hooking both would send two receipts.
+    const user = store.users[userId];
+    if (action === "paid" && user) {
+      queueEmail({
+        userId,
+        to: user.email,
+        kind: "withdraw-paid",
+        ...withdrawPaidMail({
+          username: user.username,
+          cents,
+          network: "BNB Chain",
+          txHash,
+          explorer: "https://bscscan.com",
+        }),
+      });
+    }
   });
 }
 

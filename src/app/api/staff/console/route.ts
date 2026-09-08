@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   houseWalletStatus,
   inboxHoldings,
@@ -14,6 +14,7 @@ import {
   listReports,
   setReportStatus,
 } from "@/lib/reports";
+import { drainEmails, emailConfigured, outboxSummary } from "@/lib/email";
 import { readBooks } from "@/lib/books";
 import {
   countHeldNews,
@@ -90,7 +91,14 @@ export async function GET(request: Request) {
       });
     }
     if (tab === "books") {
-      return NextResponse.json({ books: await readBooks(), house, you });
+      // Undelivered receipts belong beside the money they describe.
+      return NextResponse.json({
+        books: await readBooks(),
+        mail: await outboxSummary(),
+        emailOn: emailConfigured(),
+        house,
+        you,
+      });
     }
     if (tab === "ledger") {
       const txs = await withStoreRead((store) =>
@@ -136,6 +144,13 @@ export async function POST(request: Request) {
       await sendQueuedWithdrawal(body.id);
       await writeStaffLog(actor, "send", body.id, "On-chain USDT send");
       return NextResponse.json({ withdrawals: await listWithdrawals() });
+    }
+    if (body.action === "mail-drain") {
+      // The drainer runs on its own every minute; this is for when someone is
+      // watching and wants a stuck receipt retried now.
+      const result = await drainEmails(50);
+      await writeStaffLog(actor, "mail-drain", "outbox", `${result.sent} sent, ${result.failed} failed`);
+      return NextResponse.json({ mail: await outboxSummary(), drained: result });
     }
     if (body.action === "paid" || body.action === "rejected") {
       if (!body.id) throw new Error("Pick a payout.");

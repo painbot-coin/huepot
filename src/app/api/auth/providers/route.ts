@@ -7,6 +7,7 @@ import {
   productMode,
   withdrawSendEnabled,
 } from "@/lib/config";
+import { emailConfigured } from "@/lib/email";
 import { APP_VERSION } from "@/lib/version";
 
 export const runtime = "nodejs";
@@ -19,6 +20,9 @@ export async function GET() {
     demoMoney: demoMoneyEnabled(),
     liveWithdrawals: liveWithdrawalsEnabled(),
     withdrawSend: withdrawSendEnabled(),
+    // Visible so it is obvious whether a player can be reached off-site at all,
+    // rather than something discovered one queued withdrawal later.
+    email: emailConfigured(),
     chain: chainStatus(),
   });
 }
