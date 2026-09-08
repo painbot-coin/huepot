@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { formatUsdt } from "@/lib/money";
@@ -101,6 +101,7 @@ export function StaffConsole() {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [reported, setReported] = useState<ReportedPlayer[]>([]);
   const [held, setHeld] = useState<HeldNews[]>([]);
+  const [live, setLive] = useState<HeldNews[]>([]);
   const [heldCount, setHeldCount] = useState(0);
   const [house, setHouse] = useState<{ balance: number; percent: string } | null>(null);
   const [books, setBooks] = useState<Books | null>(null);
@@ -170,6 +171,7 @@ export function StaffConsole() {
         reports?: ReportRow[];
         reported?: ReportedPlayer[];
       held?: HeldNews[];
+        live?: HeldNews[];
         heldCount?: number;
         logs?: LogRow[];
         house?: { balance: number; percent: string };
@@ -194,6 +196,7 @@ export function StaffConsole() {
       if (data.reports) setReports(data.reports);
       if (data.reported) setReported(data.reported);
       if (data.held) setHeld(data.held);
+      if (data.live) setLive(data.live);
       if (typeof data.heldCount === "number") setHeldCount(data.heldCount);
       if (data.logs) setLogs(data.logs);
       if (data.house) setHouse(data.house);
@@ -231,6 +234,7 @@ export function StaffConsole() {
         reports?: ReportRow[];
         reported?: ReportedPlayer[];
       held?: HeldNews[];
+        live?: HeldNews[];
         heldCount?: number;
         treasury?: Treasury;
         inboxes?: InboxHold;
@@ -247,6 +251,7 @@ export function StaffConsole() {
       if (data.reports) setReports(data.reports);
       if (data.reported) setReported(data.reported);
       if (data.held) setHeld(data.held);
+      if (data.live) setLive(data.live);
       if (typeof data.heldCount === "number") setHeldCount(data.heldCount);
       if (data.treasury) setTreasury(data.treasury);
       if (data.inboxes) setInboxes(data.inboxes);
@@ -719,8 +724,8 @@ export function StaffConsole() {
         <div className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-zinc-400">
-              {heldCount} headline{heldCount === 1 ? "" : "s"} waiting. Nothing
-              reaches the wire until it is published here.
+              Headlines publish themselves, every quarter of an hour, from eight
+              approved sources. Pull anything that should not be there.
             </p>
             <button
               className="chip-btn chip-btn-ghost"
@@ -728,9 +733,60 @@ export function StaffConsole() {
               onClick={() => void act({ action: "wire-fetch" })}
               type="button"
             >
-              {busy ? "Fetchingâ€¦" : "Fetch now"}
+              {busy ? "Fetching…" : "Fetch now"}
             </button>
           </div>
+
+          {heldCount > 0 ? (
+            <div className="mt-4 rounded-2xl border border-amber-300/30 px-4 py-3">
+              <p className="text-sm text-amber-200">
+                {heldCount} headline{heldCount === 1 ? "" : "s"} left over from when
+                publishing needed a click. They came from the same approved sources
+                as everything else.
+              </p>
+              <button
+                className="chip-btn mt-2"
+                disabled={busy}
+                onClick={() => void act({ action: "wire-publish-all" })}
+                type="button"
+              >
+                Put them all on the wire
+              </button>
+            </div>
+          ) : null}
+
+          <p className="mt-6 text-xs uppercase tracking-widest text-zinc-500">
+            On the wire now
+          </p>
+          <ul className="mt-2 space-y-2">
+            {live.map((row) => (
+              <li
+                className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400"
+                key={row.id}
+              >
+                <p className="text-zinc-200">{row.title}</p>
+                <p className="mt-1 text-xs uppercase tracking-widest">
+                  {row.source} · {row.tag}
+                </p>
+                <div className="mt-3">
+                  <button
+                    className="chip-btn chip-btn-ghost"
+                    disabled={busy}
+                    onClick={() => void act({ action: "wire-drop", id: row.id })}
+                    type="button"
+                  >
+                    Pull from the wire
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {live.length === 0 ? (
+            <p className="mt-2 text-sm text-zinc-500">
+              Nothing on the wire yet. The next fetch is within a quarter of an hour.
+            </p>
+          ) : null}
+
           <ul className="mt-4 space-y-2">
             {held.map((row) => (
               <li
@@ -763,11 +819,6 @@ export function StaffConsole() {
               </li>
             ))}
           </ul>
-          {held.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">
-              Nothing waiting. Headlines arrive within a quarter of an hour.
-            </p>
-          ) : null}
         </div>
       ) : null}
     </main>

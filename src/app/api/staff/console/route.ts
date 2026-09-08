@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import {
   houseWalletStatus,
   inboxHoldings,
@@ -21,6 +21,8 @@ import {
   fetchNewsOnce,
   hideNewsItem,
   listHeldNews,
+  listNews,
+  releaseAllHeld,
   releaseNewsItem,
 } from "@/lib/news";
 import { staffKillRound } from "@/lib/game";
@@ -84,6 +86,9 @@ export async function GET(request: Request) {
     }
     if (tab === "wire") {
       return NextResponse.json({
+        // What is actually on the wire, since that is now the normal state.
+        live: await listNews(40),
+        // Only ever non-empty for rows left over from when publishing was gated.
         held: await listHeldNews(),
         heldCount: await countHeldNews(),
         house,
@@ -199,18 +204,26 @@ export async function POST(request: Request) {
     }
     if (
       body.action === "wire-publish" ||
+      body.action === "wire-publish-all" ||
       body.action === "wire-drop" ||
       body.action === "wire-fetch"
     ) {
       if (body.action === "wire-fetch") {
         await fetchNewsOnce();
+      } else if (body.action === "wire-publish-all") {
+        const moved = await releaseAllHeld();
+        await writeStaffLog(actor, "wire-publish-all", "backlog", `${moved} released`);
       } else {
         if (!body.id) throw new Error("Pick a headline.");
         if (body.action === "wire-publish") await releaseNewsItem(body.id);
         else await hideNewsItem(body.id);
         await writeStaffLog(actor, body.action, body.id, "");
       }
-      return NextResponse.json({ held: await listHeldNews(), heldCount: await countHeldNews() });
+      return NextResponse.json({
+        live: await listNews(40),
+        held: await listHeldNews(),
+        heldCount: await countHeldNews(),
+      });
     }
     if (body.action === "kill") {
       if (!body.slug) throw new Error("Pick a table.");

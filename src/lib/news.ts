@@ -1,16 +1,19 @@
-﻿import { createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 
 /**
- * Betting and crypto headlines, fetched on a timer and held for one click
- * before they reach the wire. Deliberately narrow in what it takes: a
- * headline, a link, the source
- * name and the feed's own image. Never an article body â€” reposting someone
- * else's writing is republishing it, and a link is not.
+ * Betting and crypto headlines, fetched on a timer and put on the wire.
+ * Deliberately narrow in what it takes: a headline, a link, the source name
+ * and the feed's own image. Never an article body - reposting someone else's
+ * writing is republishing it, and a link is not.
  *
- * Fetching is unattended; publishing is not. An unwatched feed will eventually
- * offer a fixed-match tip or a scam promotion, and the house name goes on
- * whatever appears on the wire.
+ * Publishing is automatic, which is what was asked for. It was briefly gated
+ * behind a staff click, on the reasoning that an unwatched feed would
+ * eventually offer a fixed-match tip or a scam promotion. That gate published
+ * nothing for a day: 108 headlines queued and the release button was pressed
+ * zero times. The approval that keeps the house name safe is the source list
+ * below - eight mainstream editorial outlets - not a button nobody is
+ * standing next to. Staff can still pull anything off the wire in one click.
  *
  * Writes straight to its own table and never touches the in-memory store, so a
  * fetch cannot sit in the lane that settles rounds.
@@ -174,7 +177,7 @@ async function saveItems(items: NewsItem[]) {
       INSERT OR IGNORE INTO NewsItem
         (id, source, tag, title, url, image, publishedAt, fetchedAt, hidden, status)
       VALUES (${item.id}, ${item.source}, ${item.tag}, ${item.title}, ${item.url},
-              ${item.image}, ${item.publishedAt}, ${now}, 0, 'held')
+              ${item.image}, ${item.publishedAt}, ${now}, 0, 'live')
     `;
     added += done;
   }
@@ -241,13 +244,26 @@ export async function countHeldNews() {
   return Number(rows[0]?.n ?? 0);
 }
 
-/** Puts one headline on the wire. */
+/** Puts one headline on the wire. Only reaches rows left over from the gate. */
 export async function releaseNewsItem(id: string) {
   await ensureNewsTables();
   const done = await prisma.$executeRaw`
     UPDATE NewsItem SET status = 'live' WHERE id = ${id} AND status = 'held'
   `;
   if (!done) throw new Error("That headline is not waiting.");
+}
+
+/**
+ * Clears the backlog the gate built up. These came from the same approved
+ * sources as everything published automatically, so holding them back was an
+ * accident of the old behaviour rather than a decision about any one headline.
+ */
+export async function releaseAllHeld() {
+  await ensureNewsTables();
+  const done = await prisma.$executeRaw`
+    UPDATE NewsItem SET status = 'live' WHERE status = 'held' AND hidden = 0
+  `;
+  return Number(done);
 }
 
 /** Removal is one step and immediate, whether it is live or still waiting. */
