@@ -43,8 +43,10 @@ function tooMany(ip: string, now: number) {
 
 export function proxy(request: Request) {
   const ip = clientIpFromHeaders(request.headers);
-  // The operator's own traffic is not the thing being defended against, and
-  // capping it would break health checks and the deploy verifier.
+  // The operator's own traffic is not the thing being defended against. Only a
+  // literal loopback address is exempt; a request with no address header at all
+  // is counted like anyone else, so a proxy that stops setting the header
+  // cannot silently lift the cap for the whole internet.
   if (isLoopback(ip)) return NextResponse.next();
 
   const now = Date.now();

@@ -23,9 +23,14 @@ export function clientIpFromHeaders(headers: Headers) {
 }
 
 /**
- * The box talking to itself: health checks, the deploy verifier, an SSH
- * tunnel. A visitor cannot claim this — the proxy replaces the header.
+ * The box talking to itself. A visitor cannot claim this, because the proxy
+ * replaces the header before the app sees it.
+ *
+ * An absent header reads as "unknown" and is deliberately *not* loopback. It
+ * is not proof of anything, and treating it as trusted would mean a proxy that
+ * stopped setting the header quietly removed every per-caller limit at once.
+ * Unknown callers share one counted bucket instead.
  */
 export function isLoopback(ip: string) {
-  return ip === "127.0.0.1" || ip === "::1" || ip === "unknown";
+  return ip === "127.0.0.1" || ip === "::1";
 }

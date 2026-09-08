@@ -139,7 +139,8 @@ const LEDGER_FILTERS: { id: string; label: string; types?: Tx["type"][] }[] = [
 ];
 
 function txSigned(tx: Tx) {
-  const out = tx.type === "withdraw" || tx.type === "click" || tx.type === "rake" || tx.note.includes("debit");
+  // An adjust already carries its own sign; the rest take it from the type.
+  const out = tx.type === "withdraw" || tx.type === "click" || tx.type === "rake";
   return out ? -tx.amount : tx.amount;
 }
 

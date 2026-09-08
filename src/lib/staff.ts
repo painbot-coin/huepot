@@ -84,7 +84,11 @@ export function staffAdjustBalance(
     id: crypto.randomUUID(),
     playerId: user.id,
     type: "adjust",
-    amount: Math.abs(delta),
+    // Signed, unlike every other row, because an adjust is the only type whose
+    // direction is not implied by the type. Storing it unsigned made a staff
+    // debit read as money arriving when the books rebuild balances from rows,
+    // which is exactly the drift that check exists to catch.
+    amount: delta,
     createdAt: Date.now(),
     note: `${delta > 0 ? "Staff credit" : "Staff debit"} · ${note}`,
   });
