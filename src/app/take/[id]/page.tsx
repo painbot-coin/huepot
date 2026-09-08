@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { fogCupAt, fogCupClock } from "@/lib/fog-cup";
@@ -37,7 +37,7 @@ export async function generateMetadata({
   const found = await loadTake(id);
   if (!found) {
     return {
-      title: "Take â€” Huepot",
+      title: "Take — Huepot",
       description: "Same-price color buttons. Biggest color splits the rest of the pot.",
     };
   }
@@ -45,7 +45,7 @@ export async function generateMetadata({
   // Short enough to survive a browser tab and a social card headline. A name
   // reads better than a colour, so it leads when the payout rows still name one.
   const who = winners.length ? creditLine(winners) : take.names;
-  const short = `${who} took ${formatUsdt(take.amount)} USDT Â· ${take.roomName}`;
+  const short = `${who} took ${formatUsdt(take.amount)} USDT · ${take.roomName}`;
   const description = `Same price on every color. Biggest color takes the rest. ${cupWhen()}.`;
   return {
     title: short,
@@ -98,7 +98,7 @@ export default async function TakePage({
       </h1>
       <p className="take-page-pot">{formatUsdt(take.amount)} USDT</p>
       <p className="take-page-hue">
-        on {take.names} Â· round #{take.number}
+        on {take.names} · round #{take.number}
       </p>
       {winners.length > 1 ? (
         <ul className="take-page-split">
@@ -114,7 +114,7 @@ export default async function TakePage({
       ) : winners.length === 1 ? (
         <p>
           <Link href={`/network?u=${encodeURIComponent(winners[0].username)}`}>
-            See {winners[0].username}â€™s record
+            See {winners[0].username}’s record
           </Link>
         </p>
       ) : null}
@@ -125,7 +125,7 @@ export default async function TakePage({
         <Link className="chip-btn" href={`/rooms/${take.slug}`}>
           Sit the next round
         </Link>
-        {" Â· "}
+        {" · "}
         <Link href={`/fairness/${take.id}`}>Open the ledger</Link>
       </p>
     </main>

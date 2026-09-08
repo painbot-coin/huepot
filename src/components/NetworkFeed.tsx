@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -111,7 +111,7 @@ export function NetworkFeed() {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the wingâ€¦</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
       </NetworkChrome>
     );
   }
@@ -126,7 +126,7 @@ export function NetworkFeed() {
           <div className="li-cover" />
           <Avatar avatar={you?.avatar} username={you?.username ?? "you"} />
           <Link className="li-name" href={you ? `/network/u/${encodeURIComponent(you.username)}` : "/network"}>
-            @{you?.username ?? "â€¦"}
+            @{you?.username ?? "…"}
           </Link>
           <p className="li-head">{you?.headline ?? "Huepot player"}</p>
         </aside>
@@ -292,7 +292,7 @@ function PostCard({
           </Link>
           <p className="li-head">
             {post.headline}
-            <span className="li-when"> Â· {whenLabel(post.createdAt)}</span>
+            <span className="li-when"> · {whenLabel(post.createdAt)}</span>
           </p>
         </div>
         {own || wire ? null : (
@@ -332,7 +332,7 @@ function PostCard({
           onClick={() => onAct({ action: "like", postId: post.id })}
           type="button"
         >
-          {post.liked ? "Liked" : "Like"} Â· {post.likes}
+          {post.liked ? "Liked" : "Like"} · {post.likes}
         </button>
       </div>
       {post.comments.length > 0 ? (

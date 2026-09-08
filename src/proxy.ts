@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { clientIpFromHeaders, isLoopback } from "@/lib/client-ip";
 
 /**
@@ -7,7 +7,7 @@ import { clientIpFromHeaders, isLoopback } from "@/lib/client-ip";
  * Lives in proxy.ts because Next 16 renamed the middleware convention; the
  * behaviour is the same, it runs before the route.
  *
- * Every request â€” reads included â€” goes through a single write queue, because
+ * Every request — reads included — goes through a single write queue, because
  * that queue is what makes concurrent clicks safe. Measured, the whole house
  * serves in the region of fifty requests a second. Without a cap, one client
  * in a loop is a house nobody else can play in, and no amount of tuning fixes

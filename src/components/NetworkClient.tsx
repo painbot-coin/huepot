@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -111,7 +111,7 @@ export function NetworkClient() {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the wingâ€¦</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
       </NetworkChrome>
     );
   }
@@ -170,7 +170,7 @@ export function NetworkClient() {
           [
             { id: "pit", label: "In the pit" },
             { id: "friends", label: "Company" },
-            { id: "requests", label: `Asks${state?.pendingIn ? ` Â· ${state.pendingIn}` : ""}` },
+            { id: "requests", label: `Asks${state?.pendingIn ? ` · ${state.pendingIn}` : ""}` },
           ] as { id: NetworkTab; label: string }[]
         ).map((item) => (
           <button
@@ -197,7 +197,7 @@ export function NetworkClient() {
       {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
 
       {!state ? (
-        <p className="mt-10 text-center text-zinc-500">Opening the wingâ€¦</p>
+        <p className="mt-10 text-center text-zinc-500">Opening the wing…</p>
       ) : state.cards.length === 0 ? (
         <p className="mt-10 text-sm text-zinc-500">
           {tab === "friends"
@@ -264,10 +264,10 @@ function PlayerCard({
           <p className="mt-1 text-xs text-zinc-500">
             {player.online
               ? player.room
-                ? `Online Â· sitting ${player.room.name}`
+                ? `Online · sitting ${player.room.name}`
                 : "Online"
-              : `Offline Â· ${ageLabel(player.lastSeen, now)}`}
-            {` Â· ${player.friends} in company Â· since ${sinceLabel(player.createdAt)}`}
+              : `Offline · ${ageLabel(player.lastSeen, now)}`}
+            {` · ${player.friends} in company · since ${sinceLabel(player.createdAt)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

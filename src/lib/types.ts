@@ -1,4 +1,4 @@
-﻿import type { ColorId } from "./colors";
+import type { ColorId } from "./colors";
 import type { NetworkId } from "./networks";
 import type { PlayerRecord } from "./record";
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Avatar } from "@/components/Avatar";
 import Link from "next/link";
@@ -162,7 +162,7 @@ export function RoomFeed({
           <input
             maxLength={240}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Speak at the tableâ€¦"
+            placeholder="Speak at the table…"
             value={text}
           />
           <button aria-label="Send" disabled={busy || !text.trim()} type="submit">
@@ -171,7 +171,7 @@ export function RoomFeed({
         </form>
       ) : (
         <form className="room-chat is-gated" onSubmit={(event) => event.preventDefault()}>
-          <input disabled placeholder={muted ? "The host muted you." : "Sign in to chatâ€¦"} />
+          <input disabled placeholder={muted ? "The host muted you." : "Sign in to chat…"} />
           {muted ? (
             <button aria-label="Send" disabled type="button">
               <IconSend />

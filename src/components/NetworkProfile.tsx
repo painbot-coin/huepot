@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -40,7 +40,7 @@ function SeatRecord({ record, you }: { record: PlayerRecord; you: boolean }) {
         <div>
           <p className="seat-coin-value">{record.coin.toLocaleString()} HUE</p>
           <p className="seat-coin-rank">
-            Level {level.level} Â· {level.title}
+            Level {level.level} · {level.title}
           </p>
         </div>
         <p className="seat-coin-note">
@@ -103,7 +103,7 @@ function TaskList({
       <p className="task-head">
         <span>{title}</span>
         <em>
-          {done}/{tasks.length} Â· {resets}
+          {done}/{tasks.length} · {resets}
         </em>
       </p>
       <ul className="task-list">
@@ -227,7 +227,7 @@ export function NetworkProfile({ username }: { username: string }) {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening profileâ€¦</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening profile…</p>
       </NetworkChrome>
     );
   }
@@ -235,7 +235,7 @@ export function NetworkProfile({ username }: { username: string }) {
   if (!profile) {
     return (
       <NetworkChrome you={you}>
-        <p className="px-4 py-16 text-center text-zinc-400">{error || "Opening profileâ€¦"}</p>
+        <p className="px-4 py-16 text-center text-zinc-400">{error || "Opening profile…"}</p>
       </NetworkChrome>
     );
   }
@@ -252,13 +252,13 @@ export function NetworkProfile({ username }: { username: string }) {
               <p className="li-head">{profile.headline}</p>
               {profile.location ? <p className="text-sm text-zinc-500">{profile.location}</p> : null}
               <p className="mt-2 text-xs text-zinc-500">
-                {profile.friends} in company Â·{" "}
+                {profile.friends} in company ·{" "}
                 {profile.online
                   ? profile.room
-                    ? `Online Â· ${profile.room.name}`
+                    ? `Online · ${profile.room.name}`
                     : "Online"
                   : `Last seen ${ageLabel(profile.lastSeen)}`}
-                {` Â· Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
+                {` · Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
               </p>
               <SeatRecord record={profile.record} you={profile.you} />
               <div className="mt-4 flex flex-wrap gap-2">
@@ -389,7 +389,7 @@ export function NetworkProfile({ username }: { username: string }) {
                     <span>
                       {post.likes} like{post.likes === 1 ? "" : "s"}
                       {post.comments.length
-                        ? ` Â· ${post.comments.length} comment${post.comments.length === 1 ? "" : "s"}`
+                        ? ` · ${post.comments.length} comment${post.comments.length === 1 ? "" : "s"}`
                         : ""}
                     </span>
                   </li>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,12 +22,12 @@ export function NetworkChrome({
     { href: "/network", label: "Board", match: path === "/network" },
     {
       href: "/network/people",
-      label: you?.pendingIn ? `Company Â· ${you.pendingIn}` : "Company",
+      label: you?.pendingIn ? `Company · ${you.pendingIn}` : "Company",
       match: path.startsWith("/network/people"),
     },
     {
       href: "/network/messages",
-      label: you?.unreadMessages ? `Letters Â· ${you.unreadMessages}` : "Letters",
+      label: you?.unreadMessages ? `Letters · ${you.unreadMessages}` : "Letters",
       match: path.startsWith("/network/messages"),
     },
     { href: me, label: "Seat", match: onMe },

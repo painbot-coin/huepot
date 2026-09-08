@@ -1,4 +1,4 @@
-﻿import { storageConfigured } from "@/lib/config";
+import { storageConfigured } from "@/lib/config";
 import { AVATAR_HUES } from "@/lib/hues";
 import { publicUrl } from "@/lib/storage";
 import type { User } from "@/lib/types";
@@ -10,7 +10,7 @@ export { AVATAR_HUES };
  *
  *   ""             initials, the default
  *   "hue:azure"    initials on a house colour, so nobody has to upload
- *   "https://â€¦"    an uploaded image, and only from our own bucket
+ *   "https://…"    an uploaded image, and only from our own bucket
  */
 
 /** Where an uploaded avatar is allowed to live. */

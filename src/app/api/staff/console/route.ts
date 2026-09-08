@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   houseWalletStatus,
   inboxHoldings,
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         const user = store.users[body.userId!];
         return searchStaffUsers(store, user?.username ?? body.userId!);
       });
-      await writeStaffLog(actor, "adjust", body.userId, `${body.amount} Â· ${body.note ?? ""}`);
+      await writeStaffLog(actor, "adjust", body.userId, `${body.amount} · ${body.note ?? ""}`);
       return NextResponse.json({ users });
     }
     if (body.action === "hide-report" || body.action === "dismiss-report") {

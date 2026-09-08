@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -204,7 +204,7 @@ export function MessageDock() {
               }}
               type="button"
             >
-              Ã—
+              ×
             </button>
           </header>
           <ul className="msg-bubbles" onScroll={onScroll} ref={scroller}>
@@ -232,7 +232,7 @@ export function MessageDock() {
               value={draft}
             />
             <button disabled={busy || !draft.trim()} type="submit">
-              {busy ? "Sendingâ€¦" : "Send"}
+              {busy ? "Sending…" : "Send"}
             </button>
           </form>
           {error ? <p className="msg-error">{error}</p> : null}
@@ -260,7 +260,7 @@ export function MessageDock() {
                 +
               </button>
               <button aria-label="Minimize messaging" onClick={() => setOpen(false)} type="button">
-                â€“
+                –
               </button>
             </span>
           </header>

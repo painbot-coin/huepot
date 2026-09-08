@@ -270,7 +270,7 @@ export function renameAllowedAt(user: User) {
 export function changeUsername(store: StoreData, user: User, raw: string) {
   const username = normalizeUsername(raw);
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-    throw new Error("Username must be 3â€“20 letters, numbers, or _.");
+    throw new Error("Username must be 3–20 letters, numbers, or _.");
   }
   const allowedAt = renameAllowedAt(user);
   if (allowedAt > nowMs()) {
@@ -296,7 +296,7 @@ export function changeUsername(store: StoreData, user: User, raw: string) {
 
 /**
  * Closes an account at the player's request. Transaction rows stay exactly
- * where they are â€” they are the house's books as much as the player's â€” but
+ * where they are — they are the house's books as much as the player's — but
  * the seat, the profile text and every session go.
  *
  * Refused while there is money on the account. Closing over a balance would
@@ -497,7 +497,7 @@ export function withdrawFromNetwork(
   const payoutId = queuedId ?? crypto.randomUUID();
   user.balance -= debit;
   user.withdrawAddress = cleaned;
-  const short = `${cleaned.slice(0, 6)}â€¦${cleaned.slice(-4)}`;
+  const short = `${cleaned.slice(0, 6)}…${cleaned.slice(-4)}`;
   store.txs.unshift({
     id: payoutId,
     playerId: user.id,
@@ -505,7 +505,7 @@ export function withdrawFromNetwork(
     amount: debit,
     createdAt: nowMs(),
     note: live
-      ? `Queued Â· ${network.name} ${short}`
+      ? `Queued · ${network.name} ${short}`
       : `To ${network.name} ${short} (demo)`,
   });
   store.txs = store.txs.slice(0, 400);

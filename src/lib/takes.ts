@@ -1,4 +1,4 @@
-﻿import { colorById } from "./colors";
+import { colorById } from "./colors";
 import { REVEAL_SECONDS } from "./config";
 import {
   settledDollars,
@@ -79,7 +79,7 @@ export async function listPublicTakes(live: PublicTake[], limit = 6) {
 /**
  * Who was paid for a take. A payout row is noted with the room, the round and
  * the winning colours, which is exactly what a take already carries, so the
- * note can be matched whole â€” no wildcard, and it works for every round ever
+ * note can be matched whole — no wildcard, and it works for every round ever
  * settled without storing anything new.
  */
 export async function takeWinners(

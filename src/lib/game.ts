@@ -1,4 +1,4 @@
-﻿import {
+import {
   colorById,
   emptyColorCounts,
   type ColorId,
@@ -169,7 +169,7 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
       addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} push`);
       notify(store, playerId, {
         kind: "refund",
-        title: `${room.name} Â· round #${round.number} push`,
+        title: `${room.name} · round #${round.number} push`,
         body: `Colors tied. ${formatCents(amount)} USDT was returned.`,
         href,
       });
@@ -263,7 +263,7 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
     );
     notify(store, playerId, {
       kind: "payout",
-      title: `${room.name} Â· wager earned`,
+      title: `${room.name} · wager earned`,
       body: `${names} took the pot. You received ${formatCents(amount)} USDT. Copy invite on the card.`,
       href,
     });
@@ -282,7 +282,7 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
     const user = store.users[playerId];
     notify(store, playerId, {
       kind: "system",
-      title: `${room.name} Â· round #${round.number} settled`,
+      title: `${room.name} · round #${round.number} settled`,
       body: "Your color did not have the most clicks.",
       href,
     });
@@ -550,7 +550,7 @@ function pruneExpiredRooms(store: StoreData) {
       notify(store, playerId, {
         kind: "system",
         title: `${room.name} closed`,
-        body: "This tableâ€™s live time ended and the room was deleted.",
+        body: "This table’s live time ended and the room was deleted.",
         href: "/",
       });
     }
@@ -765,7 +765,7 @@ export function staffKillRound(store: StoreData, slug: string) {
     addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} voided`);
     notify(store, playerId, {
       kind: "refund",
-      title: `${room.name} Â· round voided`,
+      title: `${room.name} · round voided`,
       body: `Staff ended the round. ${formatCents(amount)} USDT came back.`,
       href: roomHref(room),
     });

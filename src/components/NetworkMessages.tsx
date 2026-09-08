@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -92,10 +92,10 @@ export function NetworkMessages() {
         <main className="li-main is-wide">
           <aside className="li-card li-inbox">
             <p className="lobby-label">Letters</p>
-            <p className="mt-3 text-sm text-zinc-500">Opening lettersâ€¦</p>
+            <p className="mt-3 text-sm text-zinc-500">Opening letters…</p>
           </aside>
           <section className="li-card li-chat">
-            <p className="text-sm text-zinc-500">Opening this chatâ€¦</p>
+            <p className="text-sm text-zinc-500">Opening this chat…</p>
           </section>
         </main>
       </NetworkChrome>
@@ -167,7 +167,7 @@ export function NetworkMessages() {
                   value={draft}
                 />
                 <button className="chip-btn" disabled={busy || !draft.trim()} type="submit">
-                  {busy ? "Sendingâ€¦" : "Send"}
+                  {busy ? "Sending…" : "Send"}
                 </button>
               </form>
             </>
