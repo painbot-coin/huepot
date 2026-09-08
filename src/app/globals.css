@@ -2578,6 +2578,14 @@ select.field {
   color: #ffd27a;
 }
 
+/* The winning colour, shown as its coin, so the name beside it is not mistaken
+   for a player's. Baseline alignment on the row would sink it, hence center. */
+.take-coins {
+  display: inline-flex;
+  align-self: center;
+  gap: 0.2rem;
+}
+
 .take-page-pot {
   font-size: 2rem;
   color: #ffd27a;

@@ -33,7 +33,9 @@ function sittingLine(room: PublicRoomCard) {
   const names = room.sitting ?? [];
   if (names.length) return names.map((name) => `@${name}`).join(" · ");
   if (room.players) return `${room.players} sitting`;
-  return "empty";
+  // Same fact as "empty", but it tells a first-time visitor what is available
+  // rather than passing a verdict on the house six cards in a row.
+  return "seats open";
 }
 
 function prefetchTable() {

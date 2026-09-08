@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { IconPot } from "@/components/Icons";
+import { MiniCoin } from "@/components/MiniCoin";
 import { classicHourClock, classicHourUtc } from "@/lib/classic-hour";
 import { formatUsdt } from "@/lib/money";
 import type { PublicTake } from "@/lib/types";
@@ -55,8 +56,14 @@ export function PublicTakes() {
           {takes.map((item) => (
             <li key={item.id}>
               <Link href={`/take/${item.id}`}>
+                {/* The coin says "this is a colour" faster than any wording can. */}
+                <span className="take-coins" aria-hidden="true">
+                  {(item.winners ?? []).map((id) => (
+                    <MiniCoin id={id} key={id} size={14} />
+                  ))}
+                </span>
                 <strong>{item.names}</strong>
-                {formatUsdt(item.amount)} · {item.roomName}
+                took {formatUsdt(item.amount)} · {item.roomName}
                 <span>{ageLabel(item.at, now)}</span>
               </Link>
             </li>

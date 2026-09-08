@@ -354,6 +354,11 @@ export type PublicTake = {
   slug: string;
   roomName: string;
   names: string;
+  /**
+   * The colours that won. `names` alone reads like a person's name to someone
+   * who has never seen the game, so surfaces show the coins beside it.
+   */
+  winners: ColorId[];
   amount: number;
   at: number;
   /** Round number, which is how a take is matched to who was paid for it. */

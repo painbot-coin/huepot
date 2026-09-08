@@ -49,3 +49,6 @@ next-env.d.ts
 
 # contract toolchain output (source of truth is contracts/*.sol)
 /.hardhat
+
+# local run logs from testing a production build
+server.log
