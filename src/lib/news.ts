@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+﻿import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 
 /**
@@ -35,6 +35,8 @@ export const NEWS_SOURCES: NewsSource[] = [
 
 /** Per source, per run. Eight feeds of thirty would bury the hall. */
 const PER_SOURCE = 5;
+/** Enough for a card to be worth reading, short enough not to be the article. */
+const SUMMARY_MAX = 320;
 const POLL_MS = 15 * 60 * 1000;
 const AGENT = "HuepotNewsBot/1.0 (+https://huepot.net)";
 
@@ -43,6 +45,8 @@ export type NewsItem = {
   source: string;
   tag: string;
   title: string;
+  /** The publisher's own syndication summary. Never the article body. */
+  summary: string;
   url: string;
   image: string;
   publishedAt: number;
@@ -58,6 +62,7 @@ export async function ensureNewsTables() {
       source TEXT NOT NULL,
       tag TEXT NOT NULL DEFAULT '',
       title TEXT NOT NULL,
+      summary TEXT NOT NULL DEFAULT '',
       url TEXT NOT NULL,
       image TEXT NOT NULL DEFAULT '',
       publishedAt BIGINT NOT NULL,
@@ -65,6 +70,11 @@ export async function ensureNewsTables() {
       hidden INTEGER NOT NULL DEFAULT 0
     )
   `);
+  try {
+    await prisma.$executeRawUnsafe("ALTER TABLE NewsItem ADD COLUMN summary TEXT NOT NULL DEFAULT ''");
+  } catch {
+    /* column already exists */
+  }
   try {
     // Defaults to 'live' so the rows already on the wire stay on it. New rows
     // are inserted as 'held' explicitly, which is what makes this a gate.
@@ -109,6 +119,45 @@ function tagText(block: string, name: string) {
 function attr(block: string, tag: string, name: string) {
   const match = block.match(new RegExp(`<${tag}[^>]*\\s${name}="([^"]+)"`, "i"));
   return match ? decode(match[1]) : "";
+}
+
+/** Feed summaries usually arrive as HTML. Keep the words, drop the markup. */
+function stripTags(raw: string) {
+  return decode(raw.replace(/<[^>]*>/g, " "));
+}
+
+/**
+ * The publisher's own one-paragraph summary, which is the thing RSS exists to
+ * syndicate. Still never the article body: `content:encoded` and Atom's
+ * `<content>` often carry the whole piece, so they are not read here.
+ *
+ * Feeds pad these. Some open by repeating the outlet name and the headline
+ * before saying anything, and WordPress ones close with a "this post first
+ * appeared on" credit. Both are noise beside a card that already shows the
+ * headline and the source, so they come off.
+ */
+function summaryOf(block: string, title: string, sourceName: string) {
+  const raw = tagText(block, "description") || tagText(block, "summary");
+  if (!raw) return "";
+  let text = stripTags(raw);
+
+  // Trailing syndication credit, and anything after it.
+  text = text.replace(/\s*This (post|article)\b[\s\S]*$/i, "").trim();
+
+  // A leading repeat of the outlet, then of the headline. Order matters:
+  // "Bitcoin Magazine Capital B Buys 376 Bitcoins…" is both, in that order.
+  for (const prefix of [sourceName, title]) {
+    const trimmed = prefix.trim();
+    if (trimmed && text.toLowerCase().startsWith(trimmed.toLowerCase())) {
+      text = text.slice(trimmed.length).replace(/^[\s\-–—:.]+/, "").trim();
+    }
+  }
+  if (!text) return "";
+  if (text.length <= SUMMARY_MAX) return text;
+  // Cut on a word, not mid-syllable, and mark that there is more to read.
+  const cut = text.slice(0, SUMMARY_MAX);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 80 ? cut.slice(0, lastSpace) : cut).replace(/[\s.,;:]+$/, "")}…`;
 }
 
 /**
@@ -157,6 +206,7 @@ export function parseFeed(xml: string, source: NewsSource): NewsItem[] {
       source: source.name,
       tag: source.tag,
       title: title.slice(0, 200),
+      summary: summaryOf(block, title, source.name),
       url,
       image: imageOf(block),
       publishedAt: Number.isFinite(at) ? at : Date.now(),
@@ -175,13 +225,82 @@ async function saveItems(items: NewsItem[]) {
     // the dedupe needs no extra query.
     const done = await prisma.$executeRaw`
       INSERT OR IGNORE INTO NewsItem
-        (id, source, tag, title, url, image, publishedAt, fetchedAt, hidden, status)
-      VALUES (${item.id}, ${item.source}, ${item.tag}, ${item.title}, ${item.url},
+        (id, source, tag, title, summary, url, image, publishedAt, fetchedAt, hidden, status)
+      VALUES (${item.id}, ${item.source}, ${item.tag}, ${item.title}, ${item.summary}, ${item.url},
               ${item.image}, ${item.publishedAt}, ${now}, 0, 'live')
     `;
     added += done;
+    // IGNORE skips a row the feed offers again, so anything stored before
+    // summaries existed would keep an empty one forever. The feed is the
+    // authority on its own summary, so refresh it while the article is still
+    // being offered — that also heals rows saved with feed boilerplate in
+    // them before it was being stripped.
+    if (!done && item.summary) {
+      await prisma.$executeRaw`
+        UPDATE NewsItem SET summary = ${item.summary}
+         WHERE id = ${item.id} AND summary <> ${item.summary}
+      `;
+      // A card already on the feed carries a copy of the old text, so it gets
+      // the same correction rather than being left reading worse than the wire.
+      try {
+        await prisma.$executeRaw`
+          UPDATE NetworkPost SET body = ${item.summary}
+           WHERE link = ${item.url} AND body <> ${item.summary}
+        `;
+      } catch {
+        /* the posts table may not exist yet on a fresh database */
+      }
+    }
   }
   return added;
+}
+
+/**
+ * How many headlines reach the Wing feed per fetch. The wire itself takes
+ * everything; the feed is a place people read, and forty cards a quarter of an
+ * hour is not reading, it is a firehose that would bury any player who ever
+ * writes something.
+ */
+const WING_PER_RUN = 4;
+
+/**
+ * Puts the newest headlines into the Wing feed as link cards, authored by the
+ * house. They are real posts, so a player can like and comment on them, which
+ * is the whole point of them being in a feed rather than a list.
+ *
+ * Skips anything already posted, and anything with no summary — a card with a
+ * headline and nothing under it is worse than no card.
+ */
+export async function postNewsToWing(limit = WING_PER_RUN) {
+  await ensureNewsTables();
+  const { ensureSocialTables } = await import("@/lib/social");
+  const { HOUSE_USER_ID } = await import("@/lib/house");
+  await ensureSocialTables();
+
+  const rows = await prisma.$queryRaw<
+    { id: string; source: string; title: string; summary: string; url: string; image: string }[]
+  >`
+    SELECT n.id, n.source, n.title, n.summary, n.url, n.image
+      FROM NewsItem n
+     WHERE n.hidden = 0 AND n.status = 'live' AND n.summary != ''
+       AND NOT EXISTS (SELECT 1 FROM NetworkPost p WHERE p.link = n.url)
+     ORDER BY n.publishedAt DESC
+     LIMIT ${Math.max(1, Math.min(20, Math.floor(limit)))}
+  `;
+
+  let posted = 0;
+  for (const row of rows) {
+    // The post id is derived from the article, so the same headline can never
+    // be posted twice even if the guard above is raced.
+    const id = `wire-${row.id}`;
+    const done = await prisma.$executeRaw`
+      INSERT OR IGNORE INTO NetworkPost (id, userId, body, link, image, title, source, createdAt)
+      VALUES (${id}, ${HOUSE_USER_ID}, ${row.summary}, ${row.url}, ${row.image},
+              ${row.title}, ${row.source}, ${Date.now()})
+    `;
+    posted += Number(done);
+  }
+  return posted;
 }
 
 export type FetchReport = { source: string; found: number; added: number; error?: string };
@@ -207,6 +326,13 @@ export async function fetchNewsOnce(): Promise<FetchReport[]> {
       });
     }
   }
+  // The feed gets its cards from the same run, so a fetch is one step rather
+  // than a thing that needs a second trigger nobody remembers to pull.
+  try {
+    await postNewsToWing();
+  } catch {
+    /* a feed card failing must not fail the fetch */
+  }
   return reports;
 }
 
@@ -217,7 +343,7 @@ export async function listNews(limit = 24) {
   await ensureNewsTables();
   const take = Math.max(1, Math.min(60, Math.floor(limit)));
   const rows = await prisma.$queryRaw<Row[]>`
-    SELECT id, source, tag, title, url, image, CAST(publishedAt AS TEXT) AS publishedAt
+    SELECT id, source, tag, title, summary, url, image, CAST(publishedAt AS TEXT) AS publishedAt
       FROM NewsItem WHERE hidden = 0 AND status = 'live'
      ORDER BY publishedAt DESC LIMIT ${take}
   `;
@@ -229,7 +355,7 @@ export async function listHeldNews(limit = 60) {
   await ensureNewsTables();
   const take = Math.max(1, Math.min(120, Math.floor(limit)));
   const rows = await prisma.$queryRaw<Row[]>`
-    SELECT id, source, tag, title, url, image, CAST(publishedAt AS TEXT) AS publishedAt
+    SELECT id, source, tag, title, summary, url, image, CAST(publishedAt AS TEXT) AS publishedAt
       FROM NewsItem WHERE hidden = 0 AND status = 'held'
      ORDER BY publishedAt ASC LIMIT ${take}
   `;

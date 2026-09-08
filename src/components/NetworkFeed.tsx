@@ -280,8 +280,10 @@ function PostCard({
 }) {
   const [comment, setComment] = useState("");
   const own = post.username.toLowerCase() === you.toLowerCase();
+  // A link means the house put this up from the wire, not a player writing.
+  const wire = Boolean(post.link);
   return (
-    <li className="li-card li-post">
+    <li className={`li-card li-post ${wire ? "is-wire" : ""}`}>
       <div className="li-post-top">
         <Avatar avatar={post.avatar} size="sm" username={post.username} />
         <div className="min-w-0 flex-1">
@@ -293,11 +295,36 @@ function PostCard({
             <span className="li-when"> Â· {whenLabel(post.createdAt)}</span>
           </p>
         </div>
-        {own ? null : (
+        {own || wire ? null : (
           <RelateButton busy={busy} onRelate={onRelate} relation={post.relation} username={post.username} />
         )}
       </div>
-      <p className="li-body">{post.body}</p>
+      {wire ? (
+        <a
+          className="li-wire"
+          href={post.link}
+          rel="noopener noreferrer nofollow"
+          target="_blank"
+        >
+          {post.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              className="li-wire-shot"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              src={post.image}
+            />
+          ) : null}
+          <span className="li-wire-text">
+            <strong className="li-wire-title">{post.title}</strong>
+            <span className="li-body">{post.body}</span>
+            <span className="li-wire-src">{post.source}</span>
+          </span>
+        </a>
+      ) : (
+        <p className="li-body">{post.body}</p>
+      )}
       <div className="li-actions">
         <button
           className={`chip-btn chip-btn-ghost ${post.liked ? "is-on" : ""}`}

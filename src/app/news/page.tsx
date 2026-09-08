@@ -27,21 +27,36 @@ export default async function NewsPage() {
       <p className="hall-kicker">The wire</p>
       <h1 className="font-display text-4xl text-white">What the tape says</h1>
       <p>
-        Headlines gathered from the feeds below, newest first. Every line is a
-        link out to whoever wrote it — the house keeps the headline and nothing
-        else.
+        Headlines gathered from the feeds below, newest first. Each one carries
+        the outlet&apos;s own summary and picture, and links out to whoever wrote
+        it — the house never keeps the article itself.
       </p>
 
       {items.length ? (
         <ul className="wire-list">
           {items.map((item) => (
-            <li key={item.id}>
-              <a href={item.url} rel="noopener noreferrer nofollow" target="_blank">
-                {item.title}
-              </a>
-              <span className="wire-meta">
-                {item.source} · {ago(item.publishedAt)}
-              </span>
+            <li className={item.image ? "has-shot" : undefined} key={item.id}>
+              {item.image ? (
+                // The feed hands us its own picture; referrerPolicy keeps the
+                // outlet from seeing which of our pages a reader came from.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt=""
+                  className="wire-shot"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  src={item.image}
+                />
+              ) : null}
+              <div className="wire-body">
+                <a href={item.url} rel="noopener noreferrer nofollow" target="_blank">
+                  {item.title}
+                </a>
+                {item.summary ? <p className="wire-sum">{item.summary}</p> : null}
+                <span className="wire-meta">
+                  {item.source} · {ago(item.publishedAt)}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

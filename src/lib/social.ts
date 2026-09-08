@@ -1,4 +1,4 @@
-﻿import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import {
   findPlayer,
   friendCount,
@@ -63,6 +63,17 @@ export async function ensureSocialTables() {
       createdAt BIGINT NOT NULL
     )
   `);
+  // A post can carry a link card: a headline, the outlet, a picture and the
+  // URL. Players never set these — they are how the wire reaches the feed.
+  for (const column of ["link", "image", "title", "source"]) {
+    try {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE NetworkPost ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`,
+      );
+    } catch {
+      /* column already exists */
+    }
+  }
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS NetworkLike (
       postId TEXT NOT NULL,
@@ -156,7 +167,20 @@ export function saveProfile(
   return publicProfile(store, user, user.username);
 }
 
-type PostRow = { id: string; userId: string; body: string; createdAt: number | bigint | string };
+type PostRow = {
+  id: string;
+  userId: string;
+  body: string;
+  createdAt: number | bigint | string;
+  link?: string | null;
+  image?: string | null;
+  title?: string | null;
+  source?: string | null;
+};
+
+/** What every read of the feed selects, so the card fields travel with it. */
+const POST_SELECT =
+  "id, userId, body, link, image, title, source, CAST(createdAt AS TEXT) as createdAt";
 
 async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): Promise<NetworkPost[]> {
   const ids = posts.map((post) => `'${esc(post.id)}'`).join(",");
@@ -177,7 +201,12 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
   const hidden = blockedIds(viewer.id);
   return posts.flatMap((post) => {
     const author = store.users[post.userId];
-    if (!author || isHouseUser(author)) return [];
+    if (!author) return [];
+    // The house is not a player and its account never appears in the feed —
+    // except for the wire, where it is the publisher. A link is what marks
+    // one of those, since players cannot set it.
+    const wire = Boolean((post.link ?? "").trim());
+    if (isHouseUser(author) && !wire) return [];
     if (hidden.has(author.id)) return [];
     const postLikes = likes.filter((item) => item.postId === post.id);
     return [
@@ -185,8 +214,12 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
         id: post.id,
         username: author.username,
         avatar: avatarOf(author),
-        headline: headlineOf(author),
+        headline: wire ? "The wire" : headlineOf(author),
         body: post.body,
+        link: (post.link ?? "").trim(),
+        image: (post.image ?? "").trim(),
+        title: (post.title ?? "").trim(),
+        source: (post.source ?? "").trim(),
         createdAt: Number(post.createdAt),
         likes: postLikes.length,
         liked: postLikes.some((item) => item.userId === viewer.id),
@@ -215,7 +248,7 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
 export async function listFeed(store: StoreData, viewer: User): Promise<NetworkPost[]> {
   touchPresence(viewer.id);
   const posts = await prisma.$queryRawUnsafe<PostRow[]>(
-    "SELECT id, userId, body, CAST(createdAt AS TEXT) as createdAt FROM NetworkPost ORDER BY createdAt DESC LIMIT 80",
+    `SELECT ${POST_SELECT} FROM NetworkPost ORDER BY createdAt DESC LIMIT 80`,
   );
   return hydratePosts(store, viewer, posts);
 }
@@ -246,7 +279,7 @@ export async function packFeed(store: StoreData, viewer: User) {
 
 export async function listAuthorPosts(store: StoreData, viewer: User, authorId: string): Promise<NetworkPost[]> {
   const posts = await prisma.$queryRawUnsafe<PostRow[]>(
-    `SELECT id, userId, body, CAST(createdAt AS TEXT) as createdAt FROM NetworkPost WHERE userId='${esc(authorId)}' ORDER BY createdAt DESC LIMIT 12`,
+    `SELECT ${POST_SELECT} FROM NetworkPost WHERE userId='${esc(authorId)}' ORDER BY createdAt DESC LIMIT 12`,
   );
   return hydratePosts(store, viewer, posts);
 }

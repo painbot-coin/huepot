@@ -431,6 +431,14 @@ export type NetworkPost = {
   avatar: string;
   headline: string;
   body: string;
+  /**
+   * A link card, set only on posts the house puts up from the wire. Players
+   * post text; these carry the outlet, the headline and where to read it.
+   */
+  link?: string;
+  image?: string;
+  title?: string;
+  source?: string;
   createdAt: number;
   likes: number;
   liked: boolean;
