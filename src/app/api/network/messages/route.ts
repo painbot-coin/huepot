@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { getSessionToken, requireUser } from "@/lib/auth";
 import { readyFriends } from "@/lib/friends";
 import { jsonError } from "@/lib/http";
+import { insertSocialReport } from "@/lib/reports";
 import {
   listInbox,
   listThread,
   readySocial,
   refreshUnread,
+  reportSocial,
   sendMessage,
   youPayload,
 } from "@/lib/social";
@@ -42,9 +44,21 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => ({}))) as {
       username?: string;
       body?: string;
+      action?: string;
+      messageId?: string;
     };
     await readyFriends();
     await readySocial();
+    if (body.action === "report") {
+      // Reporting a message does not send one, so it answers on its own rather
+      // than falling through to the send path below.
+      const report = await withStoreRead(async (store) => {
+        const user = requireUser(store, token);
+        return reportSocial(store, user, "message", body.messageId ?? "");
+      });
+      await insertSocialReport(report);
+      return NextResponse.json({ reported: true });
+    }
     const payload = await withStore(async (store) => {
       const user = requireUser(store, token);
       const thread = await sendMessage(store, user, body.username ?? "", body.body ?? "");

@@ -1,8 +1,21 @@
 import { prisma } from "@/lib/db";
 import type { StoreData } from "@/lib/types";
 
+/**
+ * One report shape for everything a player can report. It began as room chat
+ * only; posts, comments and direct messages reuse it rather than getting their
+ * own table, because the part that matters — grouping by who was reported, so
+ * one irritated player is distinguishable from a pattern — is already here and
+ * would otherwise have to exist twice.
+ *
+ * For chat, `target` is the room event and `roomSlug` says where. For the rest,
+ * `target` is the row's id and `roomSlug` is empty.
+ */
+export type ReportKind = "chat" | "post" | "comment" | "message";
+
 export type ChatReport = {
   id: string;
+  kind: ReportKind;
   roomSlug: string;
   eventId: string;
   reporterId: string;
@@ -29,6 +42,14 @@ export async function ensureReportTables() {
       status TEXT NOT NULL DEFAULT 'open'
     )
   `);
+  try {
+    // Defaults to 'chat' so rows filed before this column stay what they were.
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE ChatReport ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat'",
+    );
+  } catch {
+    /* column already exists */
+  }
 }
 
 export function reportChat(
@@ -65,12 +86,35 @@ export function hideReportedChat(store: StoreData, slug: string, eventId: string
   }
 }
 
-export async function insertReport(row: ChatReport) {
+export async function insertReport(row: Omit<ChatReport, "kind"> & { kind?: ReportKind }) {
   await ensureReportTables();
   await prisma.$executeRawUnsafe(
-    `INSERT INTO ChatReport (id, roomSlug, eventId, reporterId, username, body, createdAt, status)
-     VALUES ('${esc(row.id)}', '${esc(row.roomSlug)}', '${esc(row.eventId)}', '${esc(row.reporterId)}', '${esc(row.username)}', '${esc(row.body)}', ${row.createdAt}, 'open')`,
+    `INSERT INTO ChatReport (id, kind, roomSlug, eventId, reporterId, username, body, createdAt, status)
+     VALUES ('${esc(row.id)}', '${esc(row.kind ?? "chat")}', '${esc(row.roomSlug)}', '${esc(row.eventId)}', '${esc(row.reporterId)}', '${esc(row.username)}', '${esc(row.body)}', ${row.createdAt}, 'open')`,
   );
+}
+
+/** A social report arrives with a target rather than a room event. */
+export async function insertSocialReport(row: {
+  id: string;
+  kind: ReportKind;
+  targetId: string;
+  reporterId: string;
+  username: string;
+  body: string;
+  createdAt: number;
+}) {
+  await insertReport({
+    id: row.id,
+    kind: row.kind,
+    roomSlug: "",
+    eventId: row.targetId,
+    reporterId: row.reporterId,
+    username: row.username,
+    body: row.body,
+    createdAt: row.createdAt,
+    status: "open",
+  });
 }
 
 export async function listReports() {
@@ -85,13 +129,15 @@ export async function listReports() {
       body: string;
       createdAt: string | number | bigint;
       status: string;
+      kind: string | null;
     }[]
   >(
-    "SELECT id, roomSlug, eventId, reporterId, username, body, CAST(createdAt AS TEXT) as createdAt, status FROM ChatReport ORDER BY createdAt DESC LIMIT 80",
+    "SELECT id, kind, roomSlug, eventId, reporterId, username, body, CAST(createdAt AS TEXT) as createdAt, status FROM ChatReport ORDER BY createdAt DESC LIMIT 80",
   );
   return rows.map(
     (row): ChatReport => ({
       id: row.id,
+      kind: (row.kind ?? "chat") as ReportKind,
       roomSlug: row.roomSlug,
       eventId: row.eventId,
       reporterId: row.reporterId,

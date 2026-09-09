@@ -334,15 +334,70 @@ function PostCard({
         >
           {post.liked ? "Liked" : "Like"} · {post.likes}
         </button>
+        {own ? (
+          <button
+            className="chip-btn chip-btn-ghost"
+            disabled={busy}
+            onClick={() => {
+              if (!window.confirm("Delete this post? It does not come back.")) return;
+              void onAct({ action: "delete-post", postId: post.id });
+            }}
+            type="button"
+          >
+            Delete
+          </button>
+        ) : (
+          <button
+            className="chip-btn chip-btn-ghost"
+            disabled={busy}
+            onClick={() => {
+              if (!window.confirm("Report this to the house?")) return;
+              void onAct({ action: "report-post", postId: post.id });
+            }}
+            type="button"
+          >
+            Report
+          </button>
+        )}
       </div>
       {post.comments.length > 0 ? (
         <ul className="li-comments">
-          {post.comments.map((item) => (
-            <li key={item.id}>
-              <Link href={`/network/u/${encodeURIComponent(item.username)}`}>@{item.username}</Link>
-              {` ${item.body}`}
-            </li>
-          ))}
+          {post.comments.map((item) => {
+            const mine = item.username.toLowerCase() === you.toLowerCase();
+            return (
+              <li key={item.id}>
+                <Link href={`/network/u/${encodeURIComponent(item.username)}`}>@{item.username}</Link>
+                {` ${item.body} `}
+                {/* The post's owner can clear their own thread, which is why
+                    this shows for a comment that is not yours on your post. */}
+                {mine || own ? (
+                  <button
+                    className="li-tiny"
+                    disabled={busy}
+                    onClick={() => {
+                      if (!window.confirm("Remove this comment?")) return;
+                      void onAct({ action: "delete-comment", commentId: item.id });
+                    }}
+                    type="button"
+                  >
+                    remove
+                  </button>
+                ) : (
+                  <button
+                    className="li-tiny"
+                    disabled={busy}
+                    onClick={() => {
+                      if (!window.confirm("Report this comment to the house?")) return;
+                      void onAct({ action: "report-comment", commentId: item.id });
+                    }}
+                    type="button"
+                  >
+                    report
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
       <form

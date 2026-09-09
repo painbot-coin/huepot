@@ -15,6 +15,7 @@ import {
   setReportStatus,
 } from "@/lib/reports";
 import { drainEmails, emailConfigured, outboxSummary } from "@/lib/email";
+import { hideReportedSocial } from "@/lib/social";
 import { readBooks } from "@/lib/books";
 import {
   countHeldNews,
@@ -189,14 +190,20 @@ export async function POST(request: Request) {
       const row = reports.find((item) => item.id === body.id);
       if (!row) throw new Error("That report was not found.");
       if (body.action === "hide-report") {
-        await withStore((store) => {
-          hideReportedChat(store, row.roomSlug, row.eventId);
-        });
+        if (row.kind === "chat") {
+          await withStore((store) => {
+            hideReportedChat(store, row.roomSlug, row.eventId);
+          });
+        } else {
+          // A post, comment or message lives in its own table rather than in a
+          // room's event list, so removing it is a different call.
+          await hideReportedSocial(row.kind, row.eventId);
+        }
         await setReportStatus(row.id, "hidden");
       } else {
         await setReportStatus(row.id, "dismissed");
       }
-      await writeStaffLog(actor, body.action, body.id, `/${row.roomSlug}`);
+      await writeStaffLog(actor, body.action, body.id, row.roomSlug ? `/${row.roomSlug}` : row.kind);
       return NextResponse.json({
         reports: await listReports(),
         reported: await listReportedPlayers(),

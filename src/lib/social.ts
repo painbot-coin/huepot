@@ -309,6 +309,106 @@ export async function createPost(store: StoreData, viewer: User, raw: string) {
   return listFeed(store, viewer);
 }
 
+/**
+ * Removing your own post. A player could write something and then have no way
+ * to take it back, which is not a feature to leave out of a place that hosts
+ * what people write.
+ *
+ * Ownership is checked against the row, not against anything the client sent,
+ * and the house's wire cards are nobody's to delete. Likes and comments go
+ * with it — leaving them would orphan rows that only exist to hang off a post.
+ */
+export async function deletePost(store: StoreData, viewer: User, postId: string) {
+  const id = postId.replace(/[^a-zA-Z0-9-]/g, "");
+  const rows = await prisma.$queryRaw<{ userId: string; link: string | null }[]>`
+    SELECT userId, link FROM NetworkPost WHERE id = ${id} LIMIT 1
+  `;
+  const post = rows[0];
+  if (!post) throw new Error("That post is gone.");
+  if (post.userId !== viewer.id) throw new Error("That is not your post.");
+  await prisma.$executeRaw`DELETE FROM NetworkLike WHERE postId = ${id}`;
+  await prisma.$executeRaw`DELETE FROM NetworkComment WHERE postId = ${id}`;
+  await prisma.$executeRaw`DELETE FROM NetworkPost WHERE id = ${id}`;
+  return listFeed(store, viewer);
+}
+
+/**
+ * Removing a comment. Either the person who wrote it or the person whose post
+ * it sits under — someone should be able to clear their own thread without
+ * calling staff, and that is the same rule every feed uses.
+ */
+export async function deleteComment(store: StoreData, viewer: User, commentId: string) {
+  const id = commentId.replace(/[^a-zA-Z0-9-]/g, "");
+  const rows = await prisma.$queryRaw<{ userId: string; postId: string }[]>`
+    SELECT userId, postId FROM NetworkComment WHERE id = ${id} LIMIT 1
+  `;
+  const comment = rows[0];
+  if (!comment) throw new Error("That comment is gone.");
+  let allowed = comment.userId === viewer.id;
+  if (!allowed) {
+    const owner = await prisma.$queryRaw<{ userId: string }[]>`
+      SELECT userId FROM NetworkPost WHERE id = ${comment.postId} LIMIT 1
+    `;
+    allowed = owner[0]?.userId === viewer.id;
+  }
+  if (!allowed) throw new Error("That is not yours to remove.");
+  await prisma.$executeRaw`DELETE FROM NetworkComment WHERE id = ${id}`;
+  return listFeed(store, viewer);
+}
+
+export type SocialReportKind = "post" | "comment" | "message";
+
+/**
+ * What a report needs to carry: who wrote it and what it said, captured at the
+ * time of reporting. Reading it back later from the row would show whatever it
+ * has since been edited or deleted into, which is no use to whoever reviews it.
+ */
+export async function reportSocial(
+  store: StoreData,
+  viewer: User,
+  kind: SocialReportKind,
+  targetId: string,
+) {
+  const id = targetId.replace(/[^a-zA-Z0-9-]/g, "");
+  const table =
+    kind === "post" ? "NetworkPost" : kind === "comment" ? "NetworkComment" : "NetworkMessage";
+  const authorColumn = kind === "message" ? "fromId" : "userId";
+  const rows = await prisma.$queryRawUnsafe<{ author: string; body: string }[]>(
+    `SELECT ${authorColumn} AS author, body FROM ${table} WHERE id = '${esc(id)}' LIMIT 1`,
+  );
+  const row = rows[0];
+  if (!row) throw new Error("That is gone already.");
+  if (row.author === viewer.id) throw new Error("You cannot report your own writing.");
+  const author = store.users[row.author];
+  return {
+    id: crypto.randomUUID(),
+    kind,
+    targetId: id,
+    reporterId: viewer.id,
+    username: author?.username ?? "player",
+    body: row.body.slice(0, 500),
+    createdAt: Date.now(),
+  };
+}
+
+/** Staff removing reported writing. Blanked rather than deleted, so the row
+ * stays attached to its report and the decision remains auditable. */
+export async function hideReportedSocial(kind: SocialReportKind, targetId: string) {
+  const id = targetId.replace(/[^a-zA-Z0-9-]/g, "");
+  const table =
+    kind === "post" ? "NetworkPost" : kind === "comment" ? "NetworkComment" : "NetworkMessage";
+  await prisma.$executeRawUnsafe(
+    `UPDATE ${table} SET body = 'Removed.' WHERE id = '${esc(id)}'`,
+  );
+  if (kind === "post") {
+    // A wire card's whole point is the link; a removed one must not still
+    // advertise the article it was pulled for.
+    await prisma.$executeRawUnsafe(
+      `UPDATE NetworkPost SET link = '', image = '', title = '', source = '' WHERE id = '${esc(id)}'`,
+    );
+  }
+}
+
 export async function toggleLike(store: StoreData, viewer: User, postId: string) {
   assertCanSocialize(viewer);
   const id = postId.replace(/[^a-zA-Z0-9-]/g, "");

@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { getSessionToken, requireUser } from "@/lib/auth";
 import { readyFriends } from "@/lib/friends";
 import { jsonError } from "@/lib/http";
+import { insertSocialReport } from "@/lib/reports";
 import {
   addComment,
   createPost,
+  deleteComment,
+  deletePost,
   packFeed,
   readySocial,
   refreshUnread,
+  reportSocial,
   toggleLike,
   youPayload,
 } from "@/lib/social";
@@ -40,6 +44,7 @@ export async function POST(request: Request) {
       action?: string;
       body?: string;
       postId?: string;
+      commentId?: string;
     };
     await readyFriends();
     await readySocial();
@@ -49,6 +54,15 @@ export async function POST(request: Request) {
       else if (body.action === "like") await toggleLike(store, user, body.postId ?? "");
       else if (body.action === "comment") {
         await addComment(store, user, body.postId ?? "", body.body ?? "");
+      } else if (body.action === "delete-post") {
+        await deletePost(store, user, body.postId ?? "");
+      } else if (body.action === "delete-comment") {
+        await deleteComment(store, user, body.commentId ?? "");
+      } else if (body.action === "report-post" || body.action === "report-comment") {
+        const kind = body.action === "report-post" ? "post" : "comment";
+        const target = kind === "post" ? (body.postId ?? "") : (body.commentId ?? "");
+        const report = await reportSocial(store, user, kind, target);
+        await insertSocialReport(report);
       } else {
         throw new Error("Unknown feed action.");
       }

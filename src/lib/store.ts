@@ -1158,6 +1158,7 @@ async function ensureDb() {
       await migrateMoneyToCents();
       await dropExpiredLogins();
       await pruneRoomEvents();
+      await pruneWireCards();
       const { warmPlayLoss } = await import("@/lib/limits");
       const { warmInviteTotals } = await import("@/lib/referrals");
       await warmPlayLoss();
@@ -1238,6 +1239,41 @@ async function pruneRoomEvents() {
     );
   } catch {
     /* nothing to trim */
+  }
+}
+
+/**
+ * Wire cards past the feed's reach.
+ *
+ * The feed reads the newest eighty posts, and the news watcher adds up to four
+ * an hour, so cards older than a couple of hundred can never be seen again.
+ * Bounded here rather than left to grow, because a table filling up with rows
+ * nothing reads is the exact thing the empty-round work went and fixed.
+ *
+ * Only cards the house posted from the wire: a player's own writing is theirs
+ * to keep, and only they can remove it.
+ */
+const WIRE_CARD_KEEP = 200;
+
+async function pruneWireCards() {
+  try {
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM NetworkPost WHERE id IN (
+         SELECT id FROM (
+           SELECT id, ROW_NUMBER() OVER (ORDER BY createdAt DESC) AS seat
+             FROM NetworkPost WHERE link <> ''
+         ) WHERE seat > ${WIRE_CARD_KEEP}
+       )`,
+    );
+    // Likes and comments on a card that is gone would be orphans.
+    await prisma.$executeRawUnsafe(
+      "DELETE FROM NetworkLike WHERE postId NOT IN (SELECT id FROM NetworkPost)",
+    );
+    await prisma.$executeRawUnsafe(
+      "DELETE FROM NetworkComment WHERE postId NOT IN (SELECT id FROM NetworkPost)",
+    );
+  } catch {
+    /* the social tables may not exist yet on a fresh database */
   }
 }
 
