@@ -855,14 +855,17 @@ export async function sendQueuedWithdrawal(id: string) {
       const tx = await token.send(row.address, value);
       hash = tx.hash;
       await prisma.$executeRawUnsafe(
-        `UPDATE Withdrawal SET txHash = '${esc(hash)}', note = 'Broadcast ${hash}' WHERE id = '${esc(id)}'`,
+        // Escaped in both places. A chain hash is hex so neither could break
+        // out today, but the same value quoted two different ways is how the
+        // habit rots: the next person copies the looser half.
+        `UPDATE Withdrawal SET txHash = '${esc(hash)}', note = 'Broadcast ${esc(hash)}' WHERE id = '${esc(id)}'`,
       );
       await tx.wait(1);
     }
 
     const now = Date.now();
     const marked = await prisma.$executeRawUnsafe(
-      `UPDATE Withdrawal SET status = 'paid', resolvedAt = ${now}, txHash = '${esc(hash)}', note = 'Sent ${hash}' WHERE id = '${esc(id)}' AND status IN ('queued', 'sending')`,
+      `UPDATE Withdrawal SET status = 'paid', resolvedAt = ${now}, txHash = '${esc(hash)}', note = 'Sent ${esc(hash)}' WHERE id = '${esc(id)}' AND status IN ('queued', 'sending')`,
     );
     if (Number(marked) < 1) throw new Error("That payout is already resolved.");
     await announcePayout(row.id, row.userId, row.amount, "paid", hash);

@@ -28,6 +28,9 @@ jobs:
       - name: encoding
         run: npm run check:encoding
 
+      - name: raw sql
+        run: npm run check:sql
+
       - name: types
         run: npx tsc --noEmit
 
