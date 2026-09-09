@@ -1,0 +1,4 @@
+{
+  "//": "Scopes ES module semantics to the tests directory, so test files can use import syntax without changing how the application itself is treated.",
+  "type": "module"
+}

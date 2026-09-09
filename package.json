@@ -14,7 +14,9 @@
                     "coin:test":  "hardhat test --config hardhat.config.cjs",
                     "coin:deploy:testnet":  "hardhat run scripts/deploy-coin.cjs --config hardhat.config.cjs --network bscTestnet",
                     "coin:deploy:mainnet":  "hardhat run scripts/deploy-coin.cjs --config hardhat.config.cjs --network bsc",
-                    "check:encoding":  "node scripts/check-encoding.mjs"
+                    "check:encoding":  "node scripts/check-encoding.mjs",
+                    "test":  "node --import ./tests/register.mjs --test tests/**/*.test.ts",
+                    "check":  "npm run check:encoding \u0026\u0026 npx tsc --noEmit \u0026\u0026 npm test"
                 },
     "dependencies":  {
                          "@prisma/client":  "^6.19.0",
