@@ -43,7 +43,11 @@ function guarded(expr) {
  */
 function unsafeCalls(text) {
   const out = [];
-  const start = /\$(?:queryRaw|executeRaw)Unsafe\s*\(/g;
+  // The generic argument matters: most calls here are written
+  // $queryRawUnsafe<PostRow[]>(…), and a pattern expecting the parenthesis
+  // straight after the name skips every one of them. An earlier version did
+  // exactly that and reported a clean tree while missing most of it.
+  const start = /\$(?:queryRaw|executeRaw)Unsafe\s*(?:<[^>]*>)?\s*\(/g;
   let m;
   while ((m = start.exec(text))) {
     let depth = 1;

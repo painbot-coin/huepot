@@ -8,6 +8,9 @@ import type { FriendRelation, NetworkCard, NetworkPost, NetworkYou } from "@/lib
 
 type FeedTab = "recent" | "recommended";
 
+/** Posts fetched per step. Matches FEED_PAGE on the server. */
+const FEED_STEP = 80;
+
 function whenLabel(at: number) {
   const mins = Math.floor(Math.max(0, Date.now() - at) / 60_000);
   if (mins < 1) return "just now";
@@ -28,9 +31,13 @@ export function NetworkFeed() {
   const [needSignIn, setNeedSignIn] = useState(false);
   const [booted, setBooted] = useState(false);
   const [busy, setBusy] = useState(false);
+  // How deep the feed is currently read. The poll asks for the same depth, so
+  // going further back is not undone twelve seconds later.
+  const [depth, setDepth] = useState(FEED_STEP);
+  const [total, setTotal] = useState(0);
 
-  async function load() {
-    const response = await fetch("/api/network/feed");
+  async function load(want = depth) {
+    const response = await fetch(`/api/network/feed?limit=${want}`);
     if (response.status === 401) {
       setNeedSignIn(true);
       return;
@@ -40,6 +47,7 @@ export function NetworkFeed() {
       recommended?: NetworkPost[];
       people?: NetworkCard[];
       you?: NetworkYou;
+      total?: number;
       error?: string;
     };
     if (!response.ok) throw new Error(data.error || "Could not load feed");
@@ -48,6 +56,7 @@ export function NetworkFeed() {
     setRecommended(data.recommended ?? []);
     setPeople(data.people ?? []);
     setYou(data.you ?? null);
+    if (typeof data.total === "number") setTotal(data.total);
   }
 
   useEffect(() => {
@@ -56,7 +65,8 @@ export function NetworkFeed() {
       .finally(() => setBooted(true));
     const id = window.setInterval(() => void load().catch(() => undefined), 12_000);
     return () => window.clearInterval(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depth]);
 
   async function act(body: Record<string, string>) {
     setBusy(true);
@@ -65,16 +75,18 @@ export function NetworkFeed() {
       const response = await fetch("/api/network/feed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, limit: depth }),
       });
       const data = (await response.json()) as {
         posts?: NetworkPost[];
         recommended?: NetworkPost[];
         people?: NetworkCard[];
         you?: NetworkYou;
+        total?: number;
         error?: string;
       };
       if (!response.ok) throw new Error(data.error || "Could not post");
+      if (typeof data.total === "number") setTotal(data.total);
       setPosts(data.posts ?? []);
       setRecommended(data.recommended ?? []);
       setPeople(data.people ?? []);
@@ -187,6 +199,29 @@ export function NetworkFeed() {
               ))}
             </ul>
           )}
+          {/* Only offered when going deeper would actually find something, so
+              the control never promises more and then delivers the same. */}
+          {tab === "recent" && total > posts.length ? (
+            <div className="li-deeper">
+              <button
+                className="chip-btn chip-btn-ghost"
+                disabled={busy}
+                onClick={() => setDepth((was) => was + FEED_STEP)}
+                type="button"
+              >
+                Show older
+              </button>
+              <span className="li-deeper-n">
+                {posts.length} of {total.toLocaleString()}
+              </span>
+            </div>
+          ) : null}
+          {tab === "recent" && total > 0 && total <= posts.length ? (
+            <p className="li-deeper-n mt-3">
+              That is everything the wing holds — {total.toLocaleString()}{" "}
+              {total === 1 ? "line" : "lines"}.
+            </p>
+          ) : null}
         </section>
         <aside className="li-card li-suggest">
           <p className="lobby-label">In the pit</p>

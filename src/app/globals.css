@@ -5767,6 +5767,83 @@ body:has(.app-page) .site-footer {
   gap: 0.1rem;
 }
 
+/* Reading further back in the wing. */
+.li-deeper {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.li-deeper-n {
+  font-size: 0.76rem;
+  color: rgba(228, 216, 198, 0.5);
+}
+
+/* Filter rows. Chips wrap rather than scroll, because a hidden filter is a
+   filter nobody uses. */
+.wire-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1.4rem;
+}
+
+.wire-outlets {
+  margin-top: 0.5rem;
+}
+
+.wire-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(212, 175, 106, 0.22);
+  background: var(--house-panel);
+  color: rgba(228, 216, 198, 0.72);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.wire-chip:hover {
+  color: #ffd27a;
+  border-color: rgba(255, 210, 122, 0.45);
+}
+
+.wire-chip.is-on {
+  color: #161019;
+  background: #ffd27a;
+  border-color: #ffd27a;
+}
+
+.wire-chip-n {
+  font-size: 0.7rem;
+  opacity: 0.65;
+}
+
+.wire-count {
+  margin-top: 1.1rem;
+  font-size: 0.82rem;
+  color: rgba(228, 216, 198, 0.6);
+}
+
+.wire-src {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(228, 216, 198, 0.2);
+}
+
+.wire-src:hover {
+  color: #ffd27a;
+}
+
+.wire-pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.4rem;
+}
+
 /* A headline, its own summary and the outlet's picture. The image is a fixed
    block so a row of them lines up whatever shape the feed sends. */
 .wire-list li {

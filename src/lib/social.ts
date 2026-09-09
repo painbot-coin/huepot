@@ -245,12 +245,36 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
   });
 }
 
-export async function listFeed(store: StoreData, viewer: User): Promise<NetworkPost[]> {
+/** How deep the feed reads by default, and the most it will ever read. */
+export const FEED_PAGE = 80;
+const FEED_MAX = 400;
+
+/**
+ * The feed, as deep as asked for.
+ *
+ * Depth rather than a cursor because the page polls every twelve seconds and
+ * replaces what it holds. Appending an older page would have it wiped on the
+ * next tick; asking for more of the same list survives that.
+ */
+export async function listFeed(
+  store: StoreData,
+  viewer: User,
+  limit = FEED_PAGE,
+): Promise<NetworkPost[]> {
   touchPresence(viewer.id);
+  const take = Math.max(1, Math.min(FEED_MAX, Math.floor(limit)));
   const posts = await prisma.$queryRawUnsafe<PostRow[]>(
-    `SELECT ${POST_SELECT} FROM NetworkPost ORDER BY createdAt DESC LIMIT 80`,
+    `SELECT ${POST_SELECT} FROM NetworkPost ORDER BY createdAt DESC LIMIT ${take}`,
   );
   return hydratePosts(store, viewer, posts);
+}
+
+/** How many posts exist to be read, so the page knows when it has them all. */
+export async function countFeed() {
+  const rows = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) AS n FROM NetworkPost
+  `;
+  return Number(rows[0]?.n ?? 0);
 }
 
 function recommendScore(post: NetworkPost, viewerName: string) {
@@ -268,12 +292,15 @@ export function recommendPosts(posts: NetworkPost[], viewer: User): NetworkPost[
   return (others.length ? others : ranked).slice(0, 40);
 }
 
-export async function packFeed(store: StoreData, viewer: User) {
-  const posts = await listFeed(store, viewer);
+export async function packFeed(store: StoreData, viewer: User, limit = FEED_PAGE) {
+  const posts = await listFeed(store, viewer, limit);
   return {
     posts,
     recommended: recommendPosts(posts, viewer),
     people: listSuggestedPeople(store, viewer, 8),
+    // What the page needs to know whether asking for more would find any.
+    total: await countFeed(),
+    depth: Math.max(1, Math.min(400, Math.floor(limit))),
   };
 }
 

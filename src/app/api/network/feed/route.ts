@@ -19,9 +19,12 @@ import { withStore, withStoreRead } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const token = await getSessionToken();
+    // How deep to read. Bounded in packFeed; anything odd falls back to a page.
+    const asked = Number(new URL(request.url).searchParams.get("limit"));
+    const limit = Number.isFinite(asked) && asked > 0 ? asked : undefined;
     await readyFriends();
     await readySocial();
     const payload = await withStoreRead(async (store) => {
@@ -29,7 +32,7 @@ export async function GET() {
       const unread = await refreshUnread(user.id);
       const you = youPayload(user);
       you.unreadMessages = unread;
-      return { you, ...(await packFeed(store, user)) };
+      return { you, ...(await packFeed(store, user, limit)) };
     });
     return NextResponse.json(payload);
   } catch (error) {
@@ -45,6 +48,7 @@ export async function POST(request: Request) {
       body?: string;
       postId?: string;
       commentId?: string;
+      limit?: number;
     };
     await readyFriends();
     await readySocial();
@@ -68,7 +72,9 @@ export async function POST(request: Request) {
       }
       const you = youPayload(user);
       you.unreadMessages = await refreshUnread(user.id);
-      return { you, ...(await packFeed(store, user)) };
+      // Answer at the depth the reader already had, so acting on an older
+      // post does not snap the list back to the newest page.
+      return { you, ...(await packFeed(store, user, body.limit && body.limit > 0 ? body.limit : undefined)) };
     });
     return NextResponse.json(payload);
   } catch (error) {

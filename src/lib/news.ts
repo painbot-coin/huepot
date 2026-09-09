@@ -338,16 +338,68 @@ export async function fetchNewsOnce(): Promise<FetchReport[]> {
 
 type Row = Omit<NewsItem, "publishedAt"> & { publishedAt: string };
 
-/** What the hall sees: released, and not pulled since. */
-export async function listNews(limit = 24) {
+export type NewsQuery = {
+  limit?: number;
+  /** "crypto" or "sport"; empty means both. */
+  tag?: string;
+  /** An outlet name; empty means all of them. */
+  source?: string;
+  /** Only headlines published before this, which is how paging walks back. */
+  before?: number;
+};
+
+/**
+ * What the hall sees: released, and not pulled since.
+ *
+ * Every filter stays a bound parameter rather than being pasted into the
+ * statement — each condition is written so it does nothing when its filter is
+ * empty. That keeps a user-supplied source name out of the SQL text entirely,
+ * which is worth more than the small awkwardness of the clause.
+ */
+export async function listNews(input: NewsQuery | number = {}) {
   await ensureNewsTables();
-  const take = Math.max(1, Math.min(60, Math.floor(limit)));
+  const query: NewsQuery = typeof input === "number" ? { limit: input } : input;
+  const take = Math.max(1, Math.min(60, Math.floor(query.limit ?? 24)));
+  const tag = (query.tag ?? "").trim();
+  const source = (query.source ?? "").trim();
+  const before = Number.isFinite(query.before) ? Math.max(0, Math.floor(query.before!)) : 0;
   const rows = await prisma.$queryRaw<Row[]>`
     SELECT id, source, tag, title, summary, url, image, CAST(publishedAt AS TEXT) AS publishedAt
-      FROM NewsItem WHERE hidden = 0 AND status = 'live'
+      FROM NewsItem
+     WHERE hidden = 0 AND status = 'live'
+       AND (${tag} = '' OR tag = ${tag})
+       AND (${source} = '' OR source = ${source})
+       AND (${before} = 0 OR publishedAt < ${before})
      ORDER BY publishedAt DESC LIMIT ${take}
   `;
   return rows.map((row) => ({ ...row, publishedAt: Number(row.publishedAt) }));
+}
+
+/** How many headlines match, so the page can say what it is showing part of. */
+export async function countNews(query: NewsQuery = {}) {
+  await ensureNewsTables();
+  const tag = (query.tag ?? "").trim();
+  const source = (query.source ?? "").trim();
+  const rows = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) AS n FROM NewsItem
+     WHERE hidden = 0 AND status = 'live'
+       AND (${tag} = '' OR tag = ${tag})
+       AND (${source} = '' OR source = ${source})
+  `;
+  return Number(rows[0]?.n ?? 0);
+}
+
+export type NewsOutlet = { source: string; tag: string; count: number };
+
+/** The outlets that have actually published something, with how much. */
+export async function newsOutlets(): Promise<NewsOutlet[]> {
+  await ensureNewsTables();
+  const rows = await prisma.$queryRaw<{ source: string; tag: string; n: number | bigint }[]>`
+    SELECT source, MIN(tag) AS tag, COUNT(*) AS n FROM NewsItem
+     WHERE hidden = 0 AND status = 'live'
+     GROUP BY source ORDER BY n DESC
+  `;
+  return rows.map((row) => ({ source: row.source, tag: row.tag, count: Number(row.n) }));
 }
 
 /** What is waiting on a decision. Oldest first, so nothing sits forgotten. */
