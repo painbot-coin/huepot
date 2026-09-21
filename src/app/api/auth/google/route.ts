@@ -15,8 +15,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const ageConfirmed = url.searchParams.get("age") === "1";
   const inviteCode = url.searchParams.get("ref") || cookieRef(request);
+  const next = url.searchParams.get("next") ?? "";
   const state = await withStore((store) =>
-    createOAuthState(store, ageConfirmed, inviteCode),
+    createOAuthState(store, ageConfirmed, inviteCode, next),
   );
   return NextResponse.redirect(googleAuthUrl(state));
 }

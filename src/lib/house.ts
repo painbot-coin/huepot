@@ -51,6 +51,7 @@ export function ensureHouseUser(store: StoreData): User {
     verifySentAt: null,
     createdAt: Date.now(),
     balance: 0,
+    bonus: 0,
     withdrawAddress: "",
     wallets: {},
     limits: emptyLimits(),

@@ -14,6 +14,8 @@ type ChainStatus = {
   asset: string;
   confirms: number;
   lastBlock: number;
+  scannedBlock?: number;
+  catchingUp?: boolean;
   explorer: string;
   lastError: string | null;
 };
@@ -41,13 +43,16 @@ export function InvestClient() {
   const [chain, setChain] = useState<ChainStatus | null>(null);
   const [pending, setPending] = useState<PendingDeposit[]>([]);
   const [landed, setLanded] = useState("");
+  const [claimHash, setClaimHash] = useState("");
   const seenDeposits = useRef(new Set<string>());
 
   async function load() {
     const response = await fetch("/api/state");
     const data = (await response.json()) as GameState;
     setState(data);
-    if (typeof data.user?.balance === "number") publishBank(data.user.balance);
+    if (typeof data.user?.balance === "number") {
+      publishBank(data.user.balance, data.user.bonus);
+    }
     if (!data.user) {
       window.location.href = "/signin";
       return;
@@ -125,9 +130,45 @@ export function InvestClient() {
       const data = (await response.json()) as GameState & { error?: string };
       if (!response.ok) throw new Error(data.error || "Deposit failed");
       setState(data);
-      if (typeof data.user?.balance === "number") publishBank(data.user.balance);
+      if (typeof data.user?.balance === "number") {
+      publishBank(data.user.balance, data.user.bonus);
+    }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Deposit failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function claimSend() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txHash: claimHash }),
+      });
+      const data = (await response.json()) as GameState & {
+        error?: string;
+        claimed?: { credited?: boolean; already?: boolean; amount?: number };
+      };
+      if (!response.ok) throw new Error(data.error || "Could not credit that send");
+      if (data.user) {
+        setState(data);
+        if (typeof data.user.balance === "number") {
+          publishBank(data.user.balance, data.user.bonus);
+        }
+      }
+      if (data.claimed?.already) {
+        setLanded("Already in your bank.");
+      } else if (data.claimed?.credited) {
+        setLanded(`Credited ${formatUsdt(data.claimed.amount ?? 0)} USDT. Sit a table or cash out.`);
+      }
+      setClaimHash("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not credit that send");
     } finally {
       setBusy(false);
     }
@@ -164,7 +205,8 @@ export function InvestClient() {
           {chain.watching
             ? `Watching ${chain.name} · block ${chain.lastBlock || "—"}`
             : "Chain watch is off. Set BSC_RPC_URL or CHAIN_WATCH=1 to credit automatically."}
-          {chain.lastError ? ` · ${chain.lastError}` : ""}
+          {chain.catchingUp ? " · catching up" : ""}
+          {chain.lastError && !chain.lastBlock ? ` · ${chain.lastError}` : ""}
         </p>
       ) : null}
 
@@ -219,6 +261,30 @@ export function InvestClient() {
               Waiting on chain. This list updates when credit lands.
             </p>
           ) : null}
+          <form
+            className="mt-6"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!busy && claimHash.trim()) void claimSend();
+            }}
+          >
+            <label className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+              Sent and still waiting?
+            </label>
+            <input
+              className="field mt-2"
+              onChange={(event) => setClaimHash(event.target.value)}
+              placeholder="Paste the BscScan hash"
+              value={claimHash}
+            />
+            <button
+              className="chip-btn mt-3 w-full justify-center"
+              disabled={busy || !claimHash.trim()}
+              type="submit"
+            >
+              {busy ? "Checking…" : "Credit this send"}
+            </button>
+          </form>
         </section>
       ) : (
         <p className="mt-8 text-sm text-zinc-400">No live BNB Chain address yet. Sign in again.</p>

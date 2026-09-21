@@ -18,8 +18,10 @@ export async function GET(request: Request) {
   const state = url.searchParams.get("state") ?? "";
   try {
     const profile = await googleProfile(code);
+    let next = "";
     const session = await withStore((store) => {
       const oauth = takeOAuthState(store, state);
+      next = oauth.next;
       return loginWithGoogle(
         store,
         profile,
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
       );
     });
     await setSessionCookie(session.token, session.maxAge);
-    return NextResponse.redirect(`${appUrl()}/`);
+    return NextResponse.redirect(`${appUrl()}${next || "/"}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Google sign-in failed";
     return NextResponse.redirect(

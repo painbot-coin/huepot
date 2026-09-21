@@ -2,8 +2,12 @@ import { randomBytes } from "crypto";
 import { classicHourClock, classicHourUtc } from "./classic-hour";
 import { INVITE_DAILY_CAP, INVITE_RAKE_SHARE_BPS } from "./config";
 import { prisma } from "./db";
+import { inviteCreditMail } from "./email-copy";
+import { queueEmail } from "./email";
 import { isHouseUser } from "./house";
+import { inviteCutCents } from "./invite-rake";
 import { formatCents, toCents } from "./money";
+import { nightHourClock, nightHourUtc } from "./night-hour";
 import { notify } from "./notifications";
 import type { ColorId } from "./colors";
 import type { StoreData, Tx, User } from "./types";
@@ -124,7 +128,7 @@ export function nudgeFirstClickInvite(store: StoreData, userId: string) {
   notify(store, userId, {
     kind: "system",
     title: FIRST_CLICK_INVITE_TITLE,
-    body: `Copy invite on Account. Classic sits ${classicHourClock(classicHourUtc())}.`,
+    body: `Copy invite on a take or Account. Classic sits ${classicHourClock(classicHourUtc())}. Night sits ${nightHourClock(nightHourUtc())}.`,
     href: "/account",
   });
 }
@@ -203,12 +207,8 @@ export function payInviteRake(
     }
     const playerLosing = losingClicksFor(playerClicks, losingColors);
     if (playerLosing <= 0) continue;
-    const playerRake = Math.floor((rake * playerLosing) / losingClicks);
-    let cut = Math.floor((playerRake * shareBps) / 10_000);
-    if (cut <= 0) continue;
     const already = inviteEarnedTodayCents(store, inviter.id, at);
-    const roomLeft = Math.max(0, cap - already);
-    cut = Math.min(cut, roomLeft);
+    const cut = inviteCutCents(rake, playerLosing, losingClicks, shareBps, already, cap);
     if (cut <= 0) continue;
     inviter.balance += cut;
     addInviteTx(
@@ -224,6 +224,20 @@ export function payInviteRake(
       body: `${formatCents(cut)} USDT house-rake share from @${player.username}.`,
       href: "/account",
     });
+    if (inviter.email) {
+      const mail = inviteCreditMail({
+        username: inviter.username,
+        cents: cut,
+        from: player.username,
+        room: roomName,
+      });
+      queueEmail({
+        userId: inviter.id,
+        to: inviter.email,
+        kind: "invite",
+        ...mail,
+      });
+    }
     paid += cut;
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatUsdt } from "@/lib/money";
+import { hueExplorerTx, type HueClaim } from "@/lib/hue-claim";
 import type { Tx, Withdrawal } from "@/lib/types";
 import type { StaffUserRow } from "@/lib/staff";
 
@@ -95,6 +96,8 @@ export function StaffConsole() {
   const [inboxes, setInboxes] = useState<InboxHold | null>(null);
   const [sweeps, setSweeps] = useState<SweepRow[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [hueClaims, setHueClaims] = useState<HueClaim[]>([]);
+  const [hueOn, setHueOn] = useState(false);
   const [users, setUsers] = useState<StaffUserRow[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
   const [txs, setTxs] = useState<(Tx & { username?: string })[]>([]);
@@ -109,6 +112,8 @@ export function StaffConsole() {
   const [emailOn, setEmailOn] = useState(false);
   const [note, setNote] = useState("");
   const [amount, setAmount] = useState("");
+  const [claimHash, setClaimHash] = useState("");
+  const [claimNote, setClaimNote] = useState("");
 
   async function checkSession() {
     const response = await fetch("/api/staff/session");
@@ -165,6 +170,8 @@ export function StaffConsole() {
       const data = (await response.json()) as {
         error?: string;
         withdrawals?: Withdrawal[];
+        hueClaims?: HueClaim[];
+        hueOn?: boolean;
         users?: StaffUserRow[];
         rooms?: RoomRow[];
         txs?: (Tx & { username?: string })[];
@@ -190,6 +197,8 @@ export function StaffConsole() {
       }
       if (!response.ok) throw new Error(data.error || "Could not load staff");
       if (data.withdrawals) setWithdrawals(data.withdrawals);
+      if (data.hueClaims) setHueClaims(data.hueClaims);
+      if (typeof data.hueOn === "boolean") setHueOn(data.hueOn);
       if (data.users) setUsers(data.users);
       if (data.rooms) setRooms(data.rooms);
       if (data.txs) setTxs(data.txs);
@@ -229,6 +238,8 @@ export function StaffConsole() {
       const data = (await response.json()) as {
         error?: string;
         withdrawals?: Withdrawal[];
+        hueClaims?: HueClaim[];
+        hueOn?: boolean;
         users?: StaffUserRow[];
         rooms?: RoomRow[];
         reports?: ReportRow[];
@@ -239,6 +250,7 @@ export function StaffConsole() {
         treasury?: Treasury;
         inboxes?: InboxHold;
         sweeps?: SweepRow[];
+        claimed?: { credited?: boolean; already?: boolean; amount?: number };
       };
       if (response.status === 401) {
         setSignedIn(false);
@@ -246,6 +258,8 @@ export function StaffConsole() {
       }
       if (!response.ok) throw new Error(data.error || "Could not update");
       if (data.withdrawals) setWithdrawals(data.withdrawals);
+      if (data.hueClaims) setHueClaims(data.hueClaims);
+      if (typeof data.hueOn === "boolean") setHueOn(data.hueOn);
       if (data.users) setUsers(data.users);
       if (data.rooms) setRooms(data.rooms);
       if (data.reports) setReports(data.reports);
@@ -256,6 +270,13 @@ export function StaffConsole() {
       if (data.treasury) setTreasury(data.treasury);
       if (data.inboxes) setInboxes(data.inboxes);
       if (data.sweeps) setSweeps(data.sweeps);
+      if (data.claimed?.already) {
+        setClaimNote("Already credited.");
+        setClaimHash("");
+      } else if (data.claimed?.credited) {
+        setClaimNote(`Credited ${formatUsdt(data.claimed.amount ?? 0)} USDT.`);
+        setClaimHash("");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update");
     } finally {
@@ -470,6 +491,30 @@ export function StaffConsole() {
 
       {signedIn && tab === "payouts" ? (
         <div className="mt-8 space-y-4">
+        <form
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!busy && claimHash.trim()) {
+              setClaimNote("");
+              void act({ action: "credit-hash", txHash: claimHash });
+            }
+          }}
+        >
+          <label className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+            Credit a send
+          </label>
+          <input
+            className="field"
+            onChange={(event) => setClaimHash(event.target.value)}
+            placeholder="BscScan hash"
+            value={claimHash}
+          />
+          <button className="chip-btn" disabled={busy || !claimHash.trim()} type="submit">
+            {busy ? "Checking…" : "Credit this send"}
+          </button>
+          {claimNote ? <p className="text-sm text-zinc-300">{claimNote}</p> : null}
+        </form>
         {canSend ? (
           <button
             className="chip-btn"
@@ -538,6 +583,55 @@ export function StaffConsole() {
               </div>
             </li>
           ))}
+        </ul>
+        <p className="mt-8 text-xs uppercase tracking-widest text-zinc-500">HUE testnet</p>
+        <p className="mt-2 text-sm text-zinc-400">
+          {hueOn
+            ? "Standing HUE sends on BSC testnet. Not USDT."
+            : "HUE send is off. Set HUE_TOKEN and HUE_HOT_KEY on chainId 97."}
+        </p>
+        <ul className="mt-3 space-y-2">
+          {hueClaims.length === 0 ? (
+            <li className="text-sm text-zinc-500">No HUE claims yet.</li>
+          ) : (
+            hueClaims.map((row) => (
+              <li className="rounded-2xl border border-white/8 px-4 py-3 text-sm text-zinc-400" key={row.id}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-zinc-200">
+                      @{row.username ?? "player"} · {row.amount} HUE
+                    </p>
+                    <p className="mt-1 break-all font-mono text-xs">{row.address}</p>
+                    <p className="mt-1 text-xs uppercase tracking-widest">{row.status}</p>
+                    {row.txHash ? (
+                      <a
+                        className="mt-1 inline-block break-all font-mono text-xs text-amber-200/80"
+                        href={hueExplorerTx(row.txHash)}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {row.txHash.slice(0, 10)}…{row.txHash.slice(-6)}
+                      </a>
+                    ) : null}
+                  </div>
+                  {row.status === "queued" || row.status === "sending" ? (
+                    <div className="flex gap-2">
+                      {hueOn && row.status === "queued" ? (
+                        <button className="chip-btn" disabled={busy} onClick={() => void act({ action: "hue-send", id: row.id })} type="button">
+                          Send
+                        </button>
+                      ) : null}
+                      {row.status === "queued" ? (
+                        <button className="chip-btn chip-btn-ghost" disabled={busy} onClick={() => void act({ action: "hue-reject", id: row.id })} type="button">
+                          Reject
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </li>
+            ))
+          )}
         </ul>
         </div>
       ) : null}
@@ -724,8 +818,9 @@ export function StaffConsole() {
         <div className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-zinc-400">
-              Headlines publish themselves, every quarter of an hour, from eight
-              approved sources. Pull anything that should not be there.
+              Headlines publish themselves, every quarter of an hour, from
+              betting-game desks and the tape. Pull anything that should not be
+              there.
             </p>
             <button
               className="chip-btn chip-btn-ghost"

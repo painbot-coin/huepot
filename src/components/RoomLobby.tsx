@@ -6,18 +6,20 @@ import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { IconCash, IconClock, IconCoin, IconPlus, IconPot } from "@/components/Icons";
 import { MiniCoin } from "@/components/MiniCoin";
+import { PublicBoard } from "@/components/PublicBoard";
 import { PublicPayouts } from "@/components/PublicPayouts";
 import { PublicTakes } from "@/components/PublicTakes";
+import { PublicWire } from "@/components/PublicWire";
 import { RoomMark } from "@/components/RoomMark";
 import { SearchDock } from "@/components/SearchDock";
 import { colorsForCount } from "@/lib/colors";
 import { eventSoon, hallClass, hallFor } from "@/lib/hall";
 import { BASIC_ROOMS } from "@/lib/rooms";
-import { classicHourClock } from "@/lib/classic-hour";
-import { fogCupClock } from "@/lib/fog-cup";
-import { inviteText } from "@/lib/invite-copy";
-import { formatClock, formatUsdt, formatWait } from "@/lib/money";
-import type { ClassicHour, FogCup, LobbyState, PublicRoomCard } from "@/lib/types";
+import { CopyInvite } from "@/components/CopyInvite";
+import { classicHourLine, classicHourSitLabel, fogCupLine, nightHourLine, nightHourSitLabel } from "@/lib/hour-door";
+import { formatClock, formatUsdt } from "@/lib/money";
+import { groupCompanySits } from "@/lib/sit-pulse";
+import type { ClassicHour, CompanySit, FogCup, LobbyState, NightHour, PublicRoomCard } from "@/lib/types";
 
 function blurbFor(room: PublicRoomCard) {
   const base =
@@ -65,68 +67,72 @@ function ClassicLine({ rooms }: { rooms: PublicRoomCard[] }) {
   );
 }
 
-function ClassicHourLine({ hour, now }: { hour?: ClassicHour; now: number }) {
-  if (!hour) return null;
-  if (hour.live) {
-    return (
-      <p className="lobby-hour">
-        <Link href="/rooms/classic" onFocus={prefetchTable} onMouseEnter={prefetchTable}>
-          Classic hour
-        </Link>{" "}
-        is on · sit now
-      </p>
-    );
-  }
+function CompanyLine({ sits }: { sits: CompanySit[] }) {
+  const groups = groupCompanySits(sits);
+  if (!groups.length) return null;
   return (
     <p className="lobby-hour">
-      Next hour {classicHourClock(hour.hour)} · in {formatWait(hour.startAt - now)}
+      Company
+      {groups.map((group, index) => {
+        const names = group.usernames.map((name) => `@${name}`).join(" · ");
+        const verb =
+          groups.length === 1
+            ? group.usernames.length === 1
+              ? " is on "
+              : " are on "
+            : " on ";
+        return (
+          <span key={group.slug}>
+            {index === 0 ? " · " : " · "}
+            {names}
+            {verb}
+            <Link
+              href={`/rooms/${group.slug}`}
+              onFocus={prefetchTable}
+              onMouseEnter={prefetchTable}
+            >
+              {group.label}
+            </Link>
+          </span>
+        );
+      })}
+    </p>
+  );
+}
+
+function ClassicHourLine({ hour, now }: { hour?: ClassicHour; now: number }) {
+  if (!hour) return null;
+  const line = classicHourLine(hour, now);
+  return (
+    <p className="lobby-hour">
+      <Link href={line.href} onFocus={prefetchTable} onMouseEnter={prefetchTable}>
+        {line.text}
+      </Link>
     </p>
   );
 }
 
 function FogCupLine({ cup, now }: { cup?: FogCup; now: number }) {
   if (!cup) return null;
-  if (cup.live) {
-    return (
-      <p className="lobby-hour">
-        <Link href="/rooms/fog" onFocus={prefetchTable} onMouseEnter={prefetchTable}>
-          Fog cup
-        </Link>{" "}
-        is on · sit Fog
-      </p>
-    );
-  }
+  const line = fogCupLine(cup, now);
   return (
     <p className="lobby-hour">
-      Next Fog cup {fogCupClock(cup.weekday, cup.hour)} · in {formatWait(cup.startAt - now)}
+      <Link href={line.href} onFocus={prefetchTable} onMouseEnter={prefetchTable}>
+        {line.text}
+      </Link>
     </p>
   );
 }
 
-function ClassicInvite({
-  code,
-  hour,
-  cup,
-}: {
-  code: string;
-  hour?: number;
-  cup?: FogCup;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  function copy() {
-    const url = `${window.location.origin}/rooms/classic?ref=${code}`;
-    const text = inviteText(url, { hour, cup });
-    void navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    });
-  }
-
+function NightHourLine({ hour, now }: { hour?: NightHour; now: number }) {
+  if (!hour) return null;
+  const line = nightHourLine(hour, now);
   return (
-    <button className="chip-btn lobby-invite" onClick={copy} type="button">
-      {copied ? "Invite copied" : "Copy Classic invite"}
-    </button>
+    <p className="lobby-hour">
+      <Link href={line.href} onFocus={prefetchTable} onMouseEnter={prefetchTable}>
+        {line.text}
+      </Link>
+    </p>
   );
 }
 
@@ -173,28 +179,34 @@ export function RoomLobby() {
   const basic = state?.rooms.filter((room) => room.kind === "basic") ?? [];
   const custom = state?.rooms.filter((room) => room.kind === "custom") ?? [];
   const hourLive = Boolean(state?.classicHour?.live);
+  const nightLive = Boolean(state?.nightHour?.live);
   const cupLive = Boolean(state?.fogCup?.live);
   const hourSoon = Boolean(state?.classicHour && eventSoon(state.classicHour.startAt, now));
+  const nightSoon = Boolean(state?.nightHour && eventSoon(state.nightHour.startAt, now));
   const cupSoon = Boolean(state?.fogCup && eventSoon(state.fogCup.startAt, now));
 
   return (
     <div className="lobby-stage">
       <header
-        className={`lobby-hero${hourLive ? " is-hour" : ""}${cupLive ? " is-cup" : ""}${
-          !hourLive && !cupLive && (hourSoon || cupSoon) ? " is-soon" : ""
+        className={`lobby-hero${hourLive || nightLive ? " is-hour" : ""}${cupLive ? " is-cup" : ""}${
+          !hourLive && !nightLive && !cupLive && (hourSoon || nightSoon || cupSoon)
+            ? " is-soon"
+            : ""
         }`}
       >
         <div className="lobby-hero-art">
           <BrandMark className="brand-mark is-hero" />
         </div>
-        <p className="lobby-kicker">The hall</p>
+        <p className="lobby-kicker">Tonight</p>
         <h1 className="font-display">Same price. Biggest color takes.</h1>
         <p className="lobby-rule">
-          Every coin costs the same. When the clock ends, the color with the most
+          Every coin costs the same. When time runs out, the color with the most
           clicks splits the rest of the pot. Ties come back.
         </p>
         <ClassicHourLine hour={state?.classicHour} now={now} />
+        <NightHourLine hour={state?.nightHour} now={now} />
         <FogCupLine cup={state?.fogCup} now={now} />
+        <CompanyLine sits={state?.companySitting ?? []} />
         <ClassicLine rooms={basic} />
         <div className="lobby-hero-tools">
           <Link
@@ -203,8 +215,20 @@ export function RoomLobby() {
             onFocus={prefetchTable}
             onMouseEnter={prefetchTable}
           >
-            {hourLive ? "Sit Classic now" : "Sit Classic"}
+            {(state?.user?.bonus ?? 0) > 0
+              ? "Your sit chip · Classic"
+              : classicHourSitLabel(state?.classicHour, now)}
           </Link>
+          {nightLive || nightSoon ? (
+            <Link
+              className="chip-btn"
+              href="/rooms/night"
+              onFocus={prefetchTable}
+              onMouseEnter={prefetchTable}
+            >
+              {nightHourSitLabel(state?.nightHour, now)}
+            </Link>
+          ) : null}
           {cupLive ? (
             <Link
               className="chip-btn"
@@ -216,10 +240,14 @@ export function RoomLobby() {
             </Link>
           ) : null}
           {state?.user?.inviteCode ? (
-            <ClassicInvite
+            <CopyInvite
+              className="chip-btn lobby-invite"
               code={state.user.inviteCode}
               cup={state.fogCup}
               hour={state.classicHour?.hour}
+              href="/rooms/classic"
+              label="Copy Classic invite"
+              night={state.nightHour?.hour}
             />
           ) : (
             <Link className="nav-link" href="/how-it-works">
@@ -236,6 +264,8 @@ export function RoomLobby() {
       </header>
       {error ? <p className="error-toast">{error}</p> : null}
 
+      <PublicWire />
+
       <section>
         <h2 className="lobby-label">House pits</h2>
         <div className="lobby-grid">
@@ -245,8 +275,12 @@ export function RoomLobby() {
               now={now}
               room={room}
               blurb={blurbFor(room)}
-              hourOn={room.slug === "classic" && hourLive}
-              hourSoon={room.slug === "classic" && hourSoon}
+              hourOn={
+                (room.slug === "classic" && hourLive) || (room.slug === "night" && nightLive)
+              }
+              hourSoon={
+                (room.slug === "classic" && hourSoon) || (room.slug === "night" && nightSoon)
+              }
               cupOn={room.slug === "fog" && cupLive}
               cupSoon={room.slug === "fog" && cupSoon}
             />
@@ -268,6 +302,7 @@ export function RoomLobby() {
           </div>
         )}
       </section>
+      <PublicBoard />
       <PublicTakes />
       <PublicPayouts />
     </div>

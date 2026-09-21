@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { countNews, listNews, newsOutlets } from "@/lib/news";
+import { countNews, listNews, newsOutlets, talkHref } from "@/lib/news";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "The wire",
   description:
-    "Betting and crypto headlines, gathered by the house. Every line links out to whoever wrote it.",
+    "Betting-game headlines gathered by the house: odds, lines, new tables and the desks that write about them. Every line links out to whoever wrote it, and Talk opens it on the wing.",
 };
 
 const PAGE = 24;
@@ -29,11 +29,10 @@ function ago(at: number) {
  */
 function href(params: { tag?: string; source?: string; before?: number }) {
   const search = new URLSearchParams();
-  if (params.tag) search.set("tag", params.tag);
+  search.set("tag", params.tag || "all");
   if (params.source) search.set("source", params.source);
   if (params.before) search.set("before", String(params.before));
-  const query = search.toString();
-  return query ? `/news?${query}` : "/news";
+  return `/news?${search.toString()}`;
 }
 
 export default async function NewsPage({
@@ -42,7 +41,8 @@ export default async function NewsPage({
   searchParams: Promise<{ tag?: string; source?: string; before?: string }>;
 }) {
   const raw = await searchParams;
-  const tag = raw.tag === "crypto" || raw.tag === "sport" ? raw.tag : "";
+  const asked = raw.tag ?? "";
+  const tag = asked === "sport" || asked === "casino" ? asked : "";
   const source = (raw.source ?? "").slice(0, 40);
   const before = Number(raw.before);
 
@@ -62,22 +62,23 @@ export default async function NewsPage({
   return (
     <main className="prose-page">
       <p className="hall-kicker">The wire</p>
-      <h1 className="font-display text-4xl text-white">What the tape says</h1>
+      <h1 className="font-display text-4xl text-white">Betting on the games</h1>
       <p>
-        Every headline the house has gathered, newest first, each with the
-        outlet&apos;s own summary and picture and a link out to whoever wrote it.
-        The house never keeps the article itself.
+        Odds, lines, new tables and the desks that write about them, newest first.
+        Each headline carries the outlet&apos;s own summary and picture and a link
+        out to whoever wrote it. Talk takes the same line onto the wing. The house
+        never keeps the article itself.
       </p>
 
       <nav aria-label="Filter the wire" className="wire-filters">
-        <Link className={`wire-chip ${!tag ? "is-on" : ""}`} href={href({ source })}>
-          Everything
-        </Link>
-        <Link className={`wire-chip ${tag === "crypto" ? "is-on" : ""}`} href={href({ tag: "crypto", source })}>
-          Coin
+        <Link className={`wire-chip ${!tag ? "is-on" : ""}`} href={href({ tag: "all", source })}>
+          All games
         </Link>
         <Link className={`wire-chip ${tag === "sport" ? "is-on" : ""}`} href={href({ tag: "sport", source })}>
-          Sport
+          Sports betting
+        </Link>
+        <Link className={`wire-chip ${tag === "casino" ? "is-on" : ""}`} href={href({ tag: "casino", source })}>
+          Casino games
         </Link>
       </nav>
 
@@ -103,12 +104,18 @@ export default async function NewsPage({
         {total === 0
           ? "Nothing on the wire under that filter."
           : `${total.toLocaleString()} headline${total === 1 ? "" : "s"}${
-              filtered ? " match" : " on the wire"
+              !tag && !source
+                ? " about betting games"
+                : tag === "sport" && !source
+                  ? " on sports betting"
+                  : tag === "casino" && !source
+                    ? " on casino games"
+                    : " match"
             }${before ? `, showing older ones` : ""}.`}
         {filtered ? (
           <>
             {" "}
-            <Link href="/news">Show everything</Link>
+            <Link href={href({ tag: "all" })}>Show everything</Link>
           </>
         ) : null}
       </p>
@@ -140,6 +147,14 @@ export default async function NewsPage({
                   </Link>
                   {" · "}
                   {ago(item.publishedAt)}
+                  {item.talkId && talkHref(item.talkId) ? (
+                    <>
+                      {" · "}
+                      <Link className="wire-talk" href={talkHref(item.talkId)}>
+                        Talk
+                      </Link>
+                    </>
+                  ) : null}
                 </span>
               </div>
             </li>

@@ -5,9 +5,12 @@ import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/LogoutButton";
 import { publishBank } from "@/lib/bank-sync";
 import { COOL_OFF_HOURS, SELF_EXCLUDE_DAYS } from "@/lib/limits";
-import { inviteSitLead, inviteText } from "@/lib/invite-copy";
+import { CopyInvite } from "@/components/CopyInvite";
+import { inviteSitLead } from "@/lib/invite-copy";
+import { lastInviteCredit } from "@/lib/invite-rake";
+import { hueExplorerTx, type HueClaim } from "@/lib/hue-claim";
 import { formatUsdt } from "@/lib/money";
-import type { ClassicHour, FogCup, PublicSession, PublicUser, Tx } from "@/lib/types";
+import type { ClassicHour, FogCup, NightHour, PublicSession, PublicUser, Tx } from "@/lib/types";
 
 const TX_LABEL: Record<Tx["type"], string> = {
   deposit: "In",
@@ -18,11 +21,14 @@ const TX_LABEL: Record<Tx["type"], string> = {
   adjust: "Staff",
   rake: "House",
   invite: "Invite",
+  bonus: "Sit chip",
+  sit: "Sit",
 };
 
 export function AccountClient() {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [hour, setHour] = useState<ClassicHour | null>(null);
+  const [night, setNight] = useState<NightHour | null>(null);
   const [cup, setCup] = useState<FogCup | null>(null);
 
   useEffect(() => {
@@ -34,12 +40,20 @@ export function AccountClient() {
         return;
       }
       setUser(data.user);
-      publishBank(data.user.balance);
+      publishBank(data.user.balance, data.user.bonus);
     })();
     void fetch("/api/rooms")
-      .then((response) => response.json() as Promise<{ classicHour?: ClassicHour; fogCup?: FogCup }>)
+      .then(
+        (response) =>
+          response.json() as Promise<{
+            classicHour?: ClassicHour;
+            nightHour?: NightHour;
+            fogCup?: FogCup;
+          }>,
+      )
       .then((data) => {
         if (data.classicHour) setHour(data.classicHour);
+        if (data.nightHour) setNight(data.nightHour);
         if (data.fogCup) setCup(data.fogCup);
       })
       .catch(() => undefined);
@@ -63,13 +77,28 @@ export function AccountClient() {
         Signed in as <strong className="text-zinc-200">@{user.username}</strong>
       </p>
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-2">
+      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StandingCard />
         <div className="app-card is-flush">
           <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
             Balance
           </p>
           <p className="font-display text-3xl text-white">
             {formatUsdt(user.balance)} USDT
+          </p>
+        </div>
+        <div className="app-card is-flush">
+          <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+            Sit chips
+          </p>
+          <p className="font-display text-3xl text-white">
+            {formatUsdt(user.bonus)}{" "}
+            <span className="text-base text-zinc-500">USDT</span>
+          </p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {user.bonus > 0
+              ? "Play only. Not withdrawable."
+              : "Next chip at 00:00 UTC. Play only."}
           </p>
         </div>
         <div className="app-card is-flush">
@@ -98,7 +127,8 @@ export function AccountClient() {
         <LogoutButton />
       </div>
 
-      <InviteCard cup={cup} hour={hour} user={user} />
+      <InviteCard cup={cup} hour={hour} night={night} user={user} />
+      <HueClaimCard withdrawAddress={user.withdrawAddress} />
       <ProfileCard user={user} onUser={setUser} />
       <LimitsCard user={user} onUser={setUser} />
       <SecurityCard user={user} />
@@ -130,7 +160,7 @@ export function AccountClient() {
 
 const LEDGER_FILTERS: { id: string; label: string; types?: Tx["type"][] }[] = [
   { id: "all", label: "All" },
-  { id: "in", label: "In", types: ["deposit", "invite"] },
+  { id: "in", label: "In", types: ["deposit", "invite", "bonus"] },
   { id: "out", label: "Out", types: ["withdraw"] },
   { id: "click", label: "Click", types: ["click"] },
   { id: "win", label: "Win", types: ["payout"] },
@@ -139,6 +169,9 @@ const LEDGER_FILTERS: { id: string; label: string; types?: Tx["type"][] }[] = [
 ];
 
 function txSigned(tx: Tx) {
+  // Sit chips are not cash. A bonus grant must not lift the running bank.
+  // Sit rows are signed and offset a click or a refund, same as the books.
+  if (tx.type === "bonus") return 0;
   // An adjust already carries its own sign; the rest take it from the type.
   const out = tx.type === "withdraw" || tx.type === "click" || tx.type === "rake";
   return out ? -tx.amount : tx.amount;
@@ -157,18 +190,16 @@ function withRunning(txs: Tx[]) {
 function InviteCard({
   user,
   hour,
+  night,
   cup,
 }: {
   user: PublicUser;
   hour: ClassicHour | null;
+  night: NightHour | null;
   cup: FogCup | null;
 }) {
-  const [copied, setCopied] = useState(false);
-  const link =
-    typeof window === "undefined"
-      ? `/signin?ref=${user.inviteCode}`
-      : `${window.location.origin}/signin?ref=${user.inviteCode}`;
-  const sit = inviteSitLead({ hour: hour?.hour, cup });
+  const sit = inviteSitLead({ hour: hour?.hour, night: night?.hour, cup });
+  const last = lastInviteCredit(user.txs);
 
   return (
     <section className="app-card">
@@ -185,22 +216,199 @@ function InviteCard({
         Your code
       </p>
       <p className="mt-2 font-mono text-2xl text-white">{user.inviteCode || "—"}</p>
-      <button
+      <CopyInvite
         className="chip-btn mt-4"
-        disabled={!user.inviteCode}
-        onClick={() => {
-          void navigator.clipboard.writeText(inviteText(link, { hour: hour?.hour, cup }));
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1600);
-        }}
-        type="button"
-      >
-        {copied ? "Invite copied" : "Copy invite"}
-      </button>
-      <p className="mt-4 text-sm text-zinc-400">
+        code={user.inviteCode}
+        cup={cup}
+        hour={hour?.hour}
+        href="/signin"
+        night={night?.hour}
+      />
+      {last ? (
+        <p className="mt-4 text-sm text-zinc-300">
+          Last credit {formatUsdt(last.amount)} USDT
+          {last.from ? ` from @${last.from}` : ""}
+          {last.room ? ` · ${last.room}` : ""}
+        </p>
+      ) : (
+        <p className="mt-4 text-sm text-zinc-500">
+          No invite credit yet. It lands after someone from your link sits a
+          rake-making take.
+        </p>
+      )}
+      <p className="mt-2 text-sm text-zinc-400">
         Today {formatUsdt(user.inviteEarnedToday)} USDT · {formatUsdt(user.inviteDailyLeft)} USDT left
         today · lifetime {formatUsdt(user.inviteEarned)} USDT
       </p>
+    </section>
+  );
+}
+
+function StandingCard() {
+  const [coin, setCoin] = useState(0);
+  const [place, setPlace] = useState<number | null>(null);
+  const [booted, setBooted] = useState(false);
+
+  useEffect(() => {
+    void fetch("/api/hue")
+      .then((response) => response.json() as Promise<{ coin?: number; place?: number | null }>)
+      .then((data) => {
+        setCoin(data.coin ?? 0);
+        setPlace(typeof data.place === "number" ? data.place : null);
+      })
+      .catch(() => undefined)
+      .finally(() => setBooted(true));
+  }, []);
+
+  return (
+    <div className="app-card is-flush">
+      <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        On the board
+      </p>
+      <p className="font-display text-3xl text-white">
+        {booted && place ? `#${place}` : booted ? "—" : "…"}
+      </p>
+      <p className="mt-2 text-sm text-zinc-400">
+        {Math.floor(coin).toLocaleString()} HUE
+      </p>
+      <p className="mt-2 text-sm text-zinc-500">
+        <Link className="underline" href="/board">
+          The board
+        </Link>
+        {" · "}
+        <Link className="underline" href="/rooms/classic">
+          Sit Classic
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function HueClaimCard({ withdrawAddress }: { withdrawAddress: string }) {
+  const [address, setAddress] = useState(withdrawAddress);
+  const [configured, setConfigured] = useState(false);
+  const [coin, setCoin] = useState(0);
+  const [claimable, setClaimable] = useState(0);
+  const [claims, setClaims] = useState<HueClaim[]>([]);
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [booted, setBooted] = useState(false);
+
+  async function load() {
+    const response = await fetch("/api/hue");
+    const data = (await response.json()) as {
+      configured?: boolean;
+      coin?: number;
+      claimable?: number;
+      claims?: HueClaim[];
+      error?: string;
+    };
+    if (!response.ok) throw new Error(data.error || "Could not load HUE");
+    setConfigured(Boolean(data.configured));
+    setCoin(data.coin ?? 0);
+    setClaimable(data.claimable ?? 0);
+    if (Array.isArray(data.claims)) setClaims(data.claims);
+  }
+
+  useEffect(() => {
+    void load()
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Could not load HUE");
+      })
+      .finally(() => setBooted(true));
+  }, []);
+
+  async function claim() {
+    setBusy(true);
+    setError("");
+    setNote("");
+    try {
+      const response = await fetch("/api/hue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const data = (await response.json()) as {
+        configured?: boolean;
+        coin?: number;
+        claimable?: number;
+        claims?: HueClaim[];
+        sendError?: string;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(data.error || "Could not claim HUE");
+      setConfigured(Boolean(data.configured));
+      setCoin(data.coin ?? 0);
+      setClaimable(data.claimable ?? 0);
+      if (Array.isArray(data.claims)) setClaims(data.claims);
+      if (data.sendError) setError(data.sendError);
+      else setNote("Claim queued on BSC testnet.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not claim HUE");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="app-card">
+      <p className="hall-kicker">The coin</p>
+      <h2 className="font-display text-2xl text-white">Claim HUE</h2>
+      <p className="mt-1 text-sm text-zinc-500">
+        Standing from play. Testnet only. Not USDT. No price.
+      </p>
+      <p className="mt-4 font-display text-3xl text-white">
+        {Math.floor(coin).toLocaleString()} HUE
+      </p>
+      <p className="mt-1 text-sm text-zinc-400">
+        {booted
+          ? configured
+            ? `${claimable.toLocaleString()} left to claim`
+            : "Send is off until the testnet token and hot key are set."
+          : "Opening the book…"}
+      </p>
+      <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        BSC testnet address
+      </label>
+      <input
+        className="field mt-2"
+        onChange={(event) => setAddress(event.target.value)}
+        placeholder="0x…"
+        value={address}
+      />
+      <button
+        className="chip-btn mt-4"
+        disabled={busy || !configured || claimable < 1}
+        onClick={() => void claim()}
+        type="button"
+      >
+        {busy ? "Claiming…" : "Claim on testnet"}
+      </button>
+      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+      {note ? <p className="mt-3 text-sm text-zinc-300">{note}</p> : null}
+      {claims.length ? (
+        <ul className="mt-5 space-y-2">
+          {claims.map((row) => (
+            <li className="text-sm text-zinc-400" key={row.id}>
+              {row.amount} HUE · {row.status}
+              {row.txHash ? (
+                <>
+                  {" · "}
+                  <a
+                    className="text-zinc-200 underline"
+                    href={hueExplorerTx(row.txHash)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    BscScan
+                  </a>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }

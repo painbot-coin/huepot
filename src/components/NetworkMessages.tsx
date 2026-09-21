@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
 import { useChatScroll } from "@/components/useChatScroll";
+import { COMPANY_CLASSIC_HREF, sitClassicLabel } from "@/lib/company-door";
 import type { NetworkMessage, NetworkThread, NetworkYou } from "@/lib/types";
 
 export function NetworkMessages() {
@@ -139,6 +140,9 @@ export function NetworkMessages() {
                   Inbox
                 </Link>
                 <Link href={`/network/u/${encodeURIComponent(peer)}`}>@{peer}</Link>
+                <Link className="chip-btn" href={COMPANY_CLASSIC_HREF}>
+                  {sitClassicLabel()}
+                </Link>
               </p>
               <ul className="li-bubbles" onScroll={onScroll} ref={scroller}>
                 {messages.length === 0 ? (

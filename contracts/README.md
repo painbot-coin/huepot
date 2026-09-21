@@ -45,6 +45,15 @@ Keep the treasury key **off the web server**. The app never needs to hold the
 supply; bonus payouts should be signed by a separate, limited hot wallet that
 is topped up from treasury.
 
+## Claiming standing (app)
+
+Off-chain HUE is still the seat record. The house can pay unpaid standing by
+transferring treasury tokens on **BSC testnet** (`HUE_TOKEN`, `HUE_HOT_KEY`,
+`HUE_CHAIN_ID=97`). That path is inert until those are set. It does not create
+a price and it must not run on mainnet from this app.
+
+Keep the treasury deployer key off the web server. Top up a small hot wallet.
+
 ## Price
 
 The contract does not create a price. HUE has a market price only once it is

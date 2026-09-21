@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { PadRune } from "@/components/PadRune";
 import { colorById, type ColorId } from "@/lib/colors";
 
 export function MiniCoin({
@@ -23,8 +22,6 @@ export function MiniCoin({
         } as CSSProperties
       }
       title={color.name}
-    >
-      <PadRune className="mini-coin-rune" id={id} />
-    </span>
+    />
   );
 }

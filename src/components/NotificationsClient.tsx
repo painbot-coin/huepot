@@ -4,31 +4,38 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Notice } from "@/lib/types";
 
+const NOTICE_STEP = 40;
+
 export function NotificationsClient() {
   const [items, setItems] = useState<Notice[]>([]);
+  const [depth, setDepth] = useState(NOTICE_STEP);
+  const [total, setTotal] = useState(0);
 
-  async function load() {
-    const response = await fetch("/api/notifications");
+  async function load(want = depth) {
+    const response = await fetch(`/api/notifications?limit=${want}`);
     if (response.status === 401) {
       window.location.href = "/signin";
       return;
     }
-    const data = (await response.json()) as { items?: Notice[] };
+    const data = (await response.json()) as { items?: Notice[]; total?: number };
     setItems(data.items ?? []);
+    if (typeof data.total === "number") setTotal(data.total);
   }
 
   useEffect(() => {
     void load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depth]);
 
   async function markAll() {
     const response = await fetch("/api/notifications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: "{}",
+      body: JSON.stringify({ limit: depth }),
     });
-    const data = (await response.json()) as { items?: Notice[] };
+    const data = (await response.json()) as { items?: Notice[]; total?: number };
     setItems(data.items ?? []);
+    if (typeof data.total === "number") setTotal(data.total);
   }
 
   return (
@@ -63,6 +70,20 @@ export function NotificationsClient() {
           </li>
         ) : null}
       </ul>
+      {total > items.length ? (
+        <div className="li-deeper">
+          <button
+            className="chip-btn chip-btn-ghost"
+            onClick={() => setDepth((was) => was + NOTICE_STEP)}
+            type="button"
+          >
+            Show older
+          </button>
+          <span className="li-deeper-n">
+            {items.length} of {total.toLocaleString()}
+          </span>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -11,7 +11,7 @@ export default function HowItWorksPage() {
       <p className="hall-kicker">The rite</p>
       <h1 className="font-display text-4xl text-white">How the house works</h1>
       <p className="app-lead">
-        Same price on every color. When the clock ends, the color with the most
+        Same price on every color. When time runs out, the color with the most
         clicks takes the rest of the pot.
       </p>
       <p className="guide-cta">
@@ -50,23 +50,26 @@ export default function HowItWorksPage() {
         </li>
         <li>
           <strong>Sit a pit</strong>
-          Classic, Lightning, Duo, High Table, and Fog Pit are free to join.
-          Classic hour is 20:00 UTC. Fog cup is Sunday 21:00 UTC.
+          Classic, Lightning, Duo, High Table, Fog Pit, and Night Pit are free
+          to join. Tonight: Classic hour 20:00 UTC, Night hour 22:00 UTC, Fog
+          cup Sunday 21:00 UTC.
         </li>
         <li>
           <strong>Strike a color</strong>
-          Each click costs that room’s price. Fog tables hide public counts in
-          the last 12 seconds.
+          Each click costs that room’s price. Fog hides public counts in the
+          last 12 seconds. Night hides them in the last 8.
         </li>
         <li>
           <strong>The take</strong>
           Winners split the rest of the pot. Ties come back. Every round posts a
-          hashed seed you can check on the ledger.
+          hashed seed you can check on the ledger. The wing hears a real take.
         </li>
         <li>
           <strong>Leave with gold</strong>
           Withdraw to a BNB Chain address. Set a loss cap or cool-off from
-          Account before a long session.
+          Account before a long session. An invite pays a slice of house rake
+          only — never a deposit bonus and never their bank. The wing is open to
+          read. Speak, ask, and letters still need a seat.
         </li>
       </ol>
     </main>

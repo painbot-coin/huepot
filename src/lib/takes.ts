@@ -15,7 +15,9 @@ import { isHouseUser } from "./house";
 import { fromCents } from "./money";
 import type { PublicTake, Room, Round, StoreData, TakeWinner } from "./types";
 
-export { formatTakeLine, takeLine } from "./take-copy";
+import { seatTakesFromNotes } from "./take-copy";
+
+export { formatTakeLine, seatTakesFromNotes, takeLine, takePayoutNote } from "./take-copy";
 
 export function takeFromSettled(row: PublicSettledRound): PublicTake | null {
   if (row.kind !== "take" || !row.winners.length) return null;
@@ -114,6 +116,29 @@ export async function takeWinners(
     });
   }
   return winners.sort((a, b) => b.amount - a.amount || a.username.localeCompare(b.username));
+}
+
+export async function listSeatTakes(store: StoreData, userId: string, limit = 6) {
+  const notes = new Set<string>();
+  for (const tx of store.txs) {
+    if (tx.playerId === userId && tx.type === "payout") notes.add(tx.note);
+  }
+  if (notes.size < limit) {
+    const rows = await prisma.$queryRaw<{ note: string }[]>`
+      SELECT note FROM Tx
+      WHERE playerId = ${userId} AND type = 'payout'
+      ORDER BY createdAt DESC
+      LIMIT 16
+    `;
+    for (const row of rows) notes.add(row.note);
+  }
+  const live = liveTakes(store);
+  const pool = await listPublicTakes(live, 12);
+  for (const row of await listSettledRounds(undefined, 80, "take")) {
+    const take = takeFromSettled(row);
+    if (take) pool.push(take);
+  }
+  return seatTakesFromNotes(pool, notes, limit);
 }
 
 export async function getPublicTake(id: string, store: StoreData) {

@@ -29,11 +29,11 @@ import {
   IconTable,
   IconUsers,
 } from "@/components/Icons";
-import { FantasyClock } from "@/components/FantasyClock";
-import { MagicOrb } from "@/components/MagicOrb";
-import { PadRune } from "@/components/PadRune";
+import { ClickGraph } from "@/components/ClickGraph";
 import { RoomMark } from "@/components/RoomMark";
+import { AfterTakeButton } from "@/components/AfterTakeButton";
 import { PitHint } from "@/components/PitHint";
+import { ShareTake } from "@/components/ShareTake";
 import { PlayerBoard } from "@/components/PlayerBoard";
 import { RoomFeed } from "@/components/RoomFeed";
 import { SearchDock } from "@/components/SearchDock";
@@ -45,7 +45,9 @@ import { publishBank } from "@/lib/bank-sync";
 import { emitFx, emitPads } from "@/lib/fx";
 import { hallClass, hallFor } from "@/lib/hall";
 import { classicHourClock } from "@/lib/classic-hour";
+import { cupSendsToFog, hourSendsToClassic, hourSendsToNight } from "@/lib/hour-door";
 import { fogCupClock } from "@/lib/fog-cup";
+import { nightHourClock } from "@/lib/night-hour";
 import { inviteText } from "@/lib/invite-copy";
 import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
 import { formatTakeLine, withSitWhen } from "@/lib/take-copy";
@@ -55,9 +57,6 @@ const CreateRoomForm = dynamic(
   () => import("@/components/CreateRoomForm").then((mod) => mod.CreateRoomForm),
   { loading: () => <PitLoader label="Opening create…" /> },
 );
-
-type Burst = { id: number; x: number; y: number; color: string };
-type Spark = { id: number; colorId: ColorId };
 
 async function readApi(path: string, init?: RequestInit): Promise<GameState> {
   const response = await fetch(path, {
@@ -94,8 +93,6 @@ export function GameClient({ slug }: { slug: string }) {
   const [error, setError] = useState("");
   const [busyColor, setBusyColor] = useState<ColorId | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [bursts, setBursts] = useState<Burst[]>([]);
-  const [sparks, setSparks] = useState<Spark[]>([]);
   const [potPulse, setPotPulse] = useState(false);
   const skew = useRef(0);
   const lastPot = useRef(0);
@@ -103,7 +100,6 @@ export function GameClient({ slug }: { slug: string }) {
   const lastRound = useRef(0);
   const urgentSent = useRef(false);
   const fogSent = useRef(false);
-  const burstId = useRef(0);
 
   const applyState = useCallback((next: GameState) => {
     if (next.room.slug !== slug) return;
@@ -148,7 +144,9 @@ export function GameClient({ slug }: { slug: string }) {
     lastPot.current = next.round.pot;
     lastStatus.current = next.round.status;
     lastRound.current = next.round.number;
-    if (typeof next.user?.balance === "number") publishBank(next.user.balance);
+    if (typeof next.user?.balance === "number") {
+      publishBank(next.user.balance, next.user.bonus);
+    }
     setState(next);
   }, [slug]);
 
@@ -278,29 +276,16 @@ export function GameClient({ slug }: { slug: string }) {
         return {
           color: colorById(id).hex,
           leading: !boardFog && leader.includes(id),
-          spark: sparks.some((item) => item.colorId === id),
+          spark: false,
           share,
           winner: Boolean(revealingNow && state.round.result?.winners.includes(id)),
         };
       }),
     });
-  }, [boardFog, leader, sparks, state]);
+  }, [boardFog, leader, state]);
 
-  function punchPad(colorId: ColorId, event: PointerEvent<HTMLButtonElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const burst: Burst = {
-      id: burstId.current++,
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-      color: colorById(colorId).hex,
-    };
-    setBursts((list) => [...list.slice(-8), burst]);
-    setSparks((list) => [...list.slice(-6), { id: burst.id, colorId }]);
+  function punchPad(colorId: ColorId) {
     emitFx({ kind: "click", color: colorById(colorId).hex });
-    window.setTimeout(() => {
-      setBursts((list) => list.filter((item) => item.id !== burst.id));
-      setSparks((list) => list.filter((item) => item.id !== burst.id));
-    }, 700);
   }
 
   function onPadDown(colorId: ColorId, event: PointerEvent<HTMLButtonElement>) {
@@ -311,7 +296,7 @@ export function GameClient({ slug }: { slug: string }) {
     } catch {
       /* capture is optional */
     }
-    punchPad(colorId, event);
+    punchPad(colorId);
     setBusyColor(colorId);
     window.setTimeout(() => {
       setBusyColor((current) => (current === colorId ? null : current));
@@ -362,6 +347,7 @@ export function GameClient({ slug }: { slug: string }) {
   const rooms = state.rooms ?? [];
   const seats = state.seats ?? [];
   const hour = state.classicHour;
+  const night = state.nightHour;
   const cup = state.fogCup;
   const table = round.buttonIds.map((id) => colorById(id));
   const liveLeft = room.closesAt ? room.closesAt - now : null;
@@ -373,17 +359,18 @@ export function GameClient({ slug }: { slug: string }) {
     !user?.blocked &&
     !room.paused &&
     !revealing &&
-    (user?.balance ?? 0) >= round.clickPrice;
+    (user?.balance ?? 0) + (user?.bonus ?? 0) >= round.clickPrice;
   const winner = round.result?.winners[0];
   const winnerColor = winner ? colorById(winner) : null;
   const hall = hallFor(slug);
   // Most rounds on a quiet table settle with nobody clicking. That is not a take.
   const tookPot = Boolean(revealing && winnerColor);
   const emptyRound = revealing && round.result?.kind === "empty";
+  const youSat = Object.values(round.yourClicks ?? {}).some((n) => n > 0);
 
   return (
     <div
-      className={`pit-app ${hallClass(slug)} ${room.paused ? "is-paused" : revealing ? (tookPot ? "is-take" : "is-closed") : "is-calm"} ${urgent ? "is-urgent" : ""} ${fog ? "is-fog" : ""} ${slug === "classic" && hour?.live ? "is-hour" : ""} ${slug === "fog" && cup?.live ? "is-cup" : ""}`}
+      className={`pit-app ${hallClass(slug)} ${room.paused ? "is-paused" : revealing ? (tookPot ? "is-take" : "is-closed") : "is-calm"} ${urgent ? "is-urgent" : ""} ${fog ? "is-fog" : ""} ${slug === "classic" && hour?.live ? "is-hour" : ""} ${slug === "night" && night?.live ? "is-hour" : ""} ${slug === "fog" && cup?.live ? "is-cup" : ""}`}
       style={
         {
           ...(hall ? { "--hall": hall.material } : {}),
@@ -409,6 +396,7 @@ export function GameClient({ slug }: { slug: string }) {
               const text = user.inviteCode
                 ? inviteText(url, {
                     hour: slug === "fog" ? null : hour?.hour,
+                    night: slug === "fog" ? null : night?.hour,
                     cup,
                   })
                 : url;
@@ -553,12 +541,22 @@ export function GameClient({ slug }: { slug: string }) {
             {slug === "classic" && hour
               ? hour.live
                 ? " · hour is on"
-                : ` · hour ${classicHourClock(hour.hour)}`
-              : slug === "fog" && cup
-                ? cup.live
-                  ? " · cup is on"
-                  : ` · cup ${fogCupClock(cup.weekday, cup.hour)}`
-                : ""}
+                : hourSendsToClassic(hour, now)
+                  ? " · hour soon"
+                  : ` · hour ${classicHourClock(hour.hour)}`
+              : slug === "night" && night
+                ? night.live
+                  ? " · hour is on"
+                  : hourSendsToNight(night, now)
+                    ? " · hour soon"
+                    : ` · hour ${nightHourClock(night.hour)}`
+                : slug === "fog" && cup
+                  ? cup.live
+                    ? " · cup is on"
+                    : cupSendsToFog(cup, now)
+                      ? " · cup soon"
+                      : ` · cup ${fogCupClock(cup.weekday, cup.hour)}`
+                  : ""}
           </span>
         )}
         <span>
@@ -602,8 +600,11 @@ export function GameClient({ slug }: { slug: string }) {
                 : revealing
                   ? "Next round"
                   : fog
-                    ? "Fog clock"
-                    : hall?.clock ?? "Pit clock"}
+                    ? "Fog"
+                    : "Time"}
+            </p>
+            <p className="mt-1 font-mono text-sm tabular-nums text-zinc-200">
+              {formatClock(Math.max(0, remainingMs))}
             </p>
             {round.seedCommit ? (
               <p className="mt-1 font-mono text-[10px] text-zinc-500">
@@ -613,17 +614,31 @@ export function GameClient({ slug }: { slug: string }) {
             ) : null}
           </div>
         </div>
-        <FantasyClock
+        <ClickGraph
+          roundId={round.id}
+          buttonIds={round.buttonIds}
+          seats={seats}
+          totals={round.totals}
+          yourClicks={round.yourClicks}
+          clickPrice={round.clickPrice}
+          estimates={Object.fromEntries(
+            table.map((color) => [color.id, fog ? 0 : estimateIfWins(round, color.id)]),
+          ) as Record<ColorId, number>}
+          fog={fog}
+          remainingMs={remainingMs}
           durationMs={
             revealing
               ? REVEAL_SECONDS * 1000
               : Math.max(1, round.endsAt - round.startedAt)
           }
-          fog={fog}
           paused={room.paused}
-          remainingMs={remainingMs}
           revealing={revealing}
           urgent={urgent}
+          canClick={canClick}
+          busyColor={busyColor}
+          leader={leader}
+          winners={round.result?.winners ?? []}
+          onPadDown={onPadDown}
         />
         {hall ? <p className="pit-enter">{hall.enter}</p> : null}
         <p className="pit-rule">
@@ -653,11 +668,22 @@ export function GameClient({ slug }: { slug: string }) {
                     ? "Last seconds."
                     : slug === "classic" && hour?.live
                       ? hall?.hour ?? "Classic hour is on."
-                      : slug === "fog" && cup?.live
-                        ? hall?.cup ?? "Fog cup is on."
-                        : hall?.calm ?? "The pit is open."}
+                      : slug === "classic" && hour && hourSendsToClassic(hour, now)
+                        ? "Classic hour soon."
+                      : slug === "night" && night?.live
+                        ? hall?.hour ?? "Night hour is on."
+                        : slug === "night" && night && hourSendsToNight(night, now)
+                          ? "Night hour soon."
+                        : slug === "fog" && cup?.live
+                          ? hall?.cup ?? "Fog cup is on."
+                          : hall?.calm ?? "The pit is open."}
         </p>
-        {!user ? (
+        {tookPot && user && youSat && !user.blocked ? (
+          <p className="pit-cta">
+            <AfterTakeButton inviteCode={user.inviteCode} />
+            <span>30 minutes of Fog. Company hears.</span>
+          </p>
+        ) : !user ? (
           <p className="pit-cta">
             <Link className="chip-btn" href="/signin">
               Sign in to sit
@@ -678,12 +704,22 @@ export function GameClient({ slug }: { slug: string }) {
             </Link>
             <span>{user.blockMessage || "Play is paused on this account."}</span>
           </p>
-        ) : user.balance < round.clickPrice ? (
+        ) : (user.balance ?? 0) + (user.bonus ?? 0) < round.clickPrice ? (
           <p className="pit-cta">
-            <Link className="chip-btn" href="/invest">
-              Add USDT to sit
-            </Link>
-            <span>Bank is below this table’s click price.</span>
+            {(user.bonus ?? 0) > 0 ? (
+              <Link className="chip-btn" href="/rooms/classic">
+                Sit Classic with the chip
+              </Link>
+            ) : (
+              <Link className="chip-btn" href="/invest">
+                Add USDT to sit
+              </Link>
+            )}
+            <span>
+              {(user.bonus ?? 0) > 0
+                ? "Sit chips do not cover this table."
+                : "Not enough to sit. Add USDT or wait for tomorrow's sit chip."}
+            </span>
           </p>
         ) : room.paused ? (
           <p className="pit-cta">
@@ -713,104 +749,6 @@ export function GameClient({ slug }: { slug: string }) {
         </p>
       ) : null}
 
-      <div
-        className={`pad-grid is-${table.length} ${revealing ? "is-locked" : ""}`}
-        style={
-          revealing && winnerColor
-            ? ({ "--pad": winnerColor.hex } as CSSProperties)
-            : undefined
-        }
-      >
-        {table.map((color, index) => {
-          const clicks = round.totals[color.id];
-          const yours = round.yourClicks[color.id];
-          const share =
-            fog || round.totalClicks <= 0
-              ? 0
-              : (clicks / round.totalClicks) * 100;
-          const leading = !fog && leader.includes(color.id);
-          const estimated = fog ? 0 : estimateIfWins(round, color.id);
-          const taken =
-            revealing && round.result?.winners.includes(color.id);
-          const dimmed = revealing && !taken && tookPot;
-          return (
-            <div
-              className="coin-slot"
-              key={color.id}
-              style={{
-                "--pad": color.hex,
-                "--ink": color.ink,
-                "--glow": color.glow,
-              } as CSSProperties}
-            >
-              <button
-                type="button"
-                aria-label={`${color.name} · ${fog ? "board in fog" : `${clicks} clicks`} · you ${yours}`}
-                disabled={!canClick}
-                onPointerCancel={() => {
-                  setBusyColor((current) => (current === color.id ? null : current));
-                }}
-                onPointerDown={(event) => onPadDown(color.id, event)}
-                onPointerUp={() => {
-                  setBusyColor((current) => (current === color.id ? null : current));
-                }}
-                className={`color-pad is-orb ${busyColor === color.id ? "is-pressed" : ""} ${leading && !revealing ? "is-leading" : ""} ${taken ? "is-winner" : ""} ${dimmed ? "is-dimmed" : ""} ${fog ? "is-fog" : ""} ${sparks.some((item) => item.colorId === color.id) ? "is-spark" : ""}`}
-                style={{ animationDelay: `${index * 90}ms` } as CSSProperties}
-              >
-                <MagicOrb
-                  color={color.hex}
-                  fog={fog}
-                  leading={leading && !revealing}
-                  pressed={busyColor === color.id}
-                  spark={sparks.some((item) => item.colorId === color.id)}
-                  winner={Boolean(taken)}
-                />
-                {bursts
-                  .filter((burst) => burst.color === color.hex)
-                  .map((burst) => (
-                    <span key={burst.id}>
-                      <span
-                        className="pad-ripple"
-                        style={{ left: burst.x, top: burst.y }}
-                      />
-                      <span
-                        className="pad-burst"
-                        style={{ left: burst.x, top: burst.y }}
-                      />
-                      <span
-                        className="pad-spark"
-                        style={{ left: burst.x, top: burst.y }}
-                      />
-                    </span>
-                  ))}
-                {taken ? (
-                  <span className="lead-chip is-take">Takes</span>
-                ) : leading && clicks > 0 ? (
-                  <span className="lead-chip">Biggest</span>
-                ) : null}
-                <div className="coin-copy">
-                  <span className="count-pop coin-count font-display">
-                    {fog ? "—" : clicks}
-                  </span>
-                  <span className="coin-you">You {yours}</span>
-                </div>
-              </button>
-              <p className="coin-label">{color.name}</p>
-              <p className="coin-meta">
-                {fog
-                  ? "Board in fog"
-                  : yours > 0
-                    ? `If ${color.name} takes: ~${formatUsdt(estimated)} USDT`
-                    : `1 click · ${formatUsdt(round.clickPrice)} USDT`}
-              </p>
-              <div className="coin-share">
-                <div className="share-fill" style={{ width: `${share}%`, background: color.hex }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       {revealing ? (
         <aside className="take-notice">
           {winnerColor ? (
@@ -824,11 +762,6 @@ export function GameClient({ slug }: { slug: string }) {
                 } as CSSProperties
               }
             >
-              <span className="take-corona" />
-              {Array.from({ length: 10 }, (_, index) => (
-                <span className="take-spark" key={index} style={{ "--i": index } as CSSProperties} />
-              ))}
-              <PadRune id={winnerColor.id} />
               <p className="take-kicker">The take</p>
               <p className="take-name">{winnerColor.name}</p>
               {round.pot > 0 ? (
@@ -851,11 +784,20 @@ export function GameClient({ slug }: { slug: string }) {
               inviteCode={user?.inviteCode ?? ""}
               slug={slug}
               hour={hour?.hour}
+              night={night?.hour}
               cup={cup}
               buttonCount={room.buttonCount}
               clickPrice={round.clickPrice}
               roundSeconds={room.roundSeconds}
-              sitWhen={cup ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}` : ""}
+              sitWhen={
+                night?.live
+                  ? `Night hour ${nightHourClock(night.hour)}`
+                  : cup
+                    ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}`
+                    : hour
+                      ? `Classic hour ${classicHourClock(hour.hour)}`
+                      : ""
+              }
               wash={winnerColor?.hex}
             />
           ) : null}
@@ -984,135 +926,6 @@ function takeLine(names: string, take: number, roomName: string, when?: string) 
   return withSitWhen(formatTakeLine(names, take, roomName), when);
 }
 
-function ShareTake({
-  path,
-  line,
-  fogName,
-  canOpenFog,
-  inviteCode,
-  slug,
-  hour,
-  cup,
-  buttonCount,
-  clickPrice,
-  roundSeconds,
-}: {
-  path: string;
-  line: string;
-  fogName: string;
-  canOpenFog: boolean;
-  inviteCode: string;
-  slug: string;
-  hour?: number | null;
-  cup?: { weekday: number; hour: number } | null;
-  buttonCount: number;
-  clickPrice: number;
-  roundSeconds: number;
-}) {
-  const [status, setStatus] = useState<"idle" | "copied" | "shared">("idle");
-  const [inviteStatus, setInviteStatus] = useState<"idle" | "copied">("idle");
-  const [fogBusy, setFogBusy] = useState(false);
-  const [fogError, setFogError] = useState("");
-
-  async function share() {
-    const url = `${window.location.origin}${path}`;
-    const text = `${line}.\n${url}`;
-    try {
-      if (typeof navigator.share === "function") {
-        await navigator.share({ title: "Huepot", text: line, url });
-        setStatus("shared");
-      } else {
-        await navigator.clipboard.writeText(text);
-        setStatus("copied");
-      }
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      try {
-        await navigator.clipboard.writeText(text);
-        setStatus("copied");
-      } catch {
-        /* ignore */
-      }
-    }
-    window.setTimeout(() => setStatus("idle"), 1800);
-  }
-
-  async function copyInvite() {
-    const url = inviteCode
-      ? `${window.location.origin}/rooms/${slug}?ref=${inviteCode}`
-      : `${window.location.origin}/rooms/${slug}`;
-    const text = inviteCode
-      ? inviteText(url, { hour: slug === "fog" ? null : hour, cup })
-      : url;
-    try {
-      await navigator.clipboard.writeText(text);
-      setInviteStatus("copied");
-    } catch {
-      /* ignore */
-    }
-    window.setTimeout(() => setInviteStatus("idle"), 1800);
-  }
-
-  async function openFog() {
-    setFogBusy(true);
-    setFogError("");
-    try {
-      const response = await fetch("/api/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: fogName,
-          buttonCount,
-          clickPrice,
-          roundSeconds,
-          liveMinutes: 30,
-          fog: true,
-        }),
-      });
-      const data = (await response.json()) as GameState & { error?: string };
-      if (!response.ok) throw new Error(data.error || "Could not open Fog");
-      const slug = data.room.slug;
-      const next = inviteCode ? `/rooms/${slug}?ref=${inviteCode}` : `/rooms/${slug}`;
-      const url = `${window.location.origin}${next}`;
-      try {
-        await navigator.clipboard.writeText(`${line}. Fog is open 30 minutes.\n${url}`);
-      } catch {
-        /* ignore */
-      }
-      window.location.assign(`/rooms/${slug}`);
-    } catch (err) {
-      setFogError(err instanceof Error ? err.message : "Could not open Fog");
-      setFogBusy(false);
-    }
-  }
-
-  const label = status === "copied" ? "Copied" : status === "shared" ? "Shared" : "Share this take";
-
-  return (
-    <div className="take-share">
-      <p className="take-share-line">{line}.</p>
-      <p>
-        <button className="take-share-btn" onClick={() => void share()} type="button">
-          {label}
-        </button>
-        {" · "}
-        <button className="take-share-btn" onClick={() => void copyInvite()} type="button">
-          {inviteStatus === "copied" ? "Invite copied" : "Copy invite"}
-        </button>
-        {" · "}
-        {canOpenFog ? (
-          <button className="take-share-btn" disabled={fogBusy} onClick={() => void openFog()} type="button">
-            {fogBusy ? "Opening Fog…" : "Open a 30-min Fog table"}
-          </button>
-        ) : (
-          <Link href="/signin">Sign in to open Fog</Link>
-        )}
-      </p>
-      {fogError ? <p className="mt-2 text-sm text-red-800">{fogError}</p> : null}
-    </div>
-  );
-}
-
 function ResultCard({
   result,
   round,
@@ -1123,6 +936,7 @@ function ResultCard({
   inviteCode,
   slug,
   hour,
+  night,
   cup,
   buttonCount,
   clickPrice,
@@ -1139,6 +953,7 @@ function ResultCard({
   inviteCode: string;
   slug: string;
   hour?: number | null;
+  night?: number | null;
   cup?: { weekday: number; hour: number } | null;
   buttonCount: number;
   clickPrice: number;
@@ -1222,6 +1037,7 @@ function ResultCard({
         inviteCode={inviteCode}
         slug={slug}
         hour={hour}
+        night={night}
         cup={cup}
         line={takeLine(
           names,

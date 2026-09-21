@@ -11,7 +11,9 @@ export type TxType =
   | "refund"
   | "adjust"
   | "rake"
-  | "invite";
+  | "invite"
+  | "bonus"
+  | "sit";
 export type NoticeKind =
   | "welcome"
   | "verify"
@@ -64,6 +66,8 @@ export type Round = {
   buttonIds: ColorId[];
   totals: Record<ColorId, number>;
   clicks: Record<string, PlayerClicks>;
+  /** Sit chips spent this round, by player. Survives a restart via Round.fair. */
+  sitByPlayer?: Record<string, number>;
   result: RoundResult | null;
   seedCommit: string;
   serverSeed: string;
@@ -133,6 +137,8 @@ export type User = {
   verifySentAt: number | null;
   createdAt: number;
   balance: number;
+  /** Play-only sit chips, integer cents. Not withdrawable. */
+  bonus: number;
   withdrawAddress: string;
   wallets: Partial<Record<string, StoredWallet>>;
   limits: PlayLimits;
@@ -232,6 +238,8 @@ export type PublicUser = {
   username: string;
   shortId: string;
   balance: number;
+  /** Sit chips, USDT. Play only. */
+  bonus: number;
   withdrawAddress: string;
   createdAt: number;
   emailVerified: boolean;
@@ -337,6 +345,13 @@ export type FogCup = {
   live: boolean;
 };
 
+export type NightHour = {
+  hour: number;
+  startAt: number;
+  endsAt: number;
+  live: boolean;
+};
+
 export type GameState = {
   now: number;
   user: PublicUser | null;
@@ -346,6 +361,7 @@ export type GameState = {
   rooms: PublicRoomCard[];
   seats: PublicSeat[];
   classicHour: ClassicHour;
+  nightHour: NightHour;
   fogCup: FogCup;
 };
 
@@ -377,12 +393,21 @@ export type SearchHit = {
   users: { username: string; rooms: { slug: string; name: string }[] }[];
 };
 
+export type CompanySit = {
+  username: string;
+  slug: string;
+  name: string;
+};
+
 export type LobbyState = {
   now: number;
   user: PublicUser | null;
   rooms: PublicRoomCard[];
   classicHour: ClassicHour;
+  nightHour: NightHour;
   fogCup: FogCup;
+  /** Friends with a click on a live round. Empty means do not mention company. */
+  companySitting: CompanySit[];
 };
 
 export type Friendship = {
@@ -483,4 +508,7 @@ export type NetworkProfile = {
   friends: number;
   you: boolean;
   record: PlayerRecord;
+  place: number | null;
+  lastTakes: PublicTake[];
+  inviteCode: string;
 };

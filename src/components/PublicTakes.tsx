@@ -49,7 +49,9 @@ export function PublicTakes() {
       {takes.length === 0 ? (
         <p className="strip-empty">
           <IconPot />
-          A take lands when one color beats another. Sit Classic {classicHourClock(classicHourUtc())}.
+          A take lands when one color beats another.{" "}
+          <Link href="/rooms/classic">Sit Classic {classicHourClock(classicHourUtc())}</Link>
+          .
         </p>
       ) : (
         <ul>

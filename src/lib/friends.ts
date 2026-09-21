@@ -1,6 +1,15 @@
 import { prisma } from "@/lib/db";
 import { HOUSE_USER_ID, isHouseUser } from "@/lib/house";
 import { playBlock } from "@/lib/limits";
+import {
+  companyAskBody,
+  companyAskHref,
+  companyAskTitle,
+  companyFormedBody,
+  companyFormedHref,
+  companyFormedTitle,
+} from "@/lib/company-door";
+import { boardSitDoor, type BoardSitDoor } from "@/lib/board-sit";
 import { notify } from "@/lib/notifications";
 import { isOnline, presenceAt, touchPresence } from "@/lib/presence";
 import type {
@@ -149,10 +158,17 @@ function seatedRoom(store: StoreData, userId: string) {
 }
 
 export function friendCount(userId: string) {
-  return allRows().filter(
-    (row) =>
-      row.status === "accepted" && (row.lowId === userId || row.highId === userId),
-  ).length;
+  return companyIds(userId).length;
+}
+
+/** Accepted company — the people who should hear when this seat sits. */
+export function companyIds(userId: string) {
+  return allRows()
+    .filter(
+      (row) =>
+        row.status === "accepted" && (row.lowId === userId || row.highId === userId),
+    )
+    .map((row) => otherId(row, userId));
 }
 
 export function headlineOf(user: User) {
@@ -283,6 +299,14 @@ export function listNetwork(
   };
 }
 
+export function listPublicPeople(store: StoreData, limit = 8): NetworkCard[] {
+  const at = Date.now();
+  return sortCards(visibleUsers(store).map((user) => toCard(store, "", user, at))).slice(
+    0,
+    limit,
+  );
+}
+
 export function listSuggestedPeople(store: StoreData, viewer: User, limit = 8): NetworkCard[] {
   const at = Date.now();
   const cards = visibleUsers(store)
@@ -303,6 +327,25 @@ export function seatedAt(store: StoreData, userId: string) {
   return seatedRoom(store, userId);
 }
 
+export function boardDoorOf(
+  store: StoreData,
+  viewerId: string,
+  username: string,
+): BoardSitDoor {
+  const needle = username.trim().toLowerCase();
+  const other = Object.values(store.users).find(
+    (user) => user.username.toLowerCase() === needle,
+  );
+  const self = Boolean(viewerId && other && other.id === viewerId);
+  const room = other ? seatedRoom(store, other.id) : null;
+  return boardSitDoor({
+    self,
+    signedIn: Boolean(viewerId),
+    relation: other && viewerId && !self ? playerRelation(viewerId, other.id) : "none",
+    sittingSlug: room?.slug ?? "",
+  });
+}
+
 export function findPlayer(store: StoreData, username: string) {
   return requirePlayer(store, username);
 }
@@ -312,7 +355,11 @@ function requirePlayer(store: StoreData, username: string) {
   const user = Object.values(store.users).find(
     (item) => item.username.toLowerCase() === needle,
   );
-  if (!user || isHouseUser(user)) throw new Error("That player was not found.");
+  if (!user || isHouseUser(user)) {
+    const error = new Error("That player was not found.");
+    (error as Error & { status: number }).status = 404;
+    throw error;
+  }
   return user;
 }
 
@@ -369,9 +416,9 @@ export async function sendFriendRequest(store: StoreData, viewer: User, username
   }
   notify(store, target.id, {
     kind: "friend",
-    title: "Friend request",
-    body: `@${viewer.username} wants to add you.`,
-    href: "/network/people?tab=requests",
+    title: companyAskTitle(),
+    body: companyAskBody(viewer.username),
+    href: companyAskHref(),
   });
 }
 
@@ -386,9 +433,9 @@ export async function acceptFriendRequest(store: StoreData, viewer: User, userna
   await updateRow(row);
   notify(store, target.id, {
     kind: "friend",
-    title: "Friend accepted",
-    body: `@${viewer.username} accepted. You can sit together.`,
-    href: "/network/people?tab=friends",
+    title: companyFormedTitle(),
+    body: companyFormedBody(viewer.username),
+    href: companyFormedHref(),
   });
 }
 

@@ -8,6 +8,7 @@ import {
   withdrawSendEnabled,
 } from "@/lib/config";
 import { emailConfigured } from "@/lib/email";
+import { hueConfigured } from "@/lib/hue-claim";
 import { APP_VERSION } from "@/lib/version";
 
 export const runtime = "nodejs";
@@ -23,6 +24,7 @@ export async function GET() {
     // Visible so it is obvious whether a player can be reached off-site at all,
     // rather than something discovered one queued withdrawal later.
     email: emailConfigured(),
+    hue: hueConfigured(),
     chain: chainStatus(),
   });
 }

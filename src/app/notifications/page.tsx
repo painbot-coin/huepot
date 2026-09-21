@@ -2,6 +2,6 @@ import { LazyNotificationsClient } from "@/components/LazyViews";
 import { requirePageUser } from "@/lib/auth";
 
 export default async function NotificationsPage() {
-  await requirePageUser();
+  await requirePageUser("/notifications");
   return <LazyNotificationsClient />;
 }

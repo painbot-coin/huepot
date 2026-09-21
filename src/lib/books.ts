@@ -151,13 +151,18 @@ export async function readBooks(): Promise<Books> {
     withdrawals = [];
   }
 
-  // Rebuild every balance from its rows and compare. Money leaving a balance
-  // without a Tx row is the one accounting fault that hides everything else,
-  // so it gets computed every time the books are opened.
-  // Out: withdraw, click. In: everything else. A rake row is written only on
-  // the house account, where it is the house take arriving, not money leaving.
+  // Rebuild every cash balance from its rows and compare. Money leaving a
+  // balance without a Tx row is the one accounting fault that hides everything
+  // else, so it gets computed every time the books are opened.
+  // Out: withdraw, click. Sit is signed and offsets a click (or a refund) so
+  // sit chips cannot mint bank. Bonus grants are chips, not cash. A rake row
+  // is written only on the house account, where it is the house take arriving.
   const [impliedRow] = await prisma.$queryRawUnsafe<{ cents: number | null }[]>(
-    `SELECT SUM(CASE WHEN type IN ('withdraw','click') THEN -amount ELSE amount END) AS cents
+    `SELECT SUM(CASE
+              WHEN type IN ('withdraw','click') THEN -amount
+              WHEN type = 'bonus' THEN 0
+              ELSE amount
+            END) AS cents
        FROM Tx`,
   );
   const implied = fromCents(num(impliedRow?.cents));

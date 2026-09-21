@@ -9,6 +9,7 @@ function plate(slug: string, fog?: boolean) {
   if (slug === "lightning") return "#2a1a06";
   if (slug === "duo") return "#140c14";
   if (slug === "high") return "#2a2110";
+  if (slug === "night") return "#0c1020";
   if (slug === "fog" || fog) return "#16141c";
   return "#14110e";
 }
@@ -61,6 +62,16 @@ export function RoomMark({ slug, fog, className = "room-mark" }: RoomMarkProps) 
         >
           5
         </text>
+      </>
+    ) : slug === "night" ? (
+      <>
+        <circle cx="40" cy="40" r="22" fill="#1a2040" />
+        <circle cx="40" cy="40" r="16" fill="#6a7cff" />
+        <path d="M43 18 L28 42 H40 L36 62 L54 36 H41 Z" fill="#0c1020" />
+        <path
+          d="M16 36 C24 28 34 30 40 34 C48 28 60 30 66 38 C58 34 50 40 40 38 C30 42 22 36 16 36 Z"
+          fill="rgba(106,124,255,0.45)"
+        />
       </>
     ) : slug === "fog" || fog ? (
       <>

@@ -3,6 +3,7 @@ import path from "path";
 import { prisma } from "@/lib/db";
 import { flushEmails } from "@/lib/email";
 import { ensureFairTables, flushSettledRounds, loadRoundFair } from "@/lib/fairness-db";
+import { flushTakeTalks } from "@/lib/take-wing";
 import { emptyLimits } from "@/lib/limits";
 import { publishRoom } from "@/lib/live";
 import { NOTICE_CAP } from "@/lib/notifications";
@@ -79,6 +80,7 @@ function userFromRow(
     verifySentAt: number | bigint | string | null;
     createdAt: number | bigint | string;
     balance: number;
+    bonus?: number;
     withdrawAddress: string;
     wallets: { network: string; address: string; secretEnc: string }[];
   },
@@ -102,6 +104,7 @@ function userFromRow(
     verifySentAt: msOpt(row.verifySentAt),
     createdAt: ms(row.createdAt),
     balance: row.balance,
+    bonus: Math.max(0, Math.round(Number(row.bonus) || 0)),
     withdrawAddress: row.withdrawAddress,
     wallets,
     limits: emptyLimits(),
@@ -145,6 +148,7 @@ function roundFromRow(row: {
     buttonIds: parseJson(row.buttonIds, []),
     totals: parseJson(row.totals, {} as Round["totals"]),
     clicks: parseJson(row.clicks, {} as Round["clicks"]),
+    sitByPlayer: {},
     result: parseJson(row.result, null),
     seedCommit: "",
     serverSeed: "",
@@ -301,9 +305,15 @@ async function loadUserAuth() {
 
 async function loadSessionExtra() {
   try {
+    // Millisecond timestamps come back as text on purpose. Prisma decodes a
+    // raw column by its declared type, and a column declared INTEGER — which
+    // is what every table the app creates for itself uses — is read as i32 and
+    // throws on any value past 2147483647. An epoch in milliseconds is three
+    // orders of magnitude past that, so such a query fails on its first row.
+    // Casting here means correctness never depends on which tables Prisma owns.
     const rows = await prisma.$queryRawUnsafe<
-      { token: string; createdAt: number | null; userAgent: string | null }[]
-    >("SELECT token, createdAt, userAgent FROM Session");
+      { token: string; createdAt: string | null; userAgent: string | null }[]
+    >("SELECT token, CAST(createdAt AS TEXT) AS createdAt, userAgent FROM Session");
     return new Map(
       rows.map((row) => [
         row.token,
@@ -353,9 +363,10 @@ async function readStore(): Promise<StoreData> {
         verifySentAt: number | bigint | string | null;
         createdAt: number | bigint | string;
         balance: number;
+        bonus: number;
         withdrawAddress: string;
       }[]
-    >("SELECT id, email, username, passwordHash, googleId, emailVerified, verifyToken, CAST(verifyExpires AS TEXT) as verifyExpires, CAST(verifySentAt AS TEXT) as verifySentAt, CAST(createdAt AS TEXT) as createdAt, balance, withdrawAddress FROM User"),
+    >("SELECT id, email, username, passwordHash, googleId, emailVerified, verifyToken, CAST(verifyExpires AS TEXT) as verifyExpires, CAST(verifySentAt AS TEXT) as verifySentAt, CAST(createdAt AS TEXT) as createdAt, balance, bonus, withdrawAddress FROM User"),
     prisma.$queryRawUnsafe<{ userId: string; network: string; address: string; secretEnc: string }[]>(
       "SELECT userId, network, address, secretEnc FROM Wallet",
     ),
@@ -570,6 +581,7 @@ async function readStore(): Promise<StoreData> {
     room.round.seedCommit = extra.seedCommit || room.round.seedCommit;
     room.round.serverSeed = extra.serverSeed || room.round.serverSeed;
     room.round.fairHash = extra.fairHash || room.round.fairHash;
+    room.round.sitByPlayer = extra.sitByPlayer ?? {};
   }
   const limitsMap = await loadUserLimits();
   for (const user of Object.values(store.users)) {
@@ -630,6 +642,7 @@ function roundRow(roomId: string, round: Round) {
 async function persistStore(prev: StoreData, next: StoreData) {
   if (same(prev, next)) {
     await flushSettledRounds();
+    await flushTakeTalks();
     await flushEmails();
     return;
   }
@@ -647,12 +660,12 @@ async function persistStore(prev: StoreData, next: StoreData) {
         const before = prev.users[user.id];
         if (same(before, user)) continue;
         await tx.$executeRawUnsafe(
-          `INSERT INTO User (id, email, username, passwordHash, googleId, emailVerified, verifyToken, verifyExpires, verifySentAt, createdAt, balance, withdrawAddress)
-           VALUES (${sqlStr(user.id)}, ${sqlStr(user.email)}, ${sqlStr(user.username)}, ${sqlStr(user.passwordHash)}, ${sqlStr(user.googleId)}, ${sqlInt(user.emailVerified)}, ${sqlStr(user.verifyToken)}, ${sqlInt(user.verifyExpires)}, ${sqlInt(user.verifySentAt)}, ${sqlInt(user.createdAt)}, ${sqlFloat(user.balance)}, ${sqlStr(user.withdrawAddress)})
+          `INSERT INTO User (id, email, username, passwordHash, googleId, emailVerified, verifyToken, verifyExpires, verifySentAt, createdAt, balance, bonus, withdrawAddress)
+           VALUES (${sqlStr(user.id)}, ${sqlStr(user.email)}, ${sqlStr(user.username)}, ${sqlStr(user.passwordHash)}, ${sqlStr(user.googleId)}, ${sqlInt(user.emailVerified)}, ${sqlStr(user.verifyToken)}, ${sqlInt(user.verifyExpires)}, ${sqlInt(user.verifySentAt)}, ${sqlInt(user.createdAt)}, ${sqlFloat(user.balance)}, ${sqlFloat(user.bonus ?? 0)}, ${sqlStr(user.withdrawAddress)})
            ON CONFLICT(id) DO UPDATE SET
              email=excluded.email, username=excluded.username, passwordHash=excluded.passwordHash, googleId=excluded.googleId,
              emailVerified=excluded.emailVerified, verifyToken=excluded.verifyToken, verifyExpires=excluded.verifyExpires,
-             verifySentAt=excluded.verifySentAt, createdAt=excluded.createdAt, balance=excluded.balance, withdrawAddress=excluded.withdrawAddress`,
+             verifySentAt=excluded.verifySentAt, createdAt=excluded.createdAt, balance=excluded.balance, bonus=excluded.bonus, withdrawAddress=excluded.withdrawAddress`,
         );
         if (!same(before?.limits, user.limits ?? emptyLimits())) {
           await tx.$executeRawUnsafe(
@@ -845,6 +858,7 @@ async function persistStore(prev: StoreData, next: StoreData) {
               seedCommit: room.round.seedCommit ?? "",
               serverSeed: room.round.serverSeed ?? "",
               fairHash: room.round.fairHash ?? "",
+              sitByPlayer: room.round.sitByPlayer ?? {},
             }).replace(/'/g, "''");
             await tx.$executeRawUnsafe(
               `UPDATE Round SET fair = '${fair}' WHERE id = '${room.round.id.replace(/'/g, "''")}'`,
@@ -893,6 +907,7 @@ async function persistStore(prev: StoreData, next: StoreData) {
     { timeout: 20_000 },
   );
   await flushSettledRounds();
+  await flushTakeTalks();
   await flushEmails();
 }
 
@@ -1034,6 +1049,7 @@ async function importJsonStore() {
     ensureRooms(store);
     for (const user of Object.values(store.users)) {
       user.limits ??= emptyLimits();
+      user.bonus ??= 0;
       user.ageConfirmedAt ??= null;
       user.resetToken ??= null;
       user.resetExpires ??= null;
@@ -1058,6 +1074,7 @@ async function importJsonStore() {
     ensureRooms(store);
     for (const user of Object.values(store.users)) {
       user.limits ??= emptyLimits();
+      user.bonus ??= 0;
       user.ageConfirmedAt ??= null;
       user.resetToken ??= null;
       user.resetExpires ??= null;
@@ -1130,6 +1147,13 @@ async function ensureDb() {
       }
       try {
         await prisma.$executeRawUnsafe(
+          "ALTER TABLE User ADD COLUMN bonus REAL NOT NULL DEFAULT 0",
+        );
+      } catch {
+        /* column already exists */
+      }
+      try {
+        await prisma.$executeRawUnsafe(
           "ALTER TABLE Session ADD COLUMN createdAt INTEGER NOT NULL DEFAULT 0",
         );
       } catch {
@@ -1166,8 +1190,12 @@ async function ensureDb() {
       const { startSitWindowWatcher } = await import("@/lib/sit-windows");
       const { ensureNewsTables, startNewsWatcher } = await import("@/lib/news");
       const { ensureEmailTables, startEmailDrainer } = await import("@/lib/email");
+      const { ensureHueTables } = await import("@/lib/hue-send");
+      const { backfillTakeTalks } = await import("@/lib/take-wing");
       await ensureNewsTables();
       await ensureEmailTables();
+      await ensureHueTables();
+      await backfillTakeTalks();
       // Last, so every table it indexes already exists.
       await ensureIndexes();
       startChainWatcher();

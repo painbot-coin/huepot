@@ -9,10 +9,10 @@
  * noticed. The examples are described rather than written out, because a file
  * that checks for mangled text must not contain any.
  *
- * Two things are checked. A CP1252 artefact is a lead byte in the C2-C3 range
- * followed by something that only appears as the second half of a misread
- * UTF-8 pair. A byte-order mark is a stray three bytes before the first line
- * of a file that has no business starting with one.
+ * Two things are checked. A CP1252 artefact is a misread UTF-8 lead byte
+ * followed by something that only appears as the tail of a misread sequence.
+ * A byte-order mark is a stray three bytes before the first line of a file
+ * that has no business starting with one.
  *
  * Pass --fix to repair rather than report. Byte-order marks are stripped, and
  * a mangled run is put back by mapping each character to the byte it was
@@ -36,11 +36,55 @@ const CP1252_BACK = new Map([
   [0x0153, 0x9c], [0x017e, 0x9e], [0x0178, 0x9f],
 ]);
 
+// The tail of a mangled run. Bytes 0x80-0x9F are the interesting part: CP1252
+// gives most of them punctuation, which is where the curly quotes and dashes
+// in the corruption come from, but it leaves 0x81, 0x8D, 0x8F, 0x90 and 0x9D
+// undefined, and those survive as literal C1 control characters. Leaving that
+// range out meant a run ending in one could not be matched at all, which is
+// what stopped GROWTH.md unwinding the whole way and left 179 of them behind.
+// No source file has a legitimate C1 control in it.
 const CONT =
+  "\\u0080-\\u009F" +
   "\\u20AC\\u201A\\u0192\\u201E\\u2026\\u2020\\u2021\\u02C6\\u2030\\u0160" +
   "\\u2039\\u0152\\u017D\\u2018\\u2019\\u201C\\u201D\\u2022\\u2013\\u2014" +
   "\\u02DC\\u2122\\u0161\\u203A\\u0153\\u017E\\u0178\\u00A0-\\u00BF";
-const RUN = new RegExp(`[\\u00C2-\\u00F4][${CONT}]{1,3}`, "g");
+
+/**
+ * The lead character of a mangled run: whatever a UTF-8 lead byte turns into
+ * when misread as CP1252. C2 and C3 lead the two-byte characters — accented
+ * letters, the non-breaking space — and E2 leads the three-byte punctuation
+ * that prose is actually full of: em dash, curly quotes, ellipsis.
+ *
+ * Detecting and repairing share this range deliberately. They used to have
+ * separate patterns, the repair covering C2 through F4 and the check only
+ * C2 through C3, so every mangled em dash in the repository was silently
+ * outside what the check looked at while being well inside what the fixer
+ * could mend. This file reported 197 clean files while GROWTH.md held 157 of
+ * them. A checker that repairs more than it detects will always read clean.
+ */
+const LEAD = "\\u00C2-\\u00F4";
+const RUN = new RegExp(`[${LEAD}][${CONT}]{1,3}`, "g");
+const ARTEFACT = new RegExp(`[${LEAD}][${CONT}]`);
+
+/**
+ * Undoes one layer of the corruption. A file edited through a shell that
+ * guesses its encoding gets another layer each time, so a run that has been
+ * through it repeatedly needs unwinding as many times as it was wound —
+ * GROWTH.md had ten layers and 1.7MB of one em dash re-encoded per phase.
+ * `unmangleFully` repeats until the text stops changing, because a single
+ * pass leaves the file dirty and the caller with no signal that it did.
+ */
+function unmangleFully(text) {
+  let out = text;
+  let fixed = 0;
+  for (let pass = 0; pass < 24; pass += 1) {
+    const step = unmangle(out);
+    if (step.out === out) break;
+    out = step.out;
+    fixed += step.fixed;
+  }
+  return { out, fixed };
+}
 
 function unmangle(text) {
   let fixed = 0;
@@ -60,14 +104,17 @@ function unmangle(text) {
   return { out, fixed };
 }
 
-const ARTEFACT =
-  /[\u00C2-\u00C3][\u0080-\u00BF\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178]/;
-
 const files = [
   ...globSync("src/**/*.{ts,tsx,css}"),
   ...globSync("scripts/**/*.{mjs,cjs,sh}"),
   ...globSync("prisma/**/*.prisma"),
   ...globSync("*.ts"),
+  // The prose files matter as much as the code, and GROWTH.md more than most:
+  // it is appended every phase through a shell, which is the exact operation
+  // that mangles a character. It was never in scope before, and had collected
+  // 170 mangled runs while the code it documents stayed clean.
+  ...globSync("*.md"),
+  ...globSync(".github/**/*.yml"),
 ];
 
 const fix = process.argv.includes("--fix");
@@ -84,7 +131,7 @@ for (const file of files) {
 
   if (fix) {
     let next = text.startsWith("\uFEFF") ? text.slice(1) : text;
-    const { out, fixed } = unmangle(next);
+    const { out, fixed } = unmangleFully(next);
     next = out;
     if (next !== text) {
       writeFileSync(file, next, "utf8");

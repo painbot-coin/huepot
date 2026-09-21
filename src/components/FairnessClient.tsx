@@ -40,7 +40,7 @@ export function FairnessClient({ slug }: { slug?: string }) {
       <p className="app-lead">
         The color with the most clicks still takes the pot. The seed does not pick
         a winner. It is hashed when the round opens and revealed when it settles,
-        so the sheet cannot be rewritten after the clock.
+        so the sheet cannot be rewritten after the round settles.
       </p>
       <ol className="app-steps">
         <li>

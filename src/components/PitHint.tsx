@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const KEY = "huepot-hint";
 const BEATS = [
   "Pick a color. One tap is one stake.",
-  "The clock runs. Biggest color takes the rest.",
+  "The bar runs down. Biggest color takes the rest.",
   "If you win, that coin pays. Sit and watch the pot.",
 ];
 

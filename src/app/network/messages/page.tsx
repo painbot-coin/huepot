@@ -4,7 +4,7 @@ import { PitLoader } from "@/components/PitLoader";
 import { requirePageUser } from "@/lib/auth";
 
 export default async function NetworkMessagesPage() {
-  await requirePageUser();
+  await requirePageUser("/network/messages");
   return (
     <Suspense fallback={<PitLoader label="Opening letters…" />}>
       <LazyNetworkMessages />

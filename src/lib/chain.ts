@@ -20,30 +20,38 @@ import {
   withdrawSendEnabled,
 } from "@/lib/config";
 import { prisma } from "@/lib/db";
+import { isBscTxHash, usdtTransfersTo } from "@/lib/deposit-claim";
 import { fromCents, toCents } from "@/lib/money";
 import { networkById } from "@/lib/networks";
+import {
+  deadRpcNotice,
+  isCatchingUp,
+  isDeadDedicatedRpc,
+  isRpcSlow,
+  isSeedRefusal,
+  pickWatchRpcUrl,
+  publicCatchUpFrom,
+  rateLimitNotice,
+  skipArchiveNotice,
+} from "@/lib/rpc-fallback";
 import type { Withdrawal, WithdrawalStatus } from "@/lib/types";
 
 const TRANSFER_TOPIC = id("Transfer(address,address,uint256)");
 const SCAN_ID = LIVE_CHAIN_ID;
 const LOOKBACK = 2_000;
-const PUBLIC_SEEDS = [
-  "https://bsc-dataseed.binance.org",
-  "https://bsc-dataseed1.binance.org",
-  "https://bsc-dataseed2.binance.org",
-  "https://bsc-dataseed3.binance.org",
-  "https://bsc-dataseed4.binance.org",
-];
 
 let started = false;
 let scanning = false;
 let lastError = "";
 let lastScanAt = 0;
+let scannedBlock = 0;
 let lastBlock = 0;
 let seedIndex = 0;
+let abandonedDedicated = false;
 let provider: JsonRpcProvider | null = null;
 let providerUrl = "";
 let nextDelayMs = 20_000;
+const claimWait = new Map<string, number>();
 
 export async function ensureChainTables() {
   await prisma.$executeRawUnsafe(`
@@ -100,32 +108,36 @@ export async function ensureChainTables() {
 }
 
 function usesPublicSeed() {
-  return !process.env.BSC_RPC_URL;
+  return abandonedDedicated || !process.env.BSC_RPC_URL;
 }
 
 function chunkBlocks() {
-  return usesPublicSeed() ? 80 : 800;
+  return usesPublicSeed() ? 32 : 800;
 }
 
 function addressChunk() {
   return usesPublicSeed() ? 1 : 20;
 }
 
-function isRpcLimit(error: unknown) {
-  const text = error instanceof Error ? error.message : String(error);
-  return (
-    text.includes("limit exceeded") ||
-    text.includes("-32005") ||
-    text.includes("rate limit") ||
-    text.includes("too many") ||
-    text.includes("429")
-  );
+function withTimeout<T>(work: Promise<T>, ms: number, label: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 function shortScanError(error: unknown) {
-  if (isRpcLimit(error)) {
-    return "BNB public RPC rate-limited eth_getLogs. Scanning slower; set BSC_RPC_URL for a dedicated node.";
-  }
+  if (isDeadDedicatedRpc(error) && !usesPublicSeed()) return deadRpcNotice();
+  if (isSeedRefusal(error)) return rateLimitNotice();
   if (error instanceof Error) {
     const line = error.message.split("\n")[0] ?? "Scan failed";
     return line.length > 180 ? `${line.slice(0, 177)}…` : line;
@@ -138,8 +150,15 @@ function sleep(ms: number) {
 }
 
 function activeRpcUrl() {
-  if (process.env.BSC_RPC_URL) return process.env.BSC_RPC_URL;
-  return PUBLIC_SEEDS[seedIndex % PUBLIC_SEEDS.length];
+  return pickWatchRpcUrl(process.env.BSC_RPC_URL ?? "", abandonedDedicated, seedIndex);
+}
+
+function abandonDedicated(error: unknown) {
+  if (abandonedDedicated || !process.env.BSC_RPC_URL) return false;
+  if (!isDeadDedicatedRpc(error)) return false;
+  abandonedDedicated = true;
+  provider = null;
+  return true;
 }
 
 function rotateSeed() {
@@ -162,6 +181,7 @@ async function getTransferLogs(
   to: number,
   addresses: string[],
   depth = 0,
+  retried = false,
 ): Promise<Log[]> {
   const topics = [
     TRANSFER_TOPIC,
@@ -171,16 +191,27 @@ async function getTransferLogs(
       : addresses.map((address) => zeroPadValue(address, 32)),
   ];
   try {
-    return await getProvider().getLogs({
-      address: LIVE_USDT,
-      fromBlock: from,
-      toBlock: to,
-      topics,
-    });
+    return await withTimeout(
+      getProvider().getLogs({
+        address: LIVE_USDT,
+        fromBlock: from,
+        toBlock: to,
+        topics,
+      }),
+      8_000,
+      "eth_getLogs",
+    );
   } catch (error) {
-    if (!isRpcLimit(error)) throw error;
+    if (abandonDedicated(error)) {
+      return getTransferLogs(from, to, addresses, depth, retried);
+    }
+    if (!isSeedRefusal(error)) throw error;
     rotateSeed();
-    if (to <= from || depth >= 3) throw error;
+    if (!retried) {
+      await sleep(600);
+      return getTransferLogs(from, to, addresses, depth, true);
+    }
+    if (!isRpcSlow(error) || to <= from || depth >= 3) throw error;
     const mid = from + Math.floor((to - from) / 2);
     await sleep(400);
     const left = await getTransferLogs(from, mid, addresses, depth + 1);
@@ -194,16 +225,21 @@ export function startChainWatcher() {
   if (started || !chainWatchEnabled()) return;
   started = true;
   const tick = () => {
-    void scanChain()
-      .catch((error) => {
-        lastError = shortScanError(error);
-        nextDelayMs = isRpcLimit(error) ? 60_000 : 20_000;
-      })
+    const scan = scanChain().catch((error) => {
+      if (abandonDedicated(error)) {
+        lastError = deadRpcNotice();
+        nextDelayMs = 4_000;
+        return;
+      }
+      lastError = shortScanError(error);
+      nextDelayMs = isRpcSlow(error) ? 15_000 : 20_000;
+    });
+    void scan.finally(() => {
+      setTimeout(tick, nextDelayMs);
+    });
+    void scan
       .then(() => drainQueuedWithdrawals().catch(() => undefined))
-      .then(() => sweepDueInboxes().catch(() => undefined))
-      .finally(() => {
-        setTimeout(tick, nextDelayMs);
-      });
+      .then(() => sweepDueInboxes().catch(() => undefined));
   };
   setTimeout(tick, 2_000);
 }
@@ -219,8 +255,10 @@ export function chainStatus() {
     contract: LIVE_USDT,
     confirms: chainConfirms(),
     lastBlock,
+    scannedBlock,
     lastScanAt,
     lastError: lastError || null,
+    catchingUp: isCatchingUp(lastBlock, scannedBlock),
     explorer: "https://bscscan.com",
     canSend: withdrawSendEnabled(),
   };
@@ -271,12 +309,16 @@ export async function houseWalletStatus(): Promise<HouseWalletStatus> {
     return empty;
   }
   try {
-    const provider = new JsonRpcProvider(chainRpcUrl(), 56, { staticNetwork: true });
+    const provider = new JsonRpcProvider(activeRpcUrl(), 56, { staticNetwork: true });
     const token = new Contract(LIVE_USDT, ["function balanceOf(address owner) view returns (uint256)"], provider);
-    const [tokenBal, gasBal] = await Promise.all([
-      token.balanceOf(address) as Promise<bigint>,
-      provider.getBalance(address),
-    ]);
+    const [tokenBal, gasBal] = await withTimeout(
+      Promise.all([
+        token.balanceOf(address) as Promise<bigint>,
+        provider.getBalance(address),
+      ]),
+      8_000,
+      "house wallet",
+    );
     const usdt = Number(formatUnits(tokenBal, LIVE_USDT_DECIMALS));
     const bnb = Number(formatUnits(gasBal, 18));
     const status: HouseWalletStatus = {
@@ -301,7 +343,7 @@ export async function scanChain() {
   scanning = true;
   try {
     await ensureChainTables();
-    const head = await getProvider().getBlockNumber();
+    const head = await withTimeout(getProvider().getBlockNumber(), 8_000, "eth_blockNumber");
     const confirms = chainConfirms();
     const safeHead = Math.max(0, head - confirms);
     lastBlock = head;
@@ -319,7 +361,15 @@ export async function scanChain() {
       `SELECT lastBlock FROM ChainScan WHERE id = '${SCAN_ID}'`,
     ).catch(() => [] as { lastBlock: number }[]);
     const saved = cursorRows[0]?.lastBlock ?? 0;
-    const from = saved > 0 ? saved + 1 : Math.max(0, safeHead - LOOKBACK);
+    if (saved > scannedBlock) scannedBlock = saved;
+    const from = usesPublicSeed()
+      ? publicCatchUpFrom(saved, safeHead, LOOKBACK)
+      : saved > 0
+        ? saved + 1
+        : Math.max(0, safeHead - LOOKBACK);
+    if (usesPublicSeed() && saved > 0 && from > saved + 1) {
+      lastError = skipArchiveNotice();
+    }
     if (from > safeHead) {
       lastScanAt = Date.now();
       lastError = "";
@@ -360,12 +410,18 @@ export async function scanChain() {
        ON CONFLICT(id) DO UPDATE SET lastBlock = ${to}, updatedAt = ${now}`,
     );
     lastScanAt = now;
+    scannedBlock = to;
     lastError = "";
     nextDelayMs = safeHead - to > chunkBlocks() * 4 ? 4_000 : 20_000;
     return chainStatus();
   } catch (error) {
+    if (abandonDedicated(error)) {
+      lastError = deadRpcNotice();
+      nextDelayMs = 4_000;
+      return chainStatus();
+    }
     lastError = shortScanError(error);
-    nextDelayMs = isRpcLimit(error) ? 60_000 : 20_000;
+    nextDelayMs = isRpcSlow(error) ? 15_000 : 20_000;
     throw error;
   } finally {
     scanning = false;
@@ -387,8 +443,8 @@ const REPAIR_AFTER_MS = 10 * 60 * 1000;
  * attempt can still be writing one.
  */
 async function creditWentMissing(txHash: string, logIndex: number) {
-  const rows = await prisma.$queryRaw<{ createdAt: bigint }[]>`
-    SELECT createdAt FROM ChainDeposit
+  const rows = await prisma.$queryRaw<{ createdAt: string }[]>`
+    SELECT CAST(createdAt AS TEXT) AS createdAt FROM ChainDeposit
      WHERE txHash = ${txHash} AND logIndex = ${logIndex} LIMIT 1
   `;
   if (!rows.length) return false;
@@ -427,6 +483,120 @@ async function creditLog(input: {
   const { creditConfirmedDeposit } = await import("@/lib/ledger");
   await withStore((store) =>
     creditConfirmedDeposit(store, input.userId, input.amount, txHash),
+  );
+}
+
+export type ClaimedDeposit = {
+  credited: boolean;
+  already: boolean;
+  amount: number;
+  txHash: string;
+};
+
+function claimFail(message: string, status = 400): never {
+  const error = new Error(message);
+  (error as Error & { status?: number }).status = status;
+  throw error;
+}
+
+function gateClaim(key: string) {
+  const now = Date.now();
+  const prev = claimWait.get(key) ?? 0;
+  if (now - prev < 8_000) claimFail("Wait a moment, then try again.", 429);
+  claimWait.set(key, now);
+}
+
+/** Credit a send from its hash when the log cursor skipped those blocks. */
+export async function claimDepositByHash(txHash: string, onlyUserId?: string) {
+  if (!chainWatchEnabled()) claimFail("Chain watch is off.");
+  const hash = txHash.trim();
+  if (!isBscTxHash(hash)) claimFail("Paste a BscScan hash.");
+  gateClaim(onlyUserId || hash.toLowerCase());
+  await ensureChainTables();
+
+  let receipt;
+  try {
+    receipt = await withTimeout(
+      getProvider().getTransactionReceipt(hash),
+      8_000,
+      "eth_getTransactionReceipt",
+    );
+  } catch {
+    claimFail("Could not read that send. Try again.");
+  }
+  if (!receipt) claimFail("That send was not found.");
+  if (Number(receipt.status) !== 1) claimFail("That send failed on chain.");
+  if (!receipt.blockNumber) claimFail("That send is still waiting on chain.");
+
+  let head = lastBlock;
+  try {
+    if (!head) head = await withTimeout(getProvider().getBlockNumber(), 8_000, "eth_blockNumber");
+  } catch {
+    claimFail("Could not read the chain head.");
+  }
+  const needed = chainConfirms();
+  const confirmations = Math.max(0, head - receipt.blockNumber);
+  if (confirmations < needed) {
+    claimFail(`Waiting on chain. ${confirmations}/${needed} confirms.`);
+  }
+
+  const wallets = await prisma.wallet.findMany({
+    where: {
+      network: LIVE_CHAIN_ID,
+      ...(onlyUserId ? { userId: onlyUserId } : {}),
+    },
+    select: { userId: true, address: true },
+  });
+  if (!wallets.length) claimFail("No live BNB Chain address yet.");
+
+  let creditedCents = 0;
+  let already = false;
+  for (const wallet of wallets) {
+    const hits = usdtTransfersTo(
+      receipt.logs,
+      LIVE_USDT,
+      wallet.address,
+      receipt.logs[0]?.transactionHash || hash,
+    );
+    for (const hit of hits) {
+      const amount = toCents(Number(formatUnits(hit.data, LIVE_USDT_DECIMALS)));
+      if (!Number.isFinite(amount) || amount < 1) continue;
+      if (await depositAlreadyCredited(hit.txHash || hash.toLowerCase())) {
+        already = true;
+        continue;
+      }
+      await creditLog({
+        userId: wallet.userId,
+        address: wallet.address.toLowerCase(),
+        amount,
+        txHash: hit.txHash || hash.toLowerCase(),
+        logIndex: hit.logIndex,
+        blockNumber: hit.blockNumber || receipt.blockNumber,
+      });
+      creditedCents += amount;
+    }
+  }
+
+  if (creditedCents > 0) {
+    return {
+      credited: true,
+      already: false,
+      amount: fromCents(creditedCents),
+      txHash: hash.toLowerCase(),
+    };
+  }
+  if (already) {
+    return {
+      credited: false,
+      already: true,
+      amount: 0,
+      txHash: hash.toLowerCase(),
+    };
+  }
+  claimFail(
+    onlyUserId
+      ? "That hash did not send USDT to your deposit address."
+      : "That hash did not send USDT to a house address.",
   );
 }
 
@@ -497,7 +667,7 @@ export async function pendingDepositsForUser(userId: string): Promise<PendingDep
   const needed = chainConfirms();
   let head = lastBlock;
   try {
-    if (!head) head = await getProvider().getBlockNumber();
+    if (!head) head = await withTimeout(getProvider().getBlockNumber(), 8_000, "eth_blockNumber");
   } catch {
     return [];
   }
@@ -543,11 +713,14 @@ export async function pendingDepositsForUser(userId: string): Promise<PendingDep
 
 export async function listPublicPayouts(limit = 8): Promise<PublicPayout[]> {
   const rows = await listWithdrawals("paid");
-  return rows.slice(0, limit).map((row) => ({
-    amount: row.amount,
-    at: row.resolvedAt ?? row.createdAt,
-    txHash: (row.txHash ?? "").trim(),
-  }));
+  return rows
+    .filter((row) => (row.txHash ?? "").trim())
+    .slice(0, limit)
+    .map((row) => ({
+      amount: row.amount,
+      at: row.resolvedAt ?? row.createdAt,
+      txHash: (row.txHash ?? "").trim(),
+    }));
 }
 
 export async function listWithdrawalsForUser(userId: string) {
@@ -678,7 +851,7 @@ export async function inboxHoldings(): Promise<InboxHolding> {
   if (!chainRpcUrl()) return empty;
   const house = houseWalletAddress().toLowerCase();
   try {
-    const provider = new JsonRpcProvider(chainRpcUrl(), 56, { staticNetwork: true });
+    const provider = new JsonRpcProvider(activeRpcUrl(), 56, { staticNetwork: true });
     const token = new Contract(LIVE_USDT, USDT_ABI, provider);
     const wallets = await prisma.wallet.findMany({
       where: { network: LIVE_CHAIN_ID },
@@ -688,7 +861,11 @@ export async function inboxHoldings(): Promise<InboxHolding> {
     let count = 0;
     for (const row of wallets) {
       if (row.address.toLowerCase() === house) continue;
-      const bal = (await token.balanceOf(row.address)) as bigint;
+      const bal = (await withTimeout(
+        token.balanceOf(row.address) as Promise<bigint>,
+        8_000,
+        "inbox balance",
+      ));
       if (bal < SWEEP_MIN_USDT) continue;
       usdt += Number(formatUnits(bal, LIVE_USDT_DECIMALS));
       count += 1;
@@ -728,25 +905,29 @@ async function sweepOneInbox(
 ): Promise<InboxSweep | null> {
   if (row.address.toLowerCase() === house.toLowerCase()) return null;
   const tokenView = new Contract(LIVE_USDT, USDT_ABI, provider);
-  const bal = (await tokenView.balanceOf(row.address)) as bigint;
+  const bal = await withTimeout(
+    tokenView.balanceOf(row.address) as Promise<bigint>,
+    8_000,
+    "inbox balance",
+  );
   if (bal < SWEEP_MIN_USDT) return null;
   const inbox = new Wallet(decryptSecret(row.secretEnc), provider);
   if (inbox.address.toLowerCase() !== row.address.toLowerCase()) {
     throw new Error("Inbox key does not match the address.");
   }
-  const gasBal = await provider.getBalance(inbox.address);
+  const gasBal = await withTimeout(provider.getBalance(inbox.address), 8_000, "inbox gas");
   if (gasBal < SWEEP_GAS_MIN) {
     const funder = new Wallet(withdrawKey(), provider);
-    const fundGas = await provider.getBalance(funder.address);
+    const fundGas = await withTimeout(provider.getBalance(funder.address), 8_000, "house gas");
     if (fundGas < SWEEP_GAS_TOPUP * BigInt(2)) {
       throw new Error("House wallet needs more BNB to move inbox USDT.");
     }
     const top = await funder.sendTransaction({ to: inbox.address, value: SWEEP_GAS_TOPUP });
-    await top.wait(1);
+    await withTimeout(top.wait(1), 20_000, "sweep gas wait");
   }
   const usdt = new Contract(LIVE_USDT, USDT_ABI, inbox);
   const sent = await usdt.getFunction("transfer").send(house, bal);
-  await sent.wait(1);
+  await withTimeout(sent.wait(1), 20_000, "sweep wait");
   const cents = Math.round(Number(formatUnits(bal, LIVE_USDT_DECIMALS)) * 100);
   await recordSweep(row.userId, row.address, cents, sent.hash);
   return { address: row.address, amount: fromCents(cents), txHash: sent.hash, ok: true };
@@ -760,7 +941,7 @@ export async function sweepDueInboxes(): Promise<InboxSweep[]> {
     await ensureChainTables();
     const house = houseWalletAddress();
     if (!house) return [];
-    const provider = new JsonRpcProvider(chainRpcUrl(), 56, { staticNetwork: true });
+    const provider = new JsonRpcProvider(activeRpcUrl(), 56, { staticNetwork: true });
     const wallets = await prisma.wallet.findMany({
       where: { network: LIVE_CHAIN_ID },
       select: { userId: true, address: true, secretEnc: true },
@@ -831,18 +1012,21 @@ export async function sendQueuedWithdrawal(id: string) {
     }
 
     let hash = (row.txHash ?? "").trim();
+    const provider = new JsonRpcProvider(activeRpcUrl(), 56, { staticNetwork: true });
     if (!hash) {
-      const rpc = chainRpcUrl();
-      const provider = new JsonRpcProvider(rpc, 56, { staticNetwork: true });
       const signer = new Wallet(withdrawKey(), provider);
       const usdt = new Contract(LIVE_USDT, USDT_ABI, signer);
       const cents = Math.round(Number(row.amount));
       if (cents < 1) throw new Error("That payout is empty.");
       const value = BigInt(cents) * BigInt(10) ** BigInt(LIVE_USDT_DECIMALS - 2);
-      const [tokenBal, gasBal] = await Promise.all([
-        usdt.balanceOf(signer.address) as Promise<bigint>,
-        provider.getBalance(signer.address),
-      ]);
+      const [tokenBal, gasBal] = await withTimeout(
+        Promise.all([
+          usdt.balanceOf(signer.address) as Promise<bigint>,
+          provider.getBalance(signer.address),
+        ]),
+        8_000,
+        "house wallet",
+      );
       if (tokenBal < value) {
         throw new Error(
           `House USDT is short. Need ${fromCents(cents)} USDT in ${signer.address.slice(0, 6)}…${signer.address.slice(-4)}.`,
@@ -860,8 +1044,9 @@ export async function sendQueuedWithdrawal(id: string) {
         // habit rots: the next person copies the looser half.
         `UPDATE Withdrawal SET txHash = '${esc(hash)}', note = 'Broadcast ${esc(hash)}' WHERE id = '${esc(id)}'`,
       );
-      await tx.wait(1);
     }
+    const mined = await withTimeout(provider.waitForTransaction(hash, 1), 20_000, "withdraw wait");
+    if (!mined || Number(mined.status) !== 1) throw new Error("That send did not land.");
 
     const now = Date.now();
     const marked = await prisma.$executeRawUnsafe(

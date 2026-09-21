@@ -1,40 +1,84 @@
 import { createHash } from "node:crypto";
+import {
+  bettingGameKind,
+  isBettingGameNews,
+  isBettingSpam,
+  isHallLine,
+  wireHeadline,
+  type BettingKind,
+  type BettingTrust,
+} from "@/lib/betting-game";
 import { prisma } from "@/lib/db";
 
 /**
- * Betting and crypto headlines, fetched on a timer and put on the wire.
- * Deliberately narrow in what it takes: a headline, a link, the source name
- * and the feed's own image. Never an article body - reposting someone else's
- * writing is republishing it, and a link is not.
+ * Betting-game headlines, fetched on a timer and put on the wire.
  *
- * Publishing is automatic, which is what was asked for. It was briefly gated
- * behind a staff click, on the reasoning that an unwatched feed would
- * eventually offer a fixed-match tip or a scam promotion. That gate published
- * nothing for a day: 108 headlines queued and the release button was pressed
- * zero times. The approval that keeps the house name safe is the source list
- * below - eight mainstream editorial outlets - not a button nobody is
- * standing next to. Staff can still pull anything off the wire in one click.
+ * This is a betting house. The tape is odds, lines, new tables and the desks
+ * that write about betting on games — not football scores, not Bitcoin
+ * prices, and not who just bought a licence. Those were what the first
+ * scrapers gathered, and they buried the thing a player here actually reads.
+ *
+ * Two kinds of source, both probed from the droplet before they went in:
+ * betting desks with their own feeds, and topic scrapes that search the
+ * open web for betting-game news. A desk is trusted to stay on subject; a
+ * scrape has to read as a betting game or it is dropped. Never an article
+ * body — a link is not republishing.
  *
  * Writes straight to its own table and never touches the in-memory store, so a
  * fetch cannot sit in the lane that settles rounds.
  */
 
-export type NewsSource = { name: string; url: string; tag: "crypto" | "sport" };
+export type NewsTag = BettingKind | "betting";
 
-/** Every feed here answered from the server before being added. */
+export type NewsSource = {
+  name: string;
+  url: string;
+  tag: BettingKind;
+  /** house = a betting desk. strict = a mixed scrape that must prove itself. */
+  trust?: BettingTrust;
+  /** Topic scrapes name the publisher per item and carry no real summary. */
+  wire?: boolean;
+  take?: number;
+};
+
+/**
+ * Every feed here answered `scripts/feed-probe.mjs` from the droplet before
+ * being added, with items that parse. Guessing at a URL and shipping it is
+ * how a wire ends up quietly half dead.
+ */
 export const NEWS_SOURCES: NewsSource[] = [
-  { name: "Cointelegraph", url: "https://cointelegraph.com/rss", tag: "crypto" },
-  { name: "Decrypt", url: "https://decrypt.co/feed", tag: "crypto" },
-  { name: "CoinDesk", url: "https://www.coindesk.com/arc/outboundfeeds/rss/", tag: "crypto" },
-  { name: "CoinJournal", url: "https://coinjournal.net/feed/", tag: "crypto" },
-  { name: "Bitcoin Magazine", url: "https://bitcoinmagazine.com/feed", tag: "crypto" },
-  { name: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/rss.xml", tag: "sport" },
-  { name: "Sky Sports", url: "https://www.skysports.com/rss/12040", tag: "sport" },
-  { name: "Guardian Sport", url: "https://www.theguardian.com/sport/rss", tag: "sport" },
+  {
+    name: "Sports betting tape",
+    url: "https://news.google.com/rss/search?q=sports+betting+odds&hl=en-US&gl=US&ceid=US:en",
+    tag: "sport",
+    trust: "strict",
+    wire: true,
+    take: 8,
+  },
+  {
+    name: "Casino games tape",
+    url: "https://news.google.com/rss/search?q=%22slot+launch%22+OR+WSOP+OR+%22poker+tournament%22+OR+%22live+dealer%22+OR+%22new+slot%22&hl=en-US&gl=US&ceid=US:en",
+    tag: "casino",
+    trust: "strict",
+    wire: true,
+    take: 6,
+  },
+  { name: "NY Post Betting", url: "https://nypost.com/tag/sports-betting/feed/", tag: "sport", trust: "house" },
+  { name: "CBS Sports Betting", url: "https://www.cbssports.com/rss/headlines/betting/", tag: "sport", trust: "house" },
+  { name: "Legal Sports Report", url: "https://www.legalsportsreport.com/feed/", tag: "sport", trust: "house" },
+  { name: "Legal Sports Betting", url: "https://www.legalsportsbetting.com/feed/", tag: "sport", trust: "house" },
+  { name: "Sports Betting Dime", url: "https://www.sportsbettingdime.com/feed/", tag: "sport", trust: "house" },
+  { name: "Betfair", url: "https://betting.betfair.com/index.xml", tag: "sport", trust: "house" },
+  { name: "Casino.org", url: "https://www.casino.org/news/feed/", tag: "sport", trust: "strict" },
+  { name: "Punter2Pro", url: "https://punter2pro.com/feed/", tag: "casino", trust: "house" },
+  { name: "VegasSlotsOnline", url: "https://www.vegasslotsonline.com/news/feed/", tag: "casino", trust: "house" },
+  { name: "OnlinePoker", url: "https://www.onlinepoker.net/feed/", tag: "casino", trust: "house" },
+  { name: "CasinoBeats", url: "https://casinobeats.com/feed/", tag: "casino", trust: "strict" },
+  { name: "SBC News", url: "https://sbcnews.co.uk/feed/", tag: "sport", trust: "strict" },
 ];
 
-/** Per source, per run. Eight feeds of thirty would bury the hall. */
-const PER_SOURCE = 5;
+/** Per source, per run. A topic scrape of a hundred would bury the hall. */
+const PER_SOURCE = 6;
 /** Enough for a card to be worth reading, short enough not to be the article. */
 const SUMMARY_MAX = 320;
 const POLL_MS = 15 * 60 * 1000;
@@ -50,7 +94,22 @@ export type NewsItem = {
   url: string;
   image: string;
   publishedAt: number;
+  /**
+   * The Wing card for this headline, when the house has posted it.
+   * Empty until then, so Talk is not offered for a discussion that is not there.
+   */
+  talkId?: string;
 };
+
+/**
+ * Where a headline is discussed. The id is the house's, so anything that is
+ * not a post id is dropped rather than being written into a link.
+ */
+export function talkHref(talkId: string) {
+  const id = talkId.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80);
+  if (!id.startsWith("wire-") || id.length < 6) return "";
+  return `/network?post=${encodeURIComponent(id)}`;
+}
 
 let ready = false;
 
@@ -84,7 +143,10 @@ export async function ensureNewsTables() {
   } catch {
     /* column already exists */
   }
+  await retireOffTopicNews();
   ready = true;
+  // Promo copy that landed before the spam check knew those titles.
+  await retireSpamNews();
 }
 
 const ENTITIES: Record<string, string> = {
@@ -141,8 +203,10 @@ function summaryOf(block: string, title: string, sourceName: string) {
   if (!raw) return "";
   let text = stripTags(raw);
 
-  // Trailing syndication credit, and anything after it.
+  // Trailing syndication credit, and anything after it. WordPress desks
+  // close with "The post … appeared first on", which is the same noise.
   text = text.replace(/\s*This (post|article)\b[\s\S]*$/i, "").trim();
+  text = text.replace(/\s*The post\b[\s\S]*$/i, "").trim();
 
   // A leading repeat of the outlet, then of the headline. Order matters:
   // "Bitcoin Magazine Capital B Buys 376 Bitcoins…" is both, in that order.
@@ -191,27 +255,37 @@ function imageOf(block: string) {
 export function parseFeed(xml: string, source: NewsSource): NewsItem[] {
   const blocks = xml.match(/<(item|entry)[\s>][\s\S]*?<\/\1>/gi) ?? [];
   const out: NewsItem[] = [];
+  const take = Math.max(1, Math.min(20, source.take ?? PER_SOURCE));
+  const trust = source.trust ?? "strict";
   for (const block of blocks) {
-    const title = tagText(block, "title");
+    const rawTitle = tagText(block, "title");
+    // Topic scrapes name the publisher in a <source> tag, and again at the
+    // end of the title. The card already has a source line, so the suffix
+    // comes off.
+    const publisher = source.wire ? tagText(block, "source") : "";
+    const title = wireHeadline(rawTitle, publisher);
     // The guid is usually the clean article URL; the link often carries a
-    // campaign string. Atom keeps the URL in a link href instead.
+    // campaign string. Atom keeps the URL in a link href instead. Topic
+    // scrapes use a non-URL guid, so the link is the one that counts.
     const guid = tagText(block, "guid");
     const link = tagText(block, "link") || attr(block, "link", "href");
     const url = cleanUrl(/^https?:\/\//i.test(guid) ? guid : link);
     if (!title || !url) continue;
+    const summary = source.wire ? "" : summaryOf(block, title, publisher || source.name);
+    if (!isBettingGameNews(title, summary, trust)) continue;
     const when = tagText(block, "pubDate") || tagText(block, "published") || tagText(block, "updated");
     const at = when ? Date.parse(when) : Number.NaN;
     out.push({
       id: createHash("sha256").update(url).digest("hex").slice(0, 32),
-      source: source.name,
-      tag: source.tag,
+      source: (publisher || source.name).slice(0, 40),
+      tag: bettingGameKind(title, summary, source.tag),
       title: title.slice(0, 200),
-      summary: summaryOf(block, title, source.name),
+      summary,
       url,
       image: imageOf(block),
       publishedAt: Number.isFinite(at) ? at : Date.now(),
     });
-    if (out.length >= PER_SOURCE) break;
+    if (out.length >= take) break;
   }
   return out;
 }
@@ -221,6 +295,12 @@ async function saveItems(items: NewsItem[]) {
   let added = 0;
   const now = Date.now();
   for (const item of items) {
+    // The same game write-up arrives from a desk and from the tape under
+    // different URLs. One headline on the wire is enough.
+    const seen = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM NewsItem WHERE title = ${item.title} LIMIT 1
+    `;
+    if (seen.length) continue;
     // Keyed by the hash of the URL, so the same article twice is one row and
     // the dedupe needs no extra query.
     const done = await prisma.$executeRaw`
@@ -261,15 +341,16 @@ async function saveItems(items: NewsItem[]) {
  * hour is not reading, it is a firehose that would bury any player who ever
  * writes something.
  */
-const WING_PER_RUN = 4;
+const WING_PER_RUN = 12;
 
 /**
  * Puts the newest headlines into the Wing feed as link cards, authored by the
  * house. They are real posts, so a player can like and comment on them, which
  * is the whole point of them being in a feed rather than a list.
  *
- * Skips anything already posted, and anything with no summary — a card with a
- * headline and nothing under it is worse than no card.
+ * Skips anything already posted. A tape item often has no publisher summary;
+ * the card still has a headline, a source and a link, which is enough to talk
+ * about. Repeating the title as the body is worse than leaving it blank.
  */
 export async function postNewsToWing(limit = WING_PER_RUN) {
   await ensureNewsTables();
@@ -282,7 +363,8 @@ export async function postNewsToWing(limit = WING_PER_RUN) {
   >`
     SELECT n.id, n.source, n.title, n.summary, n.url, n.image
       FROM NewsItem n
-     WHERE n.hidden = 0 AND n.status = 'live' AND n.summary != ''
+     WHERE n.hidden = 0 AND n.status = 'live'
+       AND n.tag IN ('sport', 'casino', 'betting')
        AND NOT EXISTS (SELECT 1 FROM NetworkPost p WHERE p.link = n.url)
      ORDER BY n.publishedAt DESC
      LIMIT ${Math.max(1, Math.min(20, Math.floor(limit)))}
@@ -326,9 +408,11 @@ export async function fetchNewsOnce(): Promise<FetchReport[]> {
       });
     }
   }
+  // Drop signup offers that were already stored, then post what is left.
   // The feed gets its cards from the same run, so a fetch is one step rather
   // than a thing that needs a second trigger nobody remembers to pull.
   try {
+    await retireSpamNews();
     await postNewsToWing();
   } catch {
     /* a feed card failing must not fail the fetch */
@@ -336,11 +420,14 @@ export async function fetchNewsOnce(): Promise<FetchReport[]> {
   return reports;
 }
 
-type Row = Omit<NewsItem, "publishedAt"> & { publishedAt: string };
+type Row = Omit<NewsItem, "publishedAt" | "talkId"> & {
+  publishedAt: string;
+  talkId?: string | null;
+};
 
 export type NewsQuery = {
   limit?: number;
-  /** "crypto" or "sport"; empty means both. */
+  /** "sport" or "casino"; empty means every betting-game headline. */
   tag?: string;
   /** An outlet name; empty means all of them. */
   source?: string;
@@ -358,21 +445,46 @@ export type NewsQuery = {
  */
 export async function listNews(input: NewsQuery | number = {}) {
   await ensureNewsTables();
+  // Talk is a join onto the feed card. The social tables are created here so
+  // a first request after a wipe does not fail the hall tape.
+  const { ensureSocialTables } = await import("@/lib/social");
+  await ensureSocialTables();
   const query: NewsQuery = typeof input === "number" ? { limit: input } : input;
   const take = Math.max(1, Math.min(60, Math.floor(query.limit ?? 24)));
   const tag = (query.tag ?? "").trim();
   const source = (query.source ?? "").trim();
   const before = Number.isFinite(query.before) ? Math.max(0, Math.floor(query.before!)) : 0;
   const rows = await prisma.$queryRaw<Row[]>`
-    SELECT id, source, tag, title, summary, url, image, CAST(publishedAt AS TEXT) AS publishedAt
-      FROM NewsItem
-     WHERE hidden = 0 AND status = 'live'
-       AND (${tag} = '' OR tag = ${tag})
-       AND (${source} = '' OR source = ${source})
-       AND (${before} = 0 OR publishedAt < ${before})
-     ORDER BY publishedAt DESC LIMIT ${take}
+    SELECT n.id, n.source, n.tag, n.title, n.summary, n.url, n.image,
+           CAST(n.publishedAt AS TEXT) AS publishedAt,
+           COALESCE(p.id, '') AS talkId
+      FROM NewsItem n
+      LEFT JOIN NetworkPost p ON p.id = ('wire-' || n.id)
+     WHERE n.hidden = 0 AND n.status = 'live'
+       AND n.tag IN ('sport', 'casino', 'betting')
+       AND (${tag} = '' OR n.tag = ${tag})
+       AND (${source} = '' OR n.source = ${source})
+       AND (${before} = 0 OR n.publishedAt < ${before})
+     ORDER BY n.publishedAt DESC LIMIT ${take}
   `;
-  return rows.map((row) => ({ ...row, publishedAt: Number(row.publishedAt) }));
+  return rows.map((row) => ({
+    ...row,
+    publishedAt: Number(row.publishedAt),
+    talkId: (row.talkId ?? "").trim(),
+  }));
+}
+
+/**
+ * The hall strip. Newest first among lines a stranger should see — a price,
+ * a market, a new table — then fill from the rest of the tape if the last
+ * day has fewer than four of those.
+ */
+export async function listHallNews(limit = 4) {
+  const take = Math.max(1, Math.min(8, Math.floor(limit)));
+  const pool = await listNews({ limit: 24 });
+  const lines = pool.filter((row) => isHallLine(row.title, row.summary));
+  const rest = pool.filter((row) => !isHallLine(row.title, row.summary));
+  return [...lines, ...rest].slice(0, take);
 }
 
 /** How many headlines match, so the page can say what it is showing part of. */
@@ -383,6 +495,7 @@ export async function countNews(query: NewsQuery = {}) {
   const rows = await prisma.$queryRaw<{ n: number | bigint }[]>`
     SELECT COUNT(*) AS n FROM NewsItem
      WHERE hidden = 0 AND status = 'live'
+       AND tag IN ('sport', 'casino', 'betting')
        AND (${tag} = '' OR tag = ${tag})
        AND (${source} = '' OR source = ${source})
   `;
@@ -397,6 +510,7 @@ export async function newsOutlets(): Promise<NewsOutlet[]> {
   const rows = await prisma.$queryRaw<{ source: string; tag: string; n: number | bigint }[]>`
     SELECT source, MIN(tag) AS tag, COUNT(*) AS n FROM NewsItem
      WHERE hidden = 0 AND status = 'live'
+       AND tag IN ('sport', 'casino', 'betting')
      GROUP BY source ORDER BY n DESC
   `;
   return rows.map((row) => ({ source: row.source, tag: row.tag, count: Number(row.n) }));
@@ -448,6 +562,91 @@ export async function releaseAllHeld() {
 export async function hideNewsItem(id: string) {
   await ensureNewsTables();
   await prisma.$executeRaw`UPDATE NewsItem SET hidden = 1 WHERE id = ${id}`;
+}
+
+/**
+ * Signup offers that passed the first spam check. They stay in the table so
+ * a pull can be undone, but they leave the public wire and the Wing. The
+ * same function that refuses them on the way in decides which rows to pull.
+ */
+export async function retireSpamNews() {
+  await ensureNewsTables();
+  const rows = await prisma.$queryRaw<
+    { id: string; title: string; summary: string; url: string }[]
+  >`
+    SELECT id, title, summary, url FROM NewsItem
+     WHERE hidden = 0 AND tag IN ('sport', 'casino', 'betting')
+  `;
+  const drop = rows.filter((row) => isBettingSpam(row.title, row.summary));
+  for (const row of drop) {
+    await prisma.$executeRaw`UPDATE NewsItem SET hidden = 1 WHERE id = ${row.id}`;
+    try {
+      await prisma.$executeRaw`
+        DELETE FROM NetworkPost WHERE id = ${`wire-${row.id}`} OR link = ${row.url}
+      `;
+    } catch {
+      /* the social tables may not exist yet on a fresh database */
+    }
+  }
+  if (drop.length) {
+    try {
+      await prisma.$executeRawUnsafe(
+        "DELETE FROM NetworkLike WHERE postId NOT IN (SELECT id FROM NetworkPost)",
+      );
+      await prisma.$executeRawUnsafe(
+        "DELETE FROM NetworkComment WHERE postId NOT IN (SELECT id FROM NetworkPost)",
+      );
+    } catch {
+      /* same */
+    }
+  }
+  return drop.length;
+}
+
+/**
+ * The first scrapers gathered football scores, Bitcoin prices and operator
+ * trade press. Those rows stay in the table so a pull can be undone, but they
+ * leave the public wire and the Wing. Names are literals the house chose —
+ * not a user-supplied list.
+ */
+export async function retireOffTopicNews() {
+  await prisma.$executeRaw`
+    UPDATE NewsItem SET hidden = 1
+     WHERE hidden = 0 AND (
+       tag = 'crypto'
+       OR source IN (
+         'BBC Sport', 'Sky Sports', 'Guardian Sport',
+         'Cointelegraph', 'Decrypt', 'CoinDesk', 'CoinJournal', 'Bitcoin Magazine',
+         'iGaming Business', 'SBC Americas', 'Next.io', 'EGR Global'
+       )
+     )
+  `;
+  await prisma.$executeRaw`
+    UPDATE NewsItem SET tag = 'sport'
+     WHERE tag = 'betting' AND source IN ('Legal Sports Report', 'SBC News')
+  `;
+  await prisma.$executeRaw`
+    UPDATE NewsItem SET tag = 'casino'
+     WHERE tag = 'betting' AND source IN ('CasinoBeats')
+  `;
+  try {
+    await prisma.$executeRaw`
+      DELETE FROM NetworkPost
+       WHERE link <> '' AND source IN (
+         'BBC Sport', 'Sky Sports', 'Guardian Sport',
+         'Cointelegraph', 'Decrypt', 'CoinDesk', 'CoinJournal', 'Bitcoin Magazine',
+         'iGaming Business', 'SBC Americas', 'Next.io', 'EGR Global'
+       )
+    `;
+    await prisma.$executeRawUnsafe(
+      "DELETE FROM NetworkLike WHERE postId NOT IN (SELECT id FROM NetworkPost)",
+    );
+    await prisma.$executeRawUnsafe(
+      "DELETE FROM NetworkComment WHERE postId NOT IN (SELECT id FROM NetworkPost)",
+    );
+  } catch {
+    /* the social tables may not exist yet on a fresh database */
+  }
 }
 
 let timer: NodeJS.Timeout | null = null;

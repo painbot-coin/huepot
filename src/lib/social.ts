@@ -3,6 +3,7 @@ import {
   findPlayer,
   friendCount,
   headlineOf,
+  listPublicPeople,
   listSuggestedPeople,
   pendingInCount,
   playerRelation,
@@ -11,6 +12,8 @@ import {
 import { avatarOf, parseAvatar } from "./avatar";
 import { blockedBetween, blockedIds } from "./friends";
 import { isHouseUser } from "@/lib/house";
+import { recommendPosts } from "@/lib/feed-rank";
+import { houseCardKind } from "@/lib/take-talk";
 import { playBlock } from "@/lib/limits";
 import { notify } from "@/lib/notifications";
 import { isOnline, presenceAt, touchPresence } from "@/lib/presence";
@@ -129,9 +132,15 @@ export function youPayload(viewer: User) {
   };
 }
 
-export function publicProfile(store: StoreData, viewer: User, username: string): NetworkProfile {
-  const self = username.trim().toLowerCase() === viewer.username.toLowerCase();
-  const user = self ? viewer : findPlayer(store, username);
+export function publicProfile(
+  store: StoreData,
+  viewer: User | null,
+  username: string,
+): NetworkProfile {
+  const self = Boolean(
+    viewer && username.trim().toLowerCase() === viewer.username.toLowerCase(),
+  );
+  const user = self && viewer ? viewer : findPlayer(store, username);
   return {
     username: user.username,
     avatar: avatarOf(user),
@@ -142,10 +151,13 @@ export function publicProfile(store: StoreData, viewer: User, username: string):
     online: isOnline(user.id),
     lastSeen: presenceAt(user.id),
     room: seatedAt(store, user.id),
-    relation: self ? "friends" : playerRelation(viewer.id, user.id),
+    relation: !viewer || self ? (self ? "friends" : "none") : playerRelation(viewer.id, user.id),
     friends: friendCount(user.id),
     you: self,
     record: emptyRecord(),
+    place: null,
+    lastTakes: [],
+    inviteCode: self && viewer ? viewer.inviteCode || "" : "",
   };
 }
 
@@ -182,7 +194,11 @@ type PostRow = {
 const POST_SELECT =
   "id, userId, body, link, image, title, source, CAST(createdAt AS TEXT) as createdAt";
 
-async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): Promise<NetworkPost[]> {
+async function hydratePosts(
+  store: StoreData,
+  viewer: User | null,
+  posts: PostRow[],
+): Promise<NetworkPost[]> {
   const ids = posts.map((post) => `'${esc(post.id)}'`).join(",");
   const likes = ids
     ? await prisma.$queryRawUnsafe<{ postId: string; userId: string }[]>(
@@ -198,15 +214,15 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
     : [];
   // One list for the whole batch: a blocked pair drops out of the feed and out
   // of each other's comment threads.
-  const hidden = blockedIds(viewer.id);
+  const hidden = viewer ? blockedIds(viewer.id) : new Set<string>();
   return posts.flatMap((post) => {
     const author = store.users[post.userId];
     if (!author) return [];
     // The house is not a player and its account never appears in the feed —
-    // except for the wire, where it is the publisher. A link is what marks
-    // one of those, since players cannot set it.
-    const wire = Boolean((post.link ?? "").trim());
-    if (isHouseUser(author) && !wire) return [];
+    // except for a house card. A link is what marks one, since players
+    // cannot set it. Takes stay in-house; the wire is everything else.
+    const kind = houseCardKind(post.link ?? "");
+    if (isHouseUser(author) && !kind) return [];
     if (hidden.has(author.id)) return [];
     const postLikes = likes.filter((item) => item.postId === post.id);
     return [
@@ -214,7 +230,7 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
         id: post.id,
         username: author.username,
         avatar: avatarOf(author),
-        headline: wire ? "The wire" : headlineOf(author),
+        headline: kind === "take" ? "The take" : kind === "wire" ? "The wire" : headlineOf(author),
         body: post.body,
         link: (post.link ?? "").trim(),
         image: (post.image ?? "").trim(),
@@ -222,8 +238,8 @@ async function hydratePosts(store: StoreData, viewer: User, posts: PostRow[]): P
         source: (post.source ?? "").trim(),
         createdAt: Number(post.createdAt),
         likes: postLikes.length,
-        liked: postLikes.some((item) => item.userId === viewer.id),
-        relation: playerRelation(viewer.id, author.id),
+        liked: viewer ? postLikes.some((item) => item.userId === viewer.id) : false,
+        relation: viewer ? playerRelation(viewer.id, author.id) : "none",
         comments: comments
           .filter((item) => item.postId === post.id)
           .slice(-4)
@@ -258,10 +274,10 @@ const FEED_MAX = 400;
  */
 export async function listFeed(
   store: StoreData,
-  viewer: User,
+  viewer: User | null,
   limit = FEED_PAGE,
 ): Promise<NetworkPost[]> {
-  touchPresence(viewer.id);
+  if (viewer) touchPresence(viewer.id);
   const take = Math.max(1, Math.min(FEED_MAX, Math.floor(limit)));
   const posts = await prisma.$queryRawUnsafe<PostRow[]>(
     `SELECT ${POST_SELECT} FROM NetworkPost ORDER BY createdAt DESC LIMIT ${take}`,
@@ -277,38 +293,74 @@ export async function countFeed() {
   return Number(rows[0]?.n ?? 0);
 }
 
-function recommendScore(post: NetworkPost, viewerName: string) {
-  const ageHours = Math.max(0, (Date.now() - post.createdAt) / 3_600_000);
-  const recency = Math.max(0, 72 - ageHours);
-  const other = post.username.toLowerCase() === viewerName ? 0 : 6;
-  const open = post.relation === "none" ? 3 : 0;
-  return post.likes * 4 + post.comments.length * 3 + recency + other + open;
+export { recommendPosts } from "@/lib/feed-rank";
+
+/**
+ * One post, for a Talk link that lands past the first page of the feed.
+ * Empty when the id is junk or the card has not been written yet.
+ */
+export async function getPost(
+  store: StoreData,
+  viewer: User | null,
+  postId: string,
+): Promise<NetworkPost | null> {
+  const id = postId.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80);
+  if (!id) return null;
+  const posts = await prisma.$queryRawUnsafe<PostRow[]>(
+    `SELECT ${POST_SELECT} FROM NetworkPost WHERE id='${esc(id)}' LIMIT 1`,
+  );
+  if (!posts[0]) return null;
+  const [hydrated] = await hydratePosts(store, viewer, posts);
+  return hydrated ?? null;
 }
 
-export function recommendPosts(posts: NetworkPost[], viewer: User): NetworkPost[] {
-  const name = viewer.username.toLowerCase();
-  const ranked = [...posts].sort((a, b) => recommendScore(b, name) - recommendScore(a, name));
-  const others = ranked.filter((post) => post.username.toLowerCase() !== name);
-  return (others.length ? others : ranked).slice(0, 40);
-}
-
-export async function packFeed(store: StoreData, viewer: User, limit = FEED_PAGE) {
+export async function packFeed(
+  store: StoreData,
+  viewer: User | null,
+  limit = FEED_PAGE,
+  focusId = "",
+) {
   const posts = await listFeed(store, viewer, limit);
+  const focus = focusId ? await getPost(store, viewer, focusId) : null;
+  // A headline older than the current depth still has to be discussable, so
+  // it is pinned at the top rather than asking the reader to walk the list.
+  const shown =
+    focus && !posts.some((post) => post.id === focus.id) ? [focus, ...posts] : posts;
   return {
-    posts,
-    recommended: recommendPosts(posts, viewer),
-    people: listSuggestedPeople(store, viewer, 8),
+    posts: shown,
+    recommended: recommendPosts(shown, viewer?.username ?? ""),
+    people: viewer
+      ? listSuggestedPeople(store, viewer, 8)
+      : listPublicPeople(store, 8),
     // What the page needs to know whether asking for more would find any.
     total: await countFeed(),
     depth: Math.max(1, Math.min(400, Math.floor(limit))),
+    focusId: focus?.id ?? "",
   };
 }
 
-export async function listAuthorPosts(store: StoreData, viewer: User, authorId: string): Promise<NetworkPost[]> {
+/** How many of one player's posts a profile shows at first. */
+export const AUTHOR_PAGE = 12;
+const AUTHOR_MAX = 200;
+
+export async function listAuthorPosts(
+  store: StoreData,
+  viewer: User | null,
+  authorId: string,
+  limit = AUTHOR_PAGE,
+): Promise<NetworkPost[]> {
+  const take = Math.max(1, Math.min(AUTHOR_MAX, Math.floor(limit)));
   const posts = await prisma.$queryRawUnsafe<PostRow[]>(
-    `SELECT ${POST_SELECT} FROM NetworkPost WHERE userId='${esc(authorId)}' ORDER BY createdAt DESC LIMIT 12`,
+    `SELECT ${POST_SELECT} FROM NetworkPost WHERE userId='${esc(authorId)}' ORDER BY createdAt DESC LIMIT ${take}`,
   );
   return hydratePosts(store, viewer, posts);
+}
+
+export async function countAuthorPosts(authorId: string) {
+  const rows = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) AS n FROM NetworkPost WHERE userId = ${authorId}
+  `;
+  return Number(rows[0]?.n ?? 0);
 }
 
 function assertCanSocialize(user: User) {

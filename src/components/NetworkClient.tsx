@@ -6,6 +6,11 @@ import { useCallback, useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
 import { Avatar } from "@/components/Avatar";
 import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
+import {
+  COMPANY_CLASSIC_HREF,
+  sitClassicLabel,
+  sitWithThemLabel,
+} from "@/lib/company-door";
 import type { NetworkCard, NetworkState, NetworkTab } from "@/lib/types";
 
 function ageLabel(at: number | null, now: number) {
@@ -207,7 +212,7 @@ export function NetworkClient() {
               : "No players match."}
         </p>
       ) : (
-        <ul className="mt-8 space-y-2">
+        <ul className="li-people-list">
           {state.cards.map((card) => (
             <PlayerCard
               busy={busy}
@@ -241,86 +246,80 @@ function PlayerCard({
 }) {
   const locked = Boolean(busy);
   const highlighted = focus.toLowerCase() === player.username.toLowerCase();
+  const line = player.room
+    ? `Sitting ${player.room.name}`
+    : player.online
+      ? "In the house"
+      : `Offline · ${ageLabel(player.lastSeen, now)}`;
   return (
-    <li
-      className={`ledger-row is-stack ${highlighted ? "is-waiting" : ""}`}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="flex items-center gap-2 text-white">
-            <Avatar avatar={player.avatar} size="sm" username={player.username} />
-            <span>
-              <span
-                className={`mr-2 inline-block h-2 w-2 rounded-full ${
-                  player.online ? "bg-emerald-400" : "bg-zinc-600"
-                }`}
-              />
-              <Link href={`/network/u/${encodeURIComponent(player.username)}`}>
-                @{player.username}
-              </Link>
-            </span>
-          </p>
-          <p className="mt-1 text-xs text-zinc-400">{player.headline}</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            {player.online
-              ? player.room
-                ? `Online · sitting ${player.room.name}`
-                : "Online"
-              : `Offline · ${ageLabel(player.lastSeen, now)}`}
+    <li className={`li-people-row ${highlighted ? "is-on" : ""}`}>
+      <Link
+        className="li-suggest-who"
+        href={`/network/u/${encodeURIComponent(player.username)}`}
+      >
+        <Avatar avatar={player.avatar} size="sm" username={player.username} />
+        <span className="li-suggest-copy">
+          <strong>@{player.username}</strong>
+          <em>
+            {line}
             {` · ${player.friends} in company · since ${sinceLabel(player.createdAt)}`}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <MessageLink username={player.username} />
-          {player.room ? (
-            <Link className="chip-btn chip-btn-ghost" href={`/rooms/${player.room.slug}`}>
-              Sit with them
-            </Link>
-          ) : null}
-          {player.relation === "none" ? (
+          </em>
+        </span>
+      </Link>
+      <div className="li-people-act">
+        <MessageLink className="li-ask is-sent" username={player.username} />
+        {player.room ? (
+          <Link className="li-ask is-sent" href={`/rooms/${player.room.slug}`}>
+            {sitWithThemLabel()}
+          </Link>
+        ) : player.relation === "friends" ? (
+          <Link className="li-ask is-sent" href={COMPANY_CLASSIC_HREF}>
+            {sitClassicLabel()}
+          </Link>
+        ) : null}
+        {player.relation === "none" ? (
+          <button
+            className="li-ask"
+            disabled={locked}
+            onClick={() => onAct("request", player.username)}
+            type="button"
+          >
+            Ask
+          </button>
+        ) : null}
+        {player.relation === "outgoing" ? (
+          <span className="li-ask is-sent">Sent</span>
+        ) : null}
+        {player.relation === "incoming" ? (
+          <>
             <button
-              className="chip-btn"
+              className="li-ask"
               disabled={locked}
-              onClick={() => onAct("request", player.username)}
+              onClick={() => onAct("accept", player.username)}
               type="button"
             >
-              Ask
+              Accept
             </button>
-          ) : null}
-          {player.relation === "outgoing" ? (
-            <span className="chip-btn chip-btn-ghost pointer-events-none">Ask sent</span>
-          ) : null}
-          {player.relation === "incoming" ? (
-            <>
-              <button
-                className="chip-btn"
-                disabled={locked}
-                onClick={() => onAct("accept", player.username)}
-                type="button"
-              >
-                Accept
-              </button>
-              <button
-                className="chip-btn chip-btn-ghost"
-                disabled={locked}
-                onClick={() => onAct("ignore", player.username)}
-                type="button"
-              >
-                Ignore
-              </button>
-            </>
-          ) : null}
-          {player.relation === "friends" ? (
             <button
-              className="chip-btn chip-btn-ghost"
+              className="li-ask is-sent"
               disabled={locked}
-              onClick={() => onAct("unfriend", player.username)}
+              onClick={() => onAct("ignore", player.username)}
               type="button"
             >
-              Remove
+              Ignore
             </button>
-          ) : null}
-        </div>
+          </>
+        ) : null}
+        {player.relation === "friends" ? (
+          <button
+            className="li-ask is-sent"
+            disabled={locked}
+            onClick={() => onAct("unfriend", player.username)}
+            type="button"
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
     </li>
   );

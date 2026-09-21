@@ -1,16 +1,21 @@
-import { hueEarned } from "./coin";
 import { COLORS } from "./colors";
 import { prisma } from "./db";
+import {
+  HOUSE_BOARD_LIMIT,
+  rankHouseBoard,
+  rankHouseBoardWeek,
+  standingFromDays,
+  type BoardPlayer,
+  type HouseSeat,
+} from "./house-board";
 import { fromCents } from "./money";
 import {
   DAY_MS,
   dailyProgress,
   dayIndex,
-  lifetimeTaskBonus,
   weekIndex,
   weeklyProgress,
   type TaskProgress,
-  type WindowCounts,
 } from "./tasks";
 
 /**
@@ -71,7 +76,7 @@ export async function playerRecord(userId: string): Promise<PlayerRecord> {
         takenCents: number | null;
         biggestCents: number | null;
         clicks: number | null;
-        since: number | bigint | null;
+        since: string | null;
       }[]
     >(
       `SELECT
@@ -79,7 +84,7 @@ export async function playerRecord(userId: string): Promise<PlayerRecord> {
          SUM(CASE WHEN type = 'payout' THEN amount ELSE 0 END) AS takenCents,
          MAX(CASE WHEN type = 'payout' THEN amount ELSE 0 END) AS biggestCents,
          SUM(CASE WHEN type = 'click' THEN 1 ELSE 0 END) AS clicks,
-         MIN(CASE WHEN type = 'click' THEN createdAt ELSE NULL END) AS since
+         CAST(MIN(CASE WHEN type = 'click' THEN createdAt ELSE NULL END) AS TEXT) AS since
        FROM Tx WHERE playerId = ?`,
       userId,
     );
@@ -116,26 +121,29 @@ export async function playerRecord(userId: string): Promise<PlayerRecord> {
       userId,
     );
 
-    const byDay = new Map<number, WindowCounts>();
-    const byWeek = new Map<number, WindowCounts>();
-    for (const row of buckets) {
-      const d = Number(row.day);
-      const counts = { clicks: num(row.clicks), takes: num(row.takes) };
-      byDay.set(d, counts);
-      const w = weekIndex(d * DAY_MS);
-      const week = byWeek.get(w) ?? { clicks: 0, takes: 0 };
-      week.clicks += counts.clicks;
-      week.takes += counts.takes;
-      byWeek.set(w, week);
-    }
+    const standing = standingFromDays(
+      buckets.map((row) => ({
+        day: Number(row.day),
+        clicks: num(row.clicks),
+        takes: num(row.takes),
+      })),
+    );
 
     const now = Date.now();
-    const today = byDay.get(dayIndex(now)) ?? { clicks: 0, takes: 0 };
-    const thisWeek = byWeek.get(weekIndex(now)) ?? { clicks: 0, takes: 0 };
-    const bonus = lifetimeTaskBonus({
-      days: [...byDay.values()],
-      weeks: [...byWeek.values()],
-    });
+    const todayBucket = buckets.find((row) => Number(row.day) === dayIndex(now));
+    const today = {
+      clicks: num(todayBucket?.clicks),
+      takes: num(todayBucket?.takes),
+    };
+    const thisWeek = buckets.reduce(
+      (week, row) => {
+        if (weekIndex(Number(row.day) * DAY_MS) !== weekIndex(now)) return week;
+        week.clicks += num(row.clicks);
+        week.takes += num(row.takes);
+        return week;
+      },
+      { clicks: 0, takes: 0 },
+    );
 
     return {
       takes,
@@ -144,12 +152,74 @@ export async function playerRecord(userId: string): Promise<PlayerRecord> {
       clicks,
       hue,
       since: totals?.since == null ? null : Number(totals.since),
-      coin: hueEarned({ clicks, takes, bonus }),
-      bonus,
+      coin: standing.coin,
+      bonus: standing.bonus,
       daily: dailyProgress(today),
       weekly: weeklyProgress(thisWeek),
     };
   } catch {
     return emptyRecord();
+  }
+}
+
+async function loadBoardPlayers(): Promise<BoardPlayer[]> {
+  const rows = await prisma.$queryRawUnsafe<
+    {
+      playerId: string;
+      username: string;
+      day: number | bigint;
+      clicks: number | null;
+      takes: number | null;
+      takenCents: number | null;
+    }[]
+  >(
+    `SELECT t.playerId AS playerId,
+            u.username AS username,
+            CAST(t.createdAt / ${DAY_MS} AS INTEGER) AS day,
+            SUM(CASE WHEN t.type = 'click' THEN 1 ELSE 0 END) AS clicks,
+            SUM(CASE WHEN t.type = 'payout' THEN 1 ELSE 0 END) AS takes,
+            SUM(CASE WHEN t.type = 'payout' THEN t.amount ELSE 0 END) AS takenCents
+       FROM Tx t
+       JOIN User u ON u.id = t.playerId
+      WHERE t.type IN ('click', 'payout')
+      GROUP BY t.playerId, u.username, day`,
+  );
+  const byPlayer = new Map<string, BoardPlayer>();
+  for (const row of rows) {
+    const username = (row.username || "").trim();
+    if (!username) continue;
+    const player = byPlayer.get(row.playerId) ?? { username, days: [] };
+    player.days.push({
+      day: Number(row.day),
+      clicks: num(row.clicks),
+      takes: num(row.takes),
+      takenCents: num(row.takenCents),
+    });
+    byPlayer.set(row.playerId, player);
+  }
+  return [...byPlayer.values()];
+}
+
+/**
+ * Every seat that has clicked, ranked by the same HUE as the seat record.
+ * Cap is small on purpose — this is a book, not a crawl of the user table.
+ */
+export async function listHouseBoard(limit = HOUSE_BOARD_LIMIT): Promise<HouseSeat[]> {
+  try {
+    return rankHouseBoard(await loadBoardPlayers(), limit);
+  } catch {
+    return [];
+  }
+}
+
+/** Same seats, same HUE math, this UTC week only. */
+export async function listHouseBoardWeek(
+  limit = HOUSE_BOARD_LIMIT,
+  at = Date.now(),
+): Promise<HouseSeat[]> {
+  try {
+    return rankHouseBoardWeek(await loadBoardPlayers(), at, limit);
+  } catch {
+    return [];
   }
 }

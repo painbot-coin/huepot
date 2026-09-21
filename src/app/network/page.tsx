@@ -1,15 +1,14 @@
 import { redirect } from "next/navigation";
 import { LazyNetworkFeed } from "@/components/LazyViews";
-import { requirePageUser } from "@/lib/auth";
 
 export default async function NetworkPage({
   searchParams,
 }: {
-  searchParams: Promise<{ u?: string }>;
+  searchParams: Promise<{ u?: string; post?: string }>;
 }) {
-  const { u } = await searchParams;
+  const { u, post } = await searchParams;
   const name = u?.trim();
   if (name) redirect(`/network/u/${encodeURIComponent(name)}`);
-  await requirePageUser();
-  return <LazyNetworkFeed />;
+  const focusPost = (post ?? "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80);
+  return <LazyNetworkFeed focusPost={focusPost} />;
 }

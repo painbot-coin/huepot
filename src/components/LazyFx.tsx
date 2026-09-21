@@ -2,10 +2,6 @@
 
 import dynamic from "next/dynamic";
 
-const Atmosphere = dynamic(
-  () => import("@/components/Atmosphere").then((mod) => mod.Atmosphere),
-);
-
 const SoundBus = dynamic(
   () => import("@/components/SoundBus").then((mod) => mod.SoundBus),
   { ssr: false },
@@ -17,10 +13,5 @@ export const LazyMessageDock = dynamic(
 );
 
 export function LazyFx() {
-  return (
-    <>
-      <Atmosphere />
-      <SoundBus />
-    </>
-  );
+  return <SoundBus />;
 }

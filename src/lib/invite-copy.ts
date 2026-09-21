@@ -1,12 +1,15 @@
 import { classicHourClock } from "./classic-hour";
 import { fogCupClock } from "./fog-cup";
+import { nightHourClock } from "./night-hour";
 
 export function inviteSitLead(input: {
   hour?: number | null;
+  night?: number | null;
   cup?: { weekday: number; hour: number } | null;
 }) {
   return [
     input.hour != null ? `Classic sits ${classicHourClock(input.hour)}.` : "",
+    input.night != null ? `Night sits ${nightHourClock(input.night)}.` : "",
     input.cup ? `Fog cup ${fogCupClock(input.cup.weekday, input.cup.hour)}.` : "",
   ]
     .filter(Boolean)
@@ -15,7 +18,11 @@ export function inviteSitLead(input: {
 
 export function inviteText(
   url: string,
-  sit?: { hour?: number | null; cup?: { weekday: number; hour: number } | null },
+  sit?: {
+    hour?: number | null;
+    night?: number | null;
+    cup?: { weekday: number; hour: number } | null;
+  },
 ) {
   const lead = sit ? inviteSitLead(sit) : "";
   const prefix = lead ? `${lead} ` : "";

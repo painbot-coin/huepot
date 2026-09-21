@@ -4,13 +4,27 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
 import { Avatar } from "@/components/Avatar";
-import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
+import { CopyInvite } from "@/components/CopyInvite";
+import { NetworkChrome } from "@/components/NetworkChrome";
 import { hueRule, levelFor, nextRankFor } from "@/lib/coin";
 import { AVATAR_HUES, hueHexOf } from "@/lib/hues";
 import { formatUsdt } from "@/lib/money";
+import {
+  COMPANY_CLASSIC_HREF,
+  sitClassicLabel,
+  sitWithThemLabel,
+} from "@/lib/company-door";
 import type { PlayerRecord } from "@/lib/record";
 import type { TaskProgress } from "@/lib/tasks";
-import type { NetworkPost, NetworkProfile as Profile, NetworkYou } from "@/lib/types";
+import type {
+  ClassicHour,
+  FogCup,
+  NetworkPost,
+  NetworkProfile as Profile,
+  NetworkYou,
+  NightHour,
+  PublicTake,
+} from "@/lib/types";
 
 function ageLabel(at: number | null) {
   if (!at) return "offline";
@@ -20,7 +34,15 @@ function ageLabel(at: number | null) {
   return `${Math.floor(mins / 60)}h ago`;
 }
 
-function SeatRecord({ record, you }: { record: PlayerRecord; you: boolean }) {
+function SeatRecord({
+  record,
+  you,
+  place,
+}: {
+  record: PlayerRecord;
+  you: boolean;
+  place: number | null;
+}) {
   if (!record || record.clicks === 0) {
     return (
       <p className="seat-record-empty">
@@ -41,6 +63,7 @@ function SeatRecord({ record, you }: { record: PlayerRecord; you: boolean }) {
           <p className="seat-coin-value">{record.coin.toLocaleString()} HUE</p>
           <p className="seat-coin-rank">
             Level {level.level} · {level.title}
+            {place != null ? ` · #${place}` : ""}
           </p>
         </div>
         <p className="seat-coin-note">
@@ -130,31 +153,33 @@ export function NetworkProfile({ username }: { username: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<NetworkPost[]>([]);
   const [error, setError] = useState("");
-  const [needSignIn, setNeedSignIn] = useState(false);
   const [booted, setBooted] = useState(false);
+  const [hour, setHour] = useState<ClassicHour | null>(null);
+  const [night, setNight] = useState<NightHour | null>(null);
+  const [cup, setCup] = useState<FogCup | null>(null);
   const [edit, setEdit] = useState(false);
   const [headline, setHeadline] = useState("");
   const [about, setAbout] = useState("");
   const [location, setLocation] = useState("");
   const [avatar, setAvatar] = useState("");
   const [busyPic, setBusyPic] = useState(false);
+  const [depth, setDepth] = useState(12);
+  const [total, setTotal] = useState(0);
 
-  async function load() {
-    const response = await fetch(`/api/network/profile?u=${encodeURIComponent(username)}`);
-    if (response.status === 401) {
-      setNeedSignIn(true);
-      return;
-    }
+  async function load(want = depth) {
+    const search = new URLSearchParams({ u: username, limit: String(want) });
+    const response = await fetch(`/api/network/profile?${search}`);
     const data = (await response.json()) as {
       you?: NetworkYou;
       profile?: Profile;
       posts?: NetworkPost[];
+      total?: number;
       error?: string;
     };
     if (!response.ok) throw new Error(data.error || "Could not load profile");
-    setNeedSignIn(false);
     setYou(data.you ?? null);
     setPosts(data.posts ?? []);
+    if (typeof data.total === "number") setTotal(data.total);
     if (data.profile) {
       setProfile(data.profile);
       setHeadline(data.profile.headline === "Huepot player" ? "" : data.profile.headline);
@@ -168,7 +193,23 @@ export function NetworkProfile({ username }: { username: string }) {
     void load()
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load"))
       .finally(() => setBooted(true));
-  }, [username]);
+    void fetch("/api/rooms")
+      .then(
+        (response) =>
+          response.json() as Promise<{
+            classicHour?: ClassicHour;
+            nightHour?: NightHour;
+            fogCup?: FogCup;
+          }>,
+      )
+      .then((data) => {
+        if (data.classicHour) setHour(data.classicHour);
+        if (data.nightHour) setNight(data.nightHour);
+        if (data.fogCup) setCup(data.fogCup);
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username, depth]);
 
   async function pickFile(file?: File) {
     if (!file) return;
@@ -231,7 +272,6 @@ export function NetworkProfile({ username }: { username: string }) {
       </NetworkChrome>
     );
   }
-  if (needSignIn) return <SignInGate />;
   if (!profile) {
     return (
       <NetworkChrome you={you}>
@@ -242,45 +282,98 @@ export function NetworkProfile({ username }: { username: string }) {
 
   return (
     <NetworkChrome you={you}>
-      <main className="li-main">
+      <main className="li-main is-seat">
         <section className="li-col">
           <div className="li-card overflow-hidden">
             <div className="li-cover is-tall" />
             <div className="li-profile">
-              <Avatar avatar={profile.avatar} size="lg" username={profile.username} />
-              <h1 className="font-display text-3xl text-white">@{profile.username}</h1>
-              <p className="li-head">{profile.headline}</p>
-              {profile.location ? <p className="text-sm text-zinc-500">{profile.location}</p> : null}
-              <p className="mt-2 text-xs text-zinc-500">
-                {profile.friends} in company ·{" "}
-                {profile.online
-                  ? profile.room
-                    ? `Online · ${profile.room.name}`
-                    : "Online"
-                  : `Last seen ${ageLabel(profile.lastSeen)}`}
-                {` · Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
-              </p>
-              <SeatRecord record={profile.record} you={profile.you} />
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="li-profile-top">
+                <Avatar avatar={profile.avatar} size="lg" username={profile.username} />
+                <div className="li-profile-id">
+                  <h1>@{profile.username}</h1>
+                  <p className="li-head">{profile.headline}</p>
+                  {profile.location ? <p className="li-profile-place">{profile.location}</p> : null}
+                  <p className="li-profile-meta">
+                    {profile.friends} in company ·{" "}
+                    {profile.online
+                      ? profile.room
+                        ? `Online · ${profile.room.name}`
+                        : "Online"
+                      : `Last seen ${ageLabel(profile.lastSeen)}`}
+                    {` · Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
+                  </p>
+                </div>
+              </div>
+              <SeatRecord
+                place={profile.place ?? null}
+                record={profile.record}
+                you={profile.you}
+              />
+              {(profile.lastTakes ?? []).length ? (
+                <ul className="seat-takes">
+                  {(profile.lastTakes as PublicTake[]).map((take) => (
+                    <li key={take.id}>
+                      <Link href={`/take/${take.id}`}>
+                        {take.roomName} · {formatUsdt(take.amount)} USDT
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="li-profile-act">
                 {profile.you ? (
-                  <button className="chip-btn" onClick={() => setEdit((open) => !open)} type="button">
-                    {edit ? "Close" : "Edit profile"}
-                  </button>
+                  <>
+                    <button className="chip-btn" onClick={() => setEdit((open) => !open)} type="button">
+                      {edit ? "Close" : "Edit profile"}
+                    </button>
+                    {profile.inviteCode ? (
+                      <CopyInvite
+                        className="chip-btn chip-btn-ghost"
+                        code={profile.inviteCode}
+                        cup={cup}
+                        hour={hour?.hour}
+                        href="/signin"
+                        night={night?.hour}
+                      />
+                    ) : null}
+                  </>
+                ) : !you ? (
+                  <>
+                    <Link
+                      className="li-ask"
+                      href={`/signin?next=${encodeURIComponent(`/network/u/${profile.username}`)}`}
+                    >
+                      Sign in to ask
+                    </Link>
+                    {profile.room ? (
+                      <Link className="chip-btn chip-btn-ghost" href={`/rooms/${profile.room.slug}`}>
+                        {sitWithThemLabel()}
+                      </Link>
+                    ) : (
+                      <Link className="chip-btn chip-btn-ghost" href={COMPANY_CLASSIC_HREF}>
+                        {sitClassicLabel()}
+                      </Link>
+                    )}
+                  </>
                 ) : (
                   <>
                     <MessageLink className="chip-btn" username={profile.username} />
                     {profile.room ? (
                       <Link className="chip-btn chip-btn-ghost" href={`/rooms/${profile.room.slug}`}>
-                        Sit with them
+                        {sitWithThemLabel()}
+                      </Link>
+                    ) : profile.relation === "friends" ? (
+                      <Link className="chip-btn chip-btn-ghost" href={COMPANY_CLASSIC_HREF}>
+                        {sitClassicLabel()}
                       </Link>
                     ) : null}
                     {profile.relation === "none" ? (
-                      <button className="chip-btn chip-btn-ghost" onClick={() => void act("request")} type="button">
+                      <button className="li-ask" onClick={() => void act("request")} type="button">
                         Ask
                       </button>
                     ) : null}
                     {profile.relation === "outgoing" ? (
-                      <span className="chip-btn chip-btn-ghost pointer-events-none">Ask sent</span>
+                      <span className="li-ask is-sent">Sent</span>
                     ) : null}
                     {profile.relation === "incoming" ? (
                       <>
@@ -294,7 +387,7 @@ export function NetworkProfile({ username }: { username: string }) {
                     ) : null}
                     {profile.relation === "friends" ? (
                       <button className="chip-btn chip-btn-ghost" onClick={() => void act("unfriend")} type="button">
-                        Remove connection
+                        Remove
                       </button>
                     ) : null}
                     {profile.relation === "blocked" ? (
@@ -385,7 +478,7 @@ export function NetworkProfile({ username }: { username: string }) {
               <ul className="mt-3 space-y-3">
                 {posts.map((post) => (
                   <li className="li-activity" key={post.id}>
-                    <p>{post.body}</p>
+                    <p>{post.body || post.title}</p>
                     <span>
                       {post.likes} like{post.likes === 1 ? "" : "s"}
                       {post.comments.length
@@ -396,6 +489,26 @@ export function NetworkProfile({ username }: { username: string }) {
                 ))}
               </ul>
             )}
+            {total > posts.length ? (
+              <div className="li-deeper">
+                <button
+                  className="chip-btn chip-btn-ghost"
+                  onClick={() => setDepth((was) => was + 12)}
+                  type="button"
+                >
+                  Show older
+                </button>
+                <span className="li-deeper-n">
+                  {posts.length} of {total.toLocaleString()}
+                </span>
+              </div>
+            ) : null}
+            {total > 0 && total <= posts.length ? (
+              <p className="li-deeper-n mt-3">
+                That is everything this seat wrote — {total.toLocaleString()}{" "}
+                {total === 1 ? "line" : "lines"}.
+              </p>
+            ) : null}
           </div>
           {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
         </section>

@@ -68,6 +68,23 @@ export function withdrawPaidMail(input: {
   };
 }
 
+export function inviteCreditMail(input: {
+  username: string;
+  cents: number;
+  from: string;
+  room: string;
+}) {
+  return {
+    subject: `${formatCents(input.cents)} USDT invite credit`,
+    text:
+      `${input.username},\n\n` +
+      `${formatCents(input.cents)} USDT house-rake share from @${input.from} on ${input.room} is in your bank.\n\n` +
+      `This is a slice of the house take only — not their stake.\n\n` +
+      `Your bank: ${appUrl()}/account` +
+      sign(),
+  };
+}
+
 export function withdrawReturnedMail(input: {
   username: string;
   cents: number;

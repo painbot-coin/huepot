@@ -4,7 +4,10 @@ import {
   toPublicUser,
   userFromToken,
 } from "@/lib/auth";
+import { ensureSitChips } from "@/lib/bonus";
+import { listCompanySitting } from "@/lib/company-sit";
 import { prisma } from "@/lib/db";
+import { readyFriends } from "@/lib/friends";
 import { jsonError } from "@/lib/http";
 import { ensureInviteCode } from "@/lib/referrals";
 import { withStore } from "@/lib/store";
@@ -18,9 +21,16 @@ export async function GET(request: Request) {
     const token = await getSessionToken();
     const payload = await withStore(async (store) => {
       const user = userFromToken(store, token);
-      if (!user) return { user: null };
+      if (!user) return { user: null, companySitting: [] };
       ensureInviteCode(store, user);
-      if (lite) return { user: toPublicUser(user, [], store) };
+      await ensureSitChips(store, user);
+      if (lite) {
+        await readyFriends();
+        return {
+          user: toPublicUser(user, [], store),
+          companySitting: listCompanySitting(store, user.id),
+        };
+      }
       const rows = await prisma.$queryRawUnsafe<
         {
           id: string;

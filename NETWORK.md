@@ -2,7 +2,7 @@
 
 **Live:** https://huepot.net  
 **Read with:** `GROWTH.md` (what not to do) and `UPDATE.md` (product).  
-**Live product:** v1.3.32 is on https://huepot.net (invite, cashier, Classic hour, Fog cup). Open Account for your code before you ask strangers to share.
+**Live product:** v2.1.5 is on https://huepot.net (invite on take and board, cashier, company, Tonight: Classic 20:00 UTC / Night 22:00 UTC / Fog cup Sunday 21:00 UTC, the board, public seats, public wing, testnet HUE claim, Night Pit). HUE on testnet is product, not this plan — it is not USDT and it has no price. Copy invite from a take, a board row, or Account. Send someone the wing. Stay in Week 1.
 
 Huepot does not grow from a logo. It grows from a **small network of people who sit the same table, get paid, and send one link**. Empty Classic kills every other tactic.
 
@@ -31,7 +31,7 @@ If these are not true, do not post. You will burn the few people who try.
 
 | Gate | Why | Done when |
 |------|-----|-----------|
-| **Invite is live** | Account has a copyable `?ref=` link. New Google users get tagged. Inviter sees a rake line after a settle. | Footer says v1.3.27+. You tested with a second Gmail. |
+| **Invite is live** | Take, board, and Account copy a `?ref=` link. New Google users get tagged. Inviter sees a rake line after a settle. | Footer says v2.1.5. You tested with a second Gmail and saw an Invite credit on Account. |
 | **Classic is sat** | A friend’s first click must land on a living table. | You or one regular is on Classic during the hours you promote. |
 | **One withdrawal is paid** | The lobby strip is empty until staff mark a payout **paid**. | `/api/payouts` has a row. BscScan link exists. You can screenshot it. |
 | **Same-day cash-out habit** | One slow send kills ten sign-ups. | You check the staff queue every day you ask anyone to deposit. |
@@ -54,7 +54,7 @@ Do not hunt strangers yet. Hunt **trust**.
 
 **What you do each day (30–60 min):**
 
-1. Sit Classic (and Fog if you have 20 extra minutes). Small clicks. Keep the pot from looking dead.
+1. Sit Classic at 20:00 UTC, Night at 22:00 UTC, and Fog if you have 20 extra minutes. Small clicks. Keep the pot from looking dead.
 2. Pay any queued withdrawal the same day.
 3. Post **one** proof in the hangout you pick (below): a take, a fairness page, or a paid BscScan. No private keys. No fake bank.
 4. Send **your** invite link to 3 people, not 30. Ask them to sit one 1 USDT click on Classic while you are there.
@@ -142,7 +142,7 @@ Each Sunday, write four numbers. Ignore sign-ins.
 3. **Withdrawals paid same day** / withdrawals requested  
 4. **Custom rooms opened by someone who is not you**
 
-Also note: invite credits paid (rake share only). If that number is high and the house wallet is thin, drop `INVITE_RAKE_SHARE_BPS` or the daily cap. Do not add a deposit bonus.
+Also note: invite credits paid (rake share only). If that number is high and the house wallet is thin, drop `INVITE_RAKE_SHARE_BPS` or the daily cap. Do not add a deposit bonus. Sit chips are play-only and not withdrawable.
 
 **Stop acquiring** if deposits happen and withdrawals stall.  
 **Sit more / post the hour** if withdrawals are fast and rooms are empty.
@@ -163,11 +163,11 @@ The invite loop is already live. The missing piece is **people in the pit at the
 
 ## This week’s checklist (print this)
 
-- [ ] Confirm Account invite link and a test rake credit (already on v1.3.27).
-- [ ] Pay one real withdrawal. Confirm it shows on the lobby strip.
+- [ ] Sit Classic at **20:00 UTC** today. Stay for more than one round.
+- [ ] Message 5 people you know. Send the Account `?ref=` link. Sit with them once.
+- [ ] Confirm an Invite credit after a take that makes rake (never landed).
+- [ ] Pay one real withdrawal (min 5 USDT). Confirm it shows on the lobby strip and `/api/payouts`.
 - [ ] Open one Telegram. Pin Classic + invite + same-day cash-out.
-- [ ] Sit Classic daily. Name one public hour and keep it.
-- [ ] Message 5 people you know. Send the invite. Sit with them once.
 - [ ] Post one proof (take / fairness / BscScan). No keys.
 - [ ] After any take: copy table link with `?ref=`, or open a 30-min Fog table for three people.
 

@@ -21,6 +21,7 @@ export function toPublicUser(user: User, txs: PublicUser["txs"], store?: StoreDa
     username: user.username,
     shortId: user.username,
     balance: fromCents(user.balance),
+    bonus: fromCents(user.bonus ?? 0),
     withdrawAddress: user.withdrawAddress,
     createdAt: user.createdAt,
     emailVerified: user.emailVerified,

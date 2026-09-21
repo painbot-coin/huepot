@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     template: "%s · Huepot",
   },
   description:
-    "A timed color-pot house. Every coin costs the same, and when the clock ends the color with the most clicks takes the rest of the pot. Provably fair, 18+.",
+    "A timed color-pot house. Every coin costs the same, and when time runs out the color with the most clicks takes the rest of the pot. Provably fair, 18+.",
   applicationName: "Huepot",
   alternates: { canonical: "/" },
   openGraph: {

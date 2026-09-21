@@ -18,7 +18,19 @@ import {
 } from "./rooms";
 import { ensureRoundSeed } from "./fairness";
 import { queueSettledRound } from "./fairness-db";
+import { takeFromLive } from "./takes";
+import { queueTakeTalk } from "./take-talk";
 import { blockedIds } from "./friends";
+import {
+  ensureSitChips,
+  noteSitOnRound,
+  sitBank,
+  sitClickSuffix,
+  sitShortMessage,
+  sitSpentOnRound,
+  spendSit,
+  userBonus,
+} from "./bonus";
 import { assertCanPlay, notePlayTx } from "./limits";
 import { HOUSE_USER_ID, ensureHouseUser, isHouseUser, rakeBps, rakeFromPot, rakePercentLabel } from "./house";
 import { payInviteRake, ensureInviteCode, hadClickTx, nudgeFirstClickInvite } from "./referrals";
@@ -31,6 +43,9 @@ import {
 import { ensureUserWallets } from "./wallets";
 import { classicHourAt } from "./classic-hour";
 import { fogCupAt } from "./fog-cup";
+import { nightHourAt } from "./night-hour";
+import { afterTakeDraft, findOpenAfterTake } from "./after-take";
+import { listCompanySitting, notifyCompanyOnSit, notifyCompanyOnTable } from "./company-sit";
 import { announceSitWindows } from "./sit-windows";
 import type {
   GameState,
@@ -69,6 +84,7 @@ function newRound(room: Room, number: number, at: number): Round {
     buttonIds,
     totals: emptyColorCounts(),
     clicks: {},
+    sitByPlayer: {},
     result: null,
     seedCommit: "",
     serverSeed: "",
@@ -84,6 +100,7 @@ function addTx(
   type: Tx["type"],
   amount: number,
   note: string,
+  playLoss = amount,
 ) {
   store.txs.unshift({
     id: crypto.randomUUID(),
@@ -94,7 +111,32 @@ function addTx(
     note,
   });
   store.txs = store.txs.slice(0, 400);
-  notePlayTx(playerId, type, amount);
+  notePlayTx(playerId, type, playLoss);
+}
+
+function refundRoundStakes(
+  store: StoreData,
+  room: Room,
+  round: Round,
+  playerId: string,
+  clickCount: number,
+  note: string,
+) {
+  const amount = clickCount * round.clickPrice;
+  const sit = Math.min(sitSpentOnRound(store, room, round, playerId), amount);
+  const user = store.users[playerId];
+  if (user) {
+    const split = { sit, cash: amount - sit };
+    user.bonus = userBonus(user) + split.sit;
+    user.balance += split.cash;
+    addTx(store, playerId, "refund", amount, note, split.cash);
+    if (split.sit > 0) {
+      addTx(store, playerId, "sit", -split.sit, `${note} · sit back`);
+    }
+    return { amount, sit: split.sit, cash: split.cash, user };
+  }
+  addTx(store, playerId, "refund", amount, note);
+  return { amount, sit: 0, cash: amount, user: undefined };
 }
 
 function playerClicksOn(round: Round, playerId: string): PlayerClicks {
@@ -163,21 +205,30 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
         0,
       );
       if (clickCount <= 0) continue;
-      const amount = clickCount * round.clickPrice;
-      const user = store.users[playerId];
-      if (user) user.balance += amount;
-      addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} push`);
+      const note = `${room.name} round #${round.number} push`;
+      const { amount, sit, user } = refundRoundStakes(
+        store,
+        room,
+        round,
+        playerId,
+        clickCount,
+        note,
+      );
+      const back =
+        sit === amount
+          ? `${formatCents(amount)} sit chips came back.`
+          : `${formatCents(amount)} USDT was returned.`;
       notify(store, playerId, {
         kind: "refund",
         title: `${room.name} · round #${round.number} push`,
-        body: `Colors tied. ${formatCents(amount)} USDT was returned.`,
+        body: `Colors tied. ${back}`,
         href,
       });
       postRoomEvent(room, {
         kind: "refund",
         userId: playerId,
         username: user?.username ?? null,
-        body: `${user?.username ?? "A player"} got ${formatCents(amount)} USDT back on the tie.`,
+        body: `${user?.username ?? "A player"} got ${formatCents(amount)} back on the tie.`,
       });
       refunds.push({ playerId, amount, winningClicks: clickCount });
     }
@@ -315,6 +366,16 @@ function settleRound(store: StoreData, room: Room, round: Round, at: number) {
         : `Round #${round.number}: ${names} took ${formatCents(losingPot + winningClicks * round.clickPrice)} USDT.`,
   });
   queueSettledRound(room, round, at);
+  const take = takeFromLive(room, round);
+  if (take) {
+    queueTakeTalk({
+      id: take.id,
+      names: take.names,
+      amount: take.amount,
+      roomName: take.roomName,
+      at: take.at,
+    });
+  }
 }
 
 function pauseShift(room: Room, at = nowMs()) {
@@ -434,7 +495,7 @@ function liveSitterIds(room: Room) {
   return ids;
 }
 
-function sittingNames(store: StoreData, room: Room) {
+export function sittingNames(store: StoreData, room: Room) {
   if (room.round && isLiveFog(room, room.round, nowMs() - pauseShift(room))) return [];
   const names: string[] = [];
   for (const id of liveSitterIds(room)) {
@@ -579,7 +640,9 @@ export function getLobbyState(store: StoreData, userId: string | null): LobbySta
     user: publicUserFor(store, userId),
     rooms: listRoomCards(store),
     classicHour: classicHourAt(),
+    nightHour: nightHourAt(),
     fogCup: fogCupAt(),
+    companySitting: listCompanySitting(store, userId),
   };
 }
 
@@ -605,6 +668,7 @@ export function getRoomState(
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),
+    nightHour: nightHourAt(),
     fogCup: fogCupAt(),
   };
 }
@@ -630,6 +694,7 @@ export function snapshotRoomState(
     rooms: listRoomCards(store),
     seats: toSeats(store, room, userId),
     classicHour: classicHourAt(),
+    nightHour: nightHourAt(),
     fogCup: fogCupAt(),
   };
 }
@@ -650,7 +715,7 @@ export async function clickColor(
   const user = store.users[userId];
   if (!user) throw new Error("Sign in to continue.");
   if (user.id === HOUSE_USER_ID) throw new Error("The house bank cannot play.");
-  assertCanPlay(store, user, round.clickPrice);
+  assertCanPlay(store, user);
 
   if (!round.buttonIds.includes(colorId)) {
     throw new Error("That coin is not on this table.");
@@ -665,26 +730,38 @@ export async function clickColor(
     tickRoom(store, room);
     throw new Error("That round just ended.");
   }
-  if (user.balance < round.clickPrice) {
-    throw new Error("Not enough balance. Invest first.");
+  await ensureSitChips(store, user);
+  const price = round.clickPrice;
+  if (sitBank(user) < price) {
+    throw new Error(sitShortMessage(price, userBonus(user)));
   }
-  assertCanPlay(store, user, round.clickPrice);
+  const sit = Math.min(userBonus(user), price);
+  const cash = price - sit;
+  assertCanPlay(store, user, cash);
 
   const firstSit = !room.playerIds.includes(userId);
   const firstClick = !(await hadClickTx(store, userId));
-  user.balance -= round.clickPrice;
+  const openingRound = !round.buttonIds.some(
+    (id) => (playerClicksOn(round, userId)[id] ?? 0) > 0,
+  );
+  spendSit(user, price);
   round.totals[colorId] += 1;
   const current = playerClicksOn(round, userId);
   current[colorId] += 1;
   round.clicks[userId] = current;
+  noteSitOnRound(round, userId, sit);
   if (firstSit) room.playerIds.push(userId);
   addTx(
     store,
     userId,
     "click",
-    round.clickPrice,
-    `Clicked ${colorById(colorId).name} in ${room.name} #${round.number}`,
+    price,
+    `Clicked ${colorById(colorId).name} in ${room.name} #${round.number}${sitClickSuffix(sit)}`,
+    cash,
   );
+  if (sit > 0) {
+    addTx(store, userId, "sit", sit, `Sat ${room.name} #${round.number}`);
+  }
   if (firstSit) {
     postRoomEvent(room, {
       kind: "join",
@@ -693,6 +770,7 @@ export async function clickColor(
       body: `${user.username} sat at the table.`,
     });
   }
+  if (openingRound) await notifyCompanyOnSit(store, user, room);
   if (firstClick) nudgeFirstClickInvite(store, userId);
   return getRoomState(store, slug, userId);
 }
@@ -724,6 +802,20 @@ export function postRoomChat(
     body: text,
   });
   return getRoomState(store, slug, userId);
+}
+
+export async function openAfterTakeRoom(store: StoreData, userId: string) {
+  const user = store.users[userId];
+  if (!user) throw new Error("Sign in to continue.");
+  assertCanPlay(store, user);
+  const existing = findOpenAfterTake(Object.values(store.rooms), userId);
+  const room = existing
+    ? store.rooms[existing.slug]
+    : createCustomRoom(store, userId, afterTakeDraft());
+  if (!room) throw new Error("Could not open that table.");
+  tickRoom(store, room);
+  await notifyCompanyOnTable(store, user, room);
+  return getRoomState(store, room.slug, userId);
 }
 
 export function openCustomRoom(
@@ -759,14 +851,16 @@ export function staffKillRound(store: StoreData, slug: string) {
   for (const [playerId, clicks] of Object.entries(round.clicks)) {
     const clickCount = buttons.reduce((sum, color) => sum + (clicks[color.id] ?? 0), 0);
     if (clickCount <= 0) continue;
-    const amount = clickCount * round.clickPrice;
-    const user = store.users[playerId];
-    if (user) user.balance += amount;
-    addTx(store, playerId, "refund", amount, `${room.name} round #${round.number} voided`);
+    const note = `${room.name} round #${round.number} voided`;
+    const { amount, sit } = refundRoundStakes(store, room, round, playerId, clickCount, note);
+    const back =
+      sit === amount
+        ? `${formatCents(amount)} sit chips came back.`
+        : `${formatCents(amount)} USDT came back.`;
     notify(store, playerId, {
       kind: "refund",
       title: `${room.name} · round voided`,
-      body: `Staff ended the round. ${formatCents(amount)} USDT came back.`,
+      body: `Staff ended the round. ${back}`,
       href: roomHref(room),
     });
     refunds.push({ playerId, amount, winningClicks: clickCount });

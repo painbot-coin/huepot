@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  claimDepositByHash,
   houseWalletStatus,
   inboxHoldings,
   listSweeps,
@@ -31,6 +32,8 @@ import { ensureHouseUser, rakeBps, rakePercentLabel } from "@/lib/house";
 import { jsonError } from "@/lib/http";
 import { fromCents } from "@/lib/money";
 import { withdrawSendEnabled } from "@/lib/config";
+import { hueConfigured } from "@/lib/hue-claim";
+import { listHueClaims, rejectHueClaim, sendQueuedHueClaim } from "@/lib/hue-send";
 import {
   searchStaffUsers,
   staffAdjustBalance,
@@ -70,6 +73,8 @@ export async function GET(request: Request) {
         inboxes: await inboxHoldings(),
         sweeps: await listSweeps(),
         canSend: withdrawSendEnabled(),
+        hueOn: hueConfigured(),
+        hueClaims: await listHueClaims(),
         you,
       });
     }
@@ -133,6 +138,7 @@ export async function POST(request: Request) {
       amount?: number;
       note?: string;
       id?: string;
+      txHash?: string;
     };
     if (body.action === "sweep") {
       const sweeps = await sweepDueInboxes();
@@ -145,11 +151,39 @@ export async function POST(request: Request) {
         sweeps: await listSweeps(),
       });
     }
+    if (body.action === "credit-hash") {
+      if (!body.txHash) throw new Error("Paste a BscScan hash.");
+      const claimed = await claimDepositByHash(body.txHash);
+      await writeStaffLog(
+        actor,
+        "credit-hash",
+        claimed.txHash,
+        claimed.already
+          ? "Already credited"
+          : `Credited ${claimed.amount} USDT`,
+      );
+      return NextResponse.json({
+        claimed,
+        withdrawals: await listWithdrawals(),
+      });
+    }
     if (body.action === "send") {
       if (!body.id) throw new Error("Pick a payout.");
       await sendQueuedWithdrawal(body.id);
       await writeStaffLog(actor, "send", body.id, "On-chain USDT send");
       return NextResponse.json({ withdrawals: await listWithdrawals() });
+    }
+    if (body.action === "hue-send") {
+      if (!body.id) throw new Error("Pick a HUE claim.");
+      await sendQueuedHueClaim(body.id);
+      await writeStaffLog(actor, "hue-send", body.id, "On-chain testnet HUE send");
+      return NextResponse.json({ hueClaims: await listHueClaims(), hueOn: hueConfigured() });
+    }
+    if (body.action === "hue-reject") {
+      if (!body.id) throw new Error("Pick a HUE claim.");
+      await rejectHueClaim(body.id);
+      await writeStaffLog(actor, "hue-reject", body.id, "HUE claim returned to standing");
+      return NextResponse.json({ hueClaims: await listHueClaims(), hueOn: hueConfigured() });
     }
     if (body.action === "mail-drain") {
       // The drainer runs on its own every minute; this is for when someone is

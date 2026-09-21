@@ -169,7 +169,15 @@ export async function loadRoundFair() {
       rows.map((row) => [row.id, parseFair(row.fair)]),
     );
   } catch {
-    return new Map<string, { seedCommit: string; serverSeed: string; fairHash: string }>();
+    return new Map<
+      string,
+      {
+        seedCommit: string;
+        serverSeed: string;
+        fairHash: string;
+        sitByPlayer: Record<string, number>;
+      }
+    >();
   }
 }
 
@@ -179,14 +187,21 @@ function parseFair(raw: string | null) {
       seedCommit?: string;
       serverSeed?: string;
       fairHash?: string;
+      sitByPlayer?: Record<string, number>;
     };
+    const sitByPlayer: Record<string, number> = {};
+    for (const [id, cents] of Object.entries(parsed.sitByPlayer ?? {})) {
+      const n = Math.round(Number(cents) || 0);
+      if (n > 0) sitByPlayer[id] = n;
+    }
     return {
       seedCommit: parsed.seedCommit ?? "",
       serverSeed: parsed.serverSeed ?? "",
       fairHash: parsed.fairHash ?? "",
+      sitByPlayer,
     };
   } catch {
-    return { seedCommit: "", serverSeed: "", fairHash: "" };
+    return { seedCommit: "", serverSeed: "", fairHash: "", sitByPlayer: {} };
   }
 }
 

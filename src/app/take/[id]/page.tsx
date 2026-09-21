@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AfterTakeDoor } from "@/components/AfterTakeDoor";
 import { Avatar } from "@/components/Avatar";
+import { TakeHangout } from "@/components/TakeHangout";
+import { getHeaderUser } from "@/lib/auth";
+import { classicHourAt, classicHourClock } from "@/lib/classic-hour";
 import { fogCupAt, fogCupClock } from "@/lib/fog-cup";
+import { seatedAt } from "@/lib/friends";
+import { sittingNames } from "@/lib/game";
 import { formatUsdt } from "@/lib/money";
+import { nightHourAt, nightHourClock } from "@/lib/night-hour";
 import { withStoreRead } from "@/lib/store";
 import { getPublicTake, takeWinners } from "@/lib/takes";
 
-function cupWhen() {
+function tonightWhen() {
+  const hour = classicHourAt();
+  const night = nightHourAt();
   const cup = fogCupAt();
-  return `Fog cup ${fogCupClock(cup.weekday, cup.hour)}`;
+  return `Classic ${classicHourClock(hour.hour)}. Night ${nightHourClock(night.hour)}. Fog cup ${fogCupClock(cup.weekday, cup.hour)}.`;
 }
 
 export const runtime = "nodejs";
@@ -17,7 +26,22 @@ async function loadTake(id: string) {
   return withStoreRead(async (store) => {
     const take = await getPublicTake(id, store);
     if (!take) return null;
-    return { take, winners: await takeWinners(take, store) };
+    const winners = await takeWinners(take, store);
+    const room = Object.values(store.rooms).find((item) => item.slug === take.slug);
+    const sitting = room ? sittingNames(store, room) : [];
+    let winnerSit: { username: string; slug: string; name: string } | null = null;
+    for (const winner of winners) {
+      const player = Object.values(store.users).find(
+        (user) => user.username.toLowerCase() === winner.username.toLowerCase(),
+      );
+      if (!player) continue;
+      const seat = seatedAt(store, player.id);
+      if (seat) {
+        winnerSit = { username: winner.username, slug: seat.slug, name: seat.name };
+        break;
+      }
+    }
+    return { take, winners, sitting, winnerSit };
   });
 }
 
@@ -42,11 +66,9 @@ export async function generateMetadata({
     };
   }
   const { take, winners } = found;
-  // Short enough to survive a browser tab and a social card headline. A name
-  // reads better than a colour, so it leads when the payout rows still name one.
   const who = winners.length ? creditLine(winners) : take.names;
   const short = `${who} took ${formatUsdt(take.amount)} USDT · ${take.roomName}`;
-  const description = `Same price on every color. Biggest color takes the rest. ${cupWhen()}.`;
+  const description = `Same price on every color. Biggest color takes the rest. ${tonightWhen()}`;
   return {
     title: short,
     description,
@@ -68,7 +90,7 @@ export default async function TakePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const found = await loadTake(id);
+  const [found, user] = await Promise.all([loadTake(id), getHeaderUser()]);
   if (!found) {
     return (
       <main className="prose-page">
@@ -84,7 +106,10 @@ export default async function TakePage({
     );
   }
 
-  const { take, winners } = found;
+  const { take, winners, sitting, winnerSit } = found;
+  const hour = classicHourAt();
+  const night = nightHourAt();
+  const cup = fogCupAt();
 
   return (
     <main className="prose-page take-page">
@@ -104,7 +129,7 @@ export default async function TakePage({
         <ul className="take-page-split">
           {winners.map((winner) => (
             <li key={winner.username}>
-              <Link href={`/network?u=${encodeURIComponent(winner.username)}`}>
+              <Link href={`/network/u/${encodeURIComponent(winner.username)}`}>
                 {winner.username}
               </Link>
               <span>{formatUsdt(winner.amount)} USDT</span>
@@ -113,21 +138,29 @@ export default async function TakePage({
         </ul>
       ) : winners.length === 1 ? (
         <p>
-          <Link href={`/network?u=${encodeURIComponent(winners[0].username)}`}>
+          <Link href={`/network/u/${encodeURIComponent(winners[0].username)}`}>
             See {winners[0].username}’s record
           </Link>
         </p>
       ) : null}
       <p>
-        Same price on every color. Biggest color takes the rest. {cupWhen()}.
+        Same price on every color. Biggest color takes the rest. {tonightWhen()}
       </p>
+      <TakeHangout
+        cup={cup}
+        hour={hour.hour}
+        inviteCode={user?.inviteCode ?? ""}
+        night={night.hour}
+        sitting={sitting}
+        sitWhen={tonightWhen()}
+        take={take}
+        winnerSit={winnerSit}
+        winners={winners}
+      />
       <p>
-        <Link className="chip-btn" href={`/rooms/${take.slug}`}>
-          Sit the next round
-        </Link>
-        {" · "}
         <Link href={`/fairness/${take.id}`}>Open the ledger</Link>
       </p>
+      <AfterTakeDoor at={take.at} />
     </main>
   );
 }

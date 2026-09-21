@@ -36,7 +36,9 @@ export function WithdrawClient() {
     const response = await fetch("/api/state");
     const data = (await response.json()) as GameState;
     setState(data);
-    if (typeof data.user?.balance === "number") publishBank(data.user.balance);
+    if (typeof data.user?.balance === "number") {
+      publishBank(data.user.balance, data.user.bonus);
+    }
     if (!data.user) {
       window.location.href = "/signin";
       return;
@@ -104,7 +106,9 @@ export function WithdrawClient() {
       if (!response.ok) throw new Error(data.error || "Withdraw failed");
       setLeft(Number(amount));
       setState(data);
-      if (typeof data.user?.balance === "number") publishBank(data.user.balance);
+      if (typeof data.user?.balance === "number") {
+      publishBank(data.user.balance, data.user.bonus);
+    }
       setAmount("");
       if (Array.isArray(data.withdrawals)) setWithdrawals(data.withdrawals);
       if (typeof data.houseReady === "boolean") setHouseReady(data.houseReady);
@@ -151,6 +155,11 @@ export function WithdrawClient() {
         <p className="font-display text-3xl text-white">
           {formatUsdt(state.user.balance)} USDT
         </p>
+        {(state.user.bonus ?? 0) > 0 ? (
+          <p className="mt-2 text-sm text-zinc-500">
+            {formatUsdt(state.user.bonus)} sit chips stay in the house.
+          </p>
+        ) : null}
 
         <p className="mt-6 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
           Network

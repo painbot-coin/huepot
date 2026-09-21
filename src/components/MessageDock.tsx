@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { useChatScroll } from "@/components/useChatScroll";
 import { MESSAGE_OPEN, openMessageDock } from "@/lib/message-dock";
+import { COMPANY_CLASSIC_HREF, sitClassicLabel } from "@/lib/company-door";
 import type { NetworkMessage, NetworkThread } from "@/lib/types";
 
 function onPit(path: string) {
@@ -196,16 +197,19 @@ export function MessageDock() {
         <section className="msg-panel msg-chat is-fade-in">
           <header className="msg-bar">
             <Link href={`/network/u/${encodeURIComponent(peer)}`}>@{peer}</Link>
-            <button
-              aria-label="Close chat"
-              onClick={() => {
-                setChatOpen(false);
-                setPeer("");
-              }}
-              type="button"
-            >
-              ×
-            </button>
+            <span>
+              <Link href={COMPANY_CLASSIC_HREF}>{sitClassicLabel()}</Link>
+              <button
+                aria-label="Close chat"
+                onClick={() => {
+                  setChatOpen(false);
+                  setPeer("");
+                }}
+                type="button"
+              >
+                ×
+              </button>
+            </span>
           </header>
           <ul className="msg-bubbles" onScroll={onScroll} ref={scroller}>
             {messages.length === 0 ? (

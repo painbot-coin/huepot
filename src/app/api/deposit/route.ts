@@ -6,7 +6,7 @@ import {
   requireVerified,
   userFromToken,
 } from "@/lib/auth";
-import { pendingDepositsForUser } from "@/lib/chain";
+import { claimDepositByHash, pendingDepositsForUser } from "@/lib/chain";
 import { getGameState } from "@/lib/game";
 import { jsonError } from "@/lib/http";
 import { withStore, withStoreRead } from "@/lib/store";
@@ -38,7 +38,18 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       amount?: number;
       networkId?: string;
+      txHash?: string;
     };
+    if (typeof body.txHash === "string" && body.txHash.trim()) {
+      const userId = await withStoreRead((store) => {
+        const user = requireUser(store, token);
+        requireVerified(user);
+        return user.id;
+      });
+      const claimed = await claimDepositByHash(body.txHash, userId);
+      const state = await withStoreRead((store) => getGameState(store, userId));
+      return NextResponse.json({ ...state, claimed });
+    }
     const state = await withStore((store) => {
       const user = requireUser(store, token);
       requireVerified(user);

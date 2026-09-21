@@ -70,6 +70,15 @@ export const BASIC_ROOMS: BasicRoomDef[] = [
     fogSeconds: FOG_SECONDS,
     blurb: "Classic rules. Last 12 seconds, the board goes dark.",
   },
+  {
+    slug: "night",
+    name: "Night Pit",
+    buttonCount: 4,
+    clickPrice: CLICK_PRICE,
+    roundSeconds: 15,
+    fogSeconds: 8,
+    blurb: "15-second rounds. Last 8 seconds, the board goes dark.",
+  },
 ];
 
 export function isLiveFog(

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { safeNext } from "@/lib/next-path";
 import type { MouseEvent, ReactNode } from "react";
 import { openMessageDock } from "@/lib/message-dock";
 import type { NetworkYou } from "@/lib/types";
@@ -18,20 +19,22 @@ export function NetworkChrome({
   const onMe =
     Boolean(you?.username) &&
     (path === me || path === `/network/u/${you?.username}`);
-  const links = [
-    { href: "/network", label: "Board", match: path === "/network" },
-    {
-      href: "/network/people",
-      label: you?.pendingIn ? `Company · ${you.pendingIn}` : "Company",
-      match: path.startsWith("/network/people"),
-    },
-    {
-      href: "/network/messages",
-      label: you?.unreadMessages ? `Letters · ${you.unreadMessages}` : "Letters",
-      match: path.startsWith("/network/messages"),
-    },
-    { href: me, label: "Seat", match: onMe },
-  ];
+  const links = you
+    ? [
+        { href: "/network", label: "Board", match: path === "/network" },
+        {
+          href: "/network/people",
+          label: you.pendingIn ? `Company · ${you.pendingIn}` : "Company",
+          match: path.startsWith("/network/people"),
+        },
+        {
+          href: "/network/messages",
+          label: you.unreadMessages ? `Letters · ${you.unreadMessages}` : "Letters",
+          match: path.startsWith("/network/messages"),
+        },
+        { href: me, label: "Seat", match: onMe },
+      ]
+    : [{ href: "/network", label: "Board", match: path === "/network" }];
   return (
     <div className="li-shell">
       <p className="hall-kicker">The wing</p>
@@ -64,6 +67,10 @@ export function NetworkChrome({
 }
 
 export function SignInGate() {
+  const path = usePathname();
+  const search = useSearchParams();
+  const q = search.toString();
+  const next = safeNext(q ? `${path}?${q}` : path);
   return (
     <NetworkChrome>
       <main className="app-page text-center">
@@ -71,7 +78,10 @@ export function SignInGate() {
         <p className="app-lead mx-auto">
           Cross the gate to meet who sits the house.
         </p>
-        <Link className="chip-btn mt-6 inline-flex" href="/signin">
+        <Link
+          className="chip-btn mt-6 inline-flex"
+          href={next ? `/signin?next=${encodeURIComponent(next)}` : "/signin"}
+        >
           Enter the house
         </Link>
       </main>

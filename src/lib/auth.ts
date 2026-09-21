@@ -26,9 +26,13 @@ import { queueEmail } from "./email";
 import { withdrawQueuedMail } from "./email-copy";
 import { applyInviteOnSignup, ensureInviteCode } from "./referrals";
 import { toPublicUser } from "./public-user";
+import { ensureSitChips } from "./bonus";
 import { withStore, withStoreRead } from "./store";
 import type { PublicUser, StoreData, User } from "./types";
 import { publicWallets, ensureUserWallets } from "./wallets";
+import { safeNext } from "./next-path";
+
+export { safeNext };
 
 export { toPublicUser };
 
@@ -89,6 +93,7 @@ function newUser(
     User,
     | "wallets"
     | "balance"
+    | "bonus"
     | "withdrawAddress"
     | "createdAt"
     | "limits"
@@ -116,6 +121,7 @@ function newUser(
     verifySentAt: partial.verifySentAt ?? null,
     createdAt: nowMs(),
     balance: 0,
+    bonus: 0,
     withdrawAddress: "",
     wallets: {},
     limits: emptyLimits(),
@@ -219,14 +225,33 @@ export function createSession(store: StoreData, userId: string, userAgent = "") 
   };
 }
 
+function packNext(path: string) {
+  const clean = safeNext(path);
+  return clean ? Buffer.from(clean, "utf8").toString("base64url") : "";
+}
+
+function unpackNext(raw: string) {
+  if (!raw || !/^[A-Za-z0-9_-]+$/.test(raw)) return "";
+  try {
+    return safeNext(Buffer.from(raw, "base64url").toString("utf8"));
+  } catch {
+    return "";
+  }
+}
+
 export function createOAuthState(
   store: StoreData,
   ageConfirmed = false,
   inviteCode = "",
+  next = "",
 ) {
   pruneSessions(store);
   const code = normalizeInviteCodeForState(inviteCode);
-  const state = `${ageConfirmed ? "1" : "0"}.${code}.${randomBytes(16).toString("hex")}`;
+  const packed = packNext(next);
+  const nonce = randomBytes(16).toString("hex");
+  const state = packed
+    ? `${ageConfirmed ? "1" : "0"}.${code}.${nonce}.${packed}`
+    : `${ageConfirmed ? "1" : "0"}.${code}.${nonce}`;
   store.oauthStates[state] = {
     state,
     expiresAt: nowMs() + 1000 * 60 * 10,
@@ -248,6 +273,7 @@ export function takeOAuthState(store: StoreData, state: string) {
   return {
     ageConfirmed: state.startsWith("1"),
     inviteCode: parts.length >= 3 ? parts[1] ?? "" : "",
+    next: unpackNext(parts[3] ?? ""),
   };
 }
 
@@ -381,16 +407,21 @@ export async function clearSessionCookie() {
 export async function getHeaderUser() {
   const token = await getSessionToken();
   if (!token) return null;
-  return withStoreRead((store) => {
+  return withStore(async (store) => {
     const user = userFromToken(store, token);
     if (!user) return null;
+    await ensureSitChips(store, user);
+    ensureInviteCode(store, user);
     return toPublicUser(user, [], store);
   });
 }
 
-export async function requirePageUser() {
+export async function requirePageUser(next = "") {
   const user = await getHeaderUser();
-  if (!user) redirect("/signin");
+  if (!user) {
+    const dest = safeNext(next);
+    redirect(dest ? `/signin?next=${encodeURIComponent(dest)}` : "/signin");
+  }
   return user;
 }
 

@@ -19,6 +19,7 @@ model User {
   verifySentAt    BigInt?
   createdAt       BigInt
   balance         Float     @default(0) // integer cents
+  bonus           Float     @default(0) // sit chips, integer cents
   withdrawAddress String    @default("")
   limits          String    @default("{}")
   auth            String    @default("{}")
@@ -181,6 +182,21 @@ model Withdrawal {
   resolvedAt BigInt?
   note       String @default("")
   txHash     String @default("")
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model HueClaim {
+  id         String  @id
+  userId     String
+  address    String
+  amount     Float
+  status     String
+  createdAt  BigInt
+  resolvedAt BigInt?
+  note       String  @default("")
+  txHash     String  @default("")
 
   @@index([userId, createdAt])
   @@index([status])

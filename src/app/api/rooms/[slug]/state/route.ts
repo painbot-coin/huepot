@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionToken, userFromToken } from "@/lib/auth";
+import { ensureSitChips } from "@/lib/bonus";
 import { getRoomState } from "@/lib/game";
 import { jsonError } from "@/lib/http";
 import { withStore } from "@/lib/store";
@@ -13,8 +14,9 @@ export async function GET(
   try {
     const { slug } = await params;
     const token = await getSessionToken();
-    const state = await withStore((store) => {
+    const state = await withStore(async (store) => {
       const user = userFromToken(store, token);
+      if (user) await ensureSitChips(store, user);
       return getRoomState(store, slug, user?.id ?? null);
     });
     return NextResponse.json(state);
