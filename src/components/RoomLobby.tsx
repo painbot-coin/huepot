@@ -288,23 +288,22 @@ export function RoomLobby() {
         </div>
       </section>
 
-      <section>
-        <div className="lobby-row">
-          <h2 className="lobby-label">Guest tables</h2>
-        </div>
-        {custom.length === 0 ? (
-          <p className="lobby-empty">No guest tables yet. Open one from the hall.</p>
-        ) : (
+      <PublicTakes />
+      <PublicPayouts />
+      <PublicBoard />
+
+      {custom.length ? (
+        <section>
+          <div className="lobby-row">
+            <h2 className="lobby-label">Guest tables</h2>
+          </div>
           <div className="lobby-grid">
             {custom.map((room) => (
               <RoomCard key={room.slug} now={now} room={room} blurb={blurbFor(room)} />
             ))}
           </div>
-        )}
-      </section>
-      <PublicBoard />
-      <PublicTakes />
-      <PublicPayouts />
+        </section>
+      ) : null}
     </div>
   );
 }

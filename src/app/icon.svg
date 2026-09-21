@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Huepot">
+  <defs>
+    <radialGradient id="well" cx="50%" cy="40%" r="68%">
+      <stop offset="0%" stop-color="#1c1630"/>
+      <stop offset="100%" stop-color="#070614"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="16" y1="1" x2="16" y2="31" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f3d48a"/>
+      <stop offset="55%" stop-color="#d4af6a"/>
+      <stop offset="100%" stop-color="#8a6a32"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7.2" fill="url(#well)"/>
+  <rect x="1.35" y="1.35" width="29.3" height="29.3" rx="6.1" fill="none" stroke="url(#gold)" stroke-width="1.7"/>
+  <circle cx="16" cy="19.5" r="5.15" fill="#8b5cff"/>
+  <circle cx="11.2" cy="16.15" r="5.2" fill="#ff355e"/>
+  <circle cx="20.8" cy="16.25" r="5.2" fill="#2ea8ff"/>
+  <circle cx="16" cy="12.85" r="5.45" fill="#ffb020"/>
+  <path d="M12.15 12.15 C13.55 11 14.9 10.55 16 10.55 C17.15 10.55 18.5 11 19.85 12.15" fill="none" stroke="#fff" stroke-opacity="0.38" stroke-width="1.05" stroke-linecap="round"/>
+</svg>

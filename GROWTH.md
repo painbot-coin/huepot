@@ -1,6 +1,6 @@
 # Huepot UI — grow into a deep fantasy house
 
-Live: https://huepot.net · product **v2.1.5**.
+Live: https://huepot.net · product **v2.1.12**.
 
 This is the look-and-feel plan. The rule stays the same: same price, biggest color takes. The interface grows until Huepot feels like one house you enter — not a SaaS site with a fancy pit in the middle.
 
@@ -2082,6 +2082,12 @@ Invite math, Night Pit, and the board were already live. They were still small.
 Seats and takes were public. The feed that carries them was not.
 
 **A stranger can read the wing.** Take cards and the wire land without a session. Speak, like, ask, and letters still need a seat. No mainnet. No price.
+
+## Phase 84 — the hall stays on the house (2.1.12)
+
+A stranger hitting the hall saw house doors, then an empty guest-table shelf, then the takes that prove the house is alive.
+
+**Last takes and cash-outs sit under the house pits.** The board follows. Guest tables only appear when one is open. No empty shelf. No HUE/USDT pool. No second ranking.
 
 ## Next for the social layer
 

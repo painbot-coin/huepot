@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Outfit } from "next/font/google";
 import { AgeBanner } from "@/components/AgeBanner";
+import { ChatzyMark } from "@/components/ChatzyMark";
 import { LazyFx, LazyMessageDock } from "@/components/LazyFx";
 import { PlayBlockBanner } from "@/components/PlayBlockBanner";
 import { RefCookie } from "@/components/RefCookie";
@@ -34,6 +35,18 @@ export const metadata: Metadata = {
   description:
     "A timed color-pot house. Every coin costs the same, and when time runs out the color with the most clicks takes the rest of the pot. Provably fair, 18+.",
   applicationName: "Huepot",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: {
+    title: "Huepot",
+    statusBarStyle: "black-translucent",
+  },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
@@ -59,6 +72,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${outfit.variable} ${cinzel.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <link
+          href="https://chatzy-kb-store.s3.amazonaws.com/icons/5ab07987-b5db-477c-82ff-1287e0883acb"
+          rel="stylesheet"
+        />
+        <script
+          className="chatzy_widget_script"
+          defer
+          id="38f024d0-53cf-4388-8570-6c76bd34f293"
+          src="https://chatzy-kb-store.s3.amazonaws.com/icons/56706cc4-b3ba-4eba-9610-f2fb07008a5c"
+        />
+      </head>
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         {/* The backdrop plate is the first thing a player sees, so start it
             with the stylesheet rather than after it parses. */}
@@ -75,6 +100,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           rel="preload"
         />
         <LazyFx />
+        <ChatzyMark />
         <RefCookie />
         <SiteHeader user={user} />
         {user ? <LazyMessageDock /> : null}
