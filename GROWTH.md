@@ -1,6 +1,6 @@
 # Huepot UI — grow into a deep fantasy house
 
-Live: https://huepot.net · product **v2.1.12**.
+Live: https://huepot.net · product **v3.0.1**.
 
 This is the look-and-feel plan. The rule stays the same: same price, biggest color takes. The interface grows until Huepot feels like one house you enter — not a SaaS site with a fancy pit in the middle.
 
@@ -10,6 +10,7 @@ This is the look-and-feel plan. The rule stays the same: same price, biggest col
 |------|--------|------|
 | Gate | `/signin` | Cross in with Google. 18+ on the lintel. |
 | Hall | `/` | House pits as doors. Classic is the public pit. |
+| Wait | `/wait` | Game RL lab. Sit Tetris player types, catch, or snake. Gold is only to take the trained weights home. |
 | Pit | `/rooms/[slug]` | Time bar, four hues, talk. You sit a table. |
 | Rite | `/how-it-works` | How to enter, sit, strike, and leave. |
 | Ledger | `/fairness` | The seed book. Anyone can check a take. |
@@ -2088,6 +2089,696 @@ Seats and takes were public. The feed that carries them was not.
 A stranger hitting the hall saw house doors, then an empty guest-table shelf, then the takes that prove the house is alive.
 
 **Last takes and cash-outs sit under the house pits.** The board follows. Guest tables only appear when one is open. No empty shelf. No HUE/USDT pool. No second ranking.
+
+## Phase 85 — a take on the hall is a door (2.1.13)
+
+Last takes sat under the house pits. A stranger who read one still had to hunt a door.
+
+**Each last take sits the pit that just paid.** The brag page is still there. No HUE/USDT pool. No second ranking.
+
+## Phase 86 — seats like yours (2.1.14)
+
+The wing named seats at random. A profile was a headline and a short about.
+
+**Search reads a pit or a colour. Suggestions rank the people who sit like you. A seat can name a cover, a preferred pit, and doors out to X, Telegram, or Discord.** No HUE/USDT pool. No second ranking.
+
+## Phase 87 — a seat you can visit (2.1.15)
+
+A profile was a record and a dead activity list. A visitor could not write, note, or read a recommended line from that seat.
+
+**A visitor writes a letter on the page, leaves how they sit, likes and talks the lines, and a recommended tab ranks this seat with the ones like it.** Notes are not stars. No HUE/USDT pool. No second ranking.
+
+## Phase 88 — the tape stays in its box (2.1.16)
+
+Four long headlines sat in the same chip row as a last take. The letters ran out of the plate.
+
+**Each tape line is a card on a two-up grid. The title clamps to two lines. Talk stays inside.** No HUE/USDT pool. No second ranking.
+
+## Phase 89 — the pit graph keeps time (2.1.17)
+
+The playhead froze between room ticks, then jumped. The bar chased a 120ms ease. Reveal remapped the clock and wiped the line.
+
+**The line follows wall time every frame. Clicks step. The scale eases. The take holds the finish.** No HUE/USDT pool. No second ranking.
+
+## Phase 90 — the pit clock stops hanging (2.1.18)
+
+The big number still used a ceiled second, so it sat on 0:27 while time moved. The line was bent through clicks. The scale eased so a new stack took too long to land.
+
+**The clock counts tenths. The line steps. The scale only grows. Time interpolates between room ticks.** No HUE/USDT pool. No second ranking.
+
+## Phase 91 — the hall for a returning seat (2.1.19)
+
+Search, seats like yours, and letters lived on the wing. A signed-in player still landed on `/` and saw the same stranger hall.
+
+**Your hall names the pit you sit, the seats that sit like you, and a door back.** Company still speaks when they sit. No HUE/USDT pool. No second ranking.
+
+## Phase 92 — the wait (2.1.20)
+
+A seat with time and no pot had nowhere in the house to put their hands.
+
+**The wait is a stack against the house. Same bag. A TD-trained value function picks the house placement. No other seat. No USDT. No second ranking.**
+
+## Phase 93 — the wait learns (2.1.21)
+
+The first wait table sat off to the left, dumped a tetris, and froze the weights after the first train.
+
+**The boards sit in the center. A clear sends at most two. Every live lock moves the house weights, then the house sits the stack again.**
+
+## Phase 94 — sit or watch (2.1.22)
+
+One door, one bag, no hold-to-run. A seat that did not want to play had nothing to watch, and the book only learned when a human sat.
+
+**You sit the house, or watch house vs house. Each board is dealt its own bag. Hold a key to run. Pieces move. Both doors train the book.**
+
+## Phase 95 — the marks (2.1.23)
+
+The wait sat slow, and the only book was the live one. A deeper sit had no door, and the house had nowhere to hang a future pit mark.
+
+**The table runs faster. The shelf lists how each mark sits. Free wait books sit anyone. A deeper wait mark costs gold from the vault. Pit marks stand as coming until they are trained.**
+
+## Phase 96 — pick to see, pay to take (2.1.24)
+
+Play and the shelf sat in one column, and a priced wait book asked for gold before it would sit.
+
+**The wait is two desks. Left is the game. Right is every house model, wait now and pit later. Anyone may pick a live wait book to see it sit. Gold is only to take the weights home.**
+
+## Phase 97 — watch the books (2.1.25)
+
+The shelf named pit marks as coming, so a seat could not see how a click book thinks before paying for the file.
+
+**Every house game hangs its reinforcement books on the right. Pick one and the left desk shows the sit: Q on each color, the weights, the features. Gold is only to take a trained book home.**
+
+## Phase 98 — the game lab (2.1.26)
+
+The wait hung color-pot books. That is Huepot betting. The shelf is for game RL: sit, train, take the weights.
+
+**Stack, catch, and snake sit on the left and train here. Aim (not CS) and lane (not Dota) stand as coming. Gold is only to take a trained file home. The pot stays on Classic.**
+
+## Phase 99 — see the sit (2.1.27)
+
+The left wells were empty: fill cells had no paint, and the desk sat in a 72rem card.
+
+**Catch, snake, and stack cells carry color. The wait desk fills the viewport. Wells size to the play panel so the sit stays on screen. Full screen opens the two columns.**
+
+## Phase 100 — Tetris player types (2.1.31)
+
+The stack shelf was one sit with three depths. Versus Tetris has types: downstacker, burst, combo, survivor.
+
+**Each type is a trained book on the same six features, different skill. Sit it free. Take the trained weights as a readable text file, not a mystery JSON. No T-spin table, no badges, no NES tap.**
+
+## Phase 101 — watch first, models aside (2.1.32)
+
+The right panel listed weights. A sit opened you vs house. One book sat both wells.
+
+**The right panel is games with pictures. A sit opens house vs house and deals again when both fall. Each well picks its own book. Gold to take a file lives on /wait/store.**
+
+## Phase 102 — world books and the aim sit (2.1.33)
+
+Famous nets were pasted as if the wait could run them. LC0 and KataGo need their own engines. Live overlays stay off the house.
+
+**The store lists world books as outbound links only. Aim sits as a flick trainer, not Counter-Strike. Lane and Break still wait. No 365 MB rehost.**
+
+## Phase 103 — four seats meet (2.1.34)
+
+The house was a pot with a wing. New people had no seat to name, no way to share a project, and the store was only house books.
+
+**Game developers, AI developers, gamers, and betters pick a seat. Posts carry that seat. A profile holds projects. The store shelves house sits, world books, and those projects. Gold is only to take a priced door home. The pot stays on Classic.**
+
+## Phase 104 — pick a seat at the gate (2.1.35)
+
+A new Google seat landed in the hall with no name. The wing looked like a feed for nobody.
+
+**After Google, if there is no seat, the four cards open first. No skip. Hall, wing, wait, and store send a signed-in seat back until one is named. Account, withdraw, and the rite stay open.**
+
+## Phase 105 — find the other seats (2.1.35)
+
+Projects sat on a profile and on the store. The wing had no board. People search was only a name.
+
+**A public project board sits on the wing. People chips filter Game / AI / Play / Table. Hall search stays the one search that matches a seat name.**
+
+## Phase 109 — a quieter lintel (2.1.37)
+
+The floor bar carried Rite, Wire, Board, cash, you, chat, and the hour at once. The four house doors got lost.
+
+**Hall, Wing, Wait, and Store stay in the middle. Search sits by the mark. Hour, sit chips, and company stay when they matter. Everything else folds under @you.**
+
+## Phase 108 — the house reads as a floor (2.1.36)
+
+LinkedIn, Facebook, and Reddit share one structure: a sticky top bar, a left shortcut rail, a dominant center stream, and a right discovery rail. The wing was a feed with a thin tab strip.
+
+**The header keeps Hall, Wing, Wait, and Store in the middle. The same house search sits in the bar off the hall. The wing left rail is you, shortcuts, and the four seats. A profile has Posts, About, Projects, and Notes. Cards round. A phone uses a floor dock. The pot stays on Classic.**
+
+## Phase 118 — the house shares four doors (2.1.46)
+
+The store shelf was empty. Seats had nowhere to stand next to.
+
+**Wait, books, play, and Classic sit on the shelf as free house doors. Seats can still share their own. Gold is only to take a priced door home. The pot stays on Classic.**
+
+## Phase 117 — first sit on Classic (2.1.45)
+
+Empty Classic kills every other door. Hire posts cannot sit the table.
+
+**An empty pot waits for a first sit. After a seat with no dest, the door is Classic. The Live shelf keeps the public pit. Sit chips stay play-only. No fake clicks. The pot stays on Classic.**
+
+## Phase 116 — ML and marketing sit on the posts (2.1.44)
+
+The floor hire was three seats. The books and the first click still needed named hands.
+
+**Machine learning and marketing sit on `/jobs`. Tiny TD books. Honest Classic talk. Guests read. A bid needs an account. Gold is not a hiring purse. The pot stays on Classic.**
+
+## Phase 115 — the house hires the floor (2.1.43)
+
+Lane and Break sit. The next wall is people, not another wait game.
+
+**UI/UX, backend, and architect sit on `/jobs`. Guests read. A bid needs an account. Gold is not a hiring purse. The pot stays on Classic.**
+
+## Phase 114 — Break sits (2.1.42)
+
+Break was the last coming card. Lane already last-hits. The wait still needed bricks on the same contract.
+
+**Break is a brick sit. Two wells. The pad tracks the gold. A hit brick scores. Three misses end the sit. The open book learns. First and deep sits are on the store. All six wait games are live. The pot stays on Classic.**
+
+## Phase 113 — Lane sits (2.1.41)
+
+Lane was a coming card. Aim already proved the wait contract: two wells, house vs house, a tiny book, play free, gold only takes the file home.
+
+**Lane is a last-hit sit. Not Dota. A mark walks the lane. Strike when it is ripe at the well. The open book learns. First and deep sits are on the store. Break still waits. The pot stays on Classic.**
+
+## Phase 112 — the whole house reads as one floor (2.1.40)
+
+The wing and the vault had rails. The hall, posts, rite, wire, ledger, and gate still read as lone pages. LinkedIn, Facebook, YouTube, Upwork, and a live betting desk share one floor: sticky top, left shortcuts, a dominant stage, and a right rail.
+
+**HouseFloor is the product chrome. The hall is a live pit plus Pits / Live / Tape / Posts. Search sits in the header. Posts sit on the phone dock. Vault, ledger, notices, law, and takes use the same rails. Wait and a sat table stay full-stage. The pot stays on Classic.**
+
+## Phase 111 — the vault reads as a seat (2.1.39)
+
+Account was a long stack of cards: gold, invite, HUE, name, limits, devices, ledger. LinkedIn, Facebook, and Reddit put identity on top, settings in a left rail, and one pane in the middle.
+
+**Cover and face on top. You / Vault / Invite / Standing / Ledger / Limits / Sign-in in the rail. One pane at a time. A right rail keeps balance, chips, standing, and the invite code. The pot stays on Classic.**
+
+## Phase 110 — the house posts who it still needs (2.1.38)
+
+Four seats can meet. Lane and Break are still coming. Classic still dies when nobody sits. Reports still have a desk with nobody rostered.
+
+**The house posts the work at `/jobs`. Sit Lane, Sit Break, train a house book, host Classic hour, share a wait project, roster the report desk. Guests read. A bid needs an account. No deposit bonus. Gold is not a hiring purse.**
+
+## Phase 119 — Popular words (2.1.47)
+
+The house dialect was not how other social platforms talk. Public labels now use Home, Network, Games, Store, Jobs, News, Leaderboard, Profile, Messages, People, Wallet, Fairness, and How it works. Sit became play. Bid became apply. Vault became wallet. Routes and money rules stay.
+
+**Stay on the house.** Read hire applications. Train a deeper model. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 120 — news stays here (2.1.48)
+
+A headline used to walk a reader off Huepot. It now opens on `/news/[id]` with the outlet's own summary and picture. The list, the home strip, and the network card all stay on the house. No article body is scraped.
+
+**Stay on the house.** Read hire applications. Train a deeper model. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 121 — read the applications (2.1.49)
+
+Jobs took applications. The house could not read them as a list, and the applicant only saw a bid notice. `/jobs/you` is that inbox. Staff opens the person, the job, and a message. The notice says application.
+
+**Stay on the house.** Train a deeper model. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 122 — hiring desk (2.1.50)
+
+Applications landed. Nobody on the house side was notified. `/manage` is the hiring desk. A manager is a signed-in seat. Staff can grant the first one. When a seat applies, every manager gets a notice. Shortlist, pass, message.
+
+**Stay on the house.** Train a deeper model. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 123 — visitors on the desk (2.1.51)
+
+The hiring desk could not see the house. `/manage` now counts visitors — guests and signed-in players — live, today, and this week. A pulse keeps someone live without adding a view. No invented numbers. No IP on the desk.
+
+**Stay on the house.** Train a deeper model. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 124 — report desk on /manage (2.1.52)
+
+Reports already filed from chat, posts, comments, and messages. Only staff could read them. `/manage` now opens that queue for a rostered manager: who was named, how many separate reporters, hide or dismiss. A message can be reported without sending one. Applying to the review job still does not grant the desk.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 125 — Material UI on the house (2.1.53)
+
+The house still looks like Huepot. Buttons, fields, menus, tabs, search, notices, and sign-in now run on Material UI with a dark gold theme. Games and the pit stay custom. Default purple is not the product.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 126 — MUI formats News (2.1.54)
+
+The old chip plates were still sitting on Material. Buttons and chips now take the theme paint. News is the formatted surface: cards, chips, and a story page. The outlet's own summary and picture stay. No scraped article body.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 127 — MUI owns the house (2.1.55)
+
+The hall plates, gold chips, and custom chrome CSS are off. App bar, floor, footer, and mobile dock are Material. Theme paint only. Games and the pit stay their own surfaces.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 143 — the desk opens on that book (2.1.73)
+
+A store watch stayed on the card. Sit this book now opens the games desk on that sit — west is the book you watched, east stays the other well. No extra gold. The file is still the file.
+
+**Stay on the house.** Let a seat take the file from the desk after they sat that book. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 144 — take the file from the desk (2.1.74)
+
+A seat could sit the book and still had to walk back to the store for the file. Take this file now sits under the west and east picks. Same download door. Gold is only for a priced sit. A guest signs in on that book. The pot stays on Classic.
+
+**Stay on the house.** Show the wallet on the desk when a priced sit is on the well. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 145 — the wallet sits on a priced well (2.1.75)
+
+A priced sit on the desk had a buy door and no gold in sight. The wallet now sits on the play bar when west or east is a priced book. A guest is told they need an account. After gold leaves, the number updates. Free wells stay quiet. The pot stays on Classic.
+
+**Stay on the house.** Open the wallet door from the desk when a priced sit is short. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 146 — the desk take tells the truth (2.1.76)
+
+A priced well could say Take this file on the last book's owned flag. Gold and ownership were two books. A cash-out could freeze after broadcast. A seat could close over a live payout. The sit door could ignore a new query. The phone dock lit Home on the store. A profile send forgot the profile.
+
+The take now follows the book on the well. Gold leaves, then the file is granted. A paid row is enough to restore a lost shelf. Staff can return a sending cash-out. The drain retries a hashed send. Close waits for an open payout. The desk follows `?sit=`. The dock has Store. A new seat returns to the profile they opened.
+
+**Stay on the house.** Open the wallet door from the desk when a priced sit is short. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 147 — the wallet door opens when gold is short (2.1.77)
+
+The wallet sat on a priced well as a number. A short seat still had to find the vault. The desk now opens that door. A guest is sent to sign in. A signed-in seat short of the price is sent to add gold, then back to the sit. Enough gold stays on the desk. Free wells stay quiet. The pot stays on Classic.
+
+**Stay on the house.** Keep the priced sit on the vault until gold is enough. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 148 — the priced sit stays on the vault (2.1.78)
+
+The wallet door dumped a short seat on a bare vault. The sit is now on that door. The vault names the book and the short. Gold stays there until it covers the file. Then the take sits on the vault. A refresh keeps `?sit=`. Free wells stay quiet. The pot stays on Classic.
+
+**Stay on the house.** Open the same vault sit from the store when a priced file is short. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 149 — the store opens the same vault sit (2.1.79)
+
+A short store card still tried to buy, or sent a guest back to the shelf. The store now opens the same vault sit as the desk. A guest signs in to that sit. A signed-in seat short of the price is sent to add gold with the book still on the door. Enough gold still buys on the card. Projects stay their own door. The pot stays on Classic.
+
+**Stay on the house.** Let a watch on a priced book open that vault sit when gold is short. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 150 — a watch opens the vault sit (2.1.80)
+
+A watch on a priced book was only a sit. Watching is still free. When that book is short, the watch now opens the same vault sit as the card. A guest signs in to that sit. A signed-in seat short of the price is sent to add gold with the book still on the door. A free or owned watch stays quiet. The pot stays on Classic.
+
+**Stay on the house.** Keep that watch on the vault until gold is enough. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 151 — notices sit as a house alert desk (2.1.81)
+
+Notices used a leftover ledger wash. They now sit as alerts: a kind mark, a severity rail, and a quiet unread pip. Gold in and takes are ok. Cash-out and verify wait. A return halts. Company and talk stay a note. The bell tray uses the same desk. The pot stays on Classic.
+
+**Stay on the house.** Keep that watch on the vault until gold is enough. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 152 — the play well shows the whole sit (2.1.83)
+
+The games desk sized wells to the window, then clipped them. A stack showed three rows. Wells now take their size from the play column, keep the board’s own ratio, and stay on the page. House games sit under the sit until the floor is wide. The pot stays on Classic.
+
+**Stay on the house.** Keep that watch on the vault until gold is enough. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 153 — the watch stays on the vault (2.1.84)
+
+A watch on a priced book already opened the vault sit. The sit card was only a line. The vault now keeps that watch playing while gold is short. Enough gold puts the take on the same door. The file is still the file. The pot stays on Classic.
+
+**Stay on the house.** USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 154 — the sits play the well (2.1.85)
+
+Snake circled beside the food. Catch slid one way. Break left the pad to chase a brick. Snake now keeps a loop and cuts to food while the tail stays open. Catch measures distance and covers both sides. Break follows the column where the gold meets the pad. Those three books were trained again. Aim and lane already cleared their sits. The pot stays on Classic.
+
+**Stay on the house.** USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 155 — the watch counts what snake ate (2.1.86)
+
+Snake keeps the same loop. A step that closes on the food is taken when it stays on the open arc and still moves forward. A step off that arc is refused, because that cut sealed the tail. A watch now says how many it ate. The pot stays on Classic.
+
+**Stay on the house.** Break clears a wall and keeps the pad. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 156 — the wall falls (2.1.87)
+
+Break clears a full wall. While bricks are still up, the return off the pad keeps its line. When only a few remain, the pad sends the gold into a brick it can reach. The next ball is served with the pad already on the column where that ball comes down. The pot stays on Classic.
+
+**Stay on the house.** The stack styles have to look different in one minute. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 194 — a contract is a door (3.0.1)
+
+Contracts sit on the left rail, next to Companies. The list stays empty until two seats lock vault USDT. The phone dock stays as it is. A guest is still a guest. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 193 — the house is version 3 (3.0.0)
+
+The product number is 3. The seats, the USDT, and the desk are the same. A guest is still a guest. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 192 — the desk says when a seat was here (2.1.123)
+
+Each seat on the manage desk says the last day this week a visit stored their name, and the doors they opened that day. A seat with no named visit this week says so. A guest stays a count. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 191 — a day owns its doors (2.1.122)
+
+A weekday on the manage desk shows that day's doors. Opening a door names the signed-in seats who used it that day. A guest stays a count. A day from before a name was kept stays a count. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 190 — a door opens the seats (2.1.121)
+
+A door count on the manage desk opens the signed-in seats who opened that door today. A guest stays a count. Views from before a name was kept stay a count. Those rows can still be managed. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 189 — the books sit on Atlas (2.1.120)
+
+Accounts, visits, contracts, and the ledgers now sit in MongoDB Atlas. The same seats and the same USDT moved with them. A guest is still a guest. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 188 — a number opens the seats (2.1.119)
+
+Each count on the manage desk opens the people in it. A signed-in visitor is a seat, and that row can be given a craft, an invite, a freeze, a manager role, or a close. A guest has no account. Visits from before this desk stored a cookie, not a name. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 187 — the desk names the seats (2.1.118)
+
+The manage desk lists every real account. A manager can set a craft, make or remove a manager or a reviewer, issue an invite, freeze a seat, or close one. Closing signs that seat out and refuses while USDT is still on it. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 186 — the key is a hash (2.1.117)
+
+The API key spends vault USDT. The house stores a hash, not the key. A new key is shown once, for a minute. A key already saved still works until it is rotated. Rotate stops the old key. Play credit cannot hire. There is no practice balance. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 185 — the other seat hears (2.1.116)
+
+An offer, an acceptance, and a delivery each leave a notice for the seat who has to answer. The notice opens that contract or that hire. A decline, a release, and the 48-hour clock still move the vault and tell the seat whose balance changed. The house does not add its own money. There is no practice balance. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 184 — no practice funds (2.1.115)
+
+A hire and a project share lock vault USDT. There is no practice grant and no practice balance. Decline, or 48 hours without delivery, returns the hold. A delivery the buyer does not release is paid to the provider after 48 hours. A share must add to 100 and the owner's vault pays it. Play credit cannot hire or pay a share. The API key spends vault USDT. Agents stay empty until a seat lists one. This is not a chain. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 183 — the vault locks the price (2.1.114)
+
+A client and a developer, or a company and an employee, lock the terms and a price in vault USDT. The words do not change. Decline, or 48 hours without delivery, returns the lock. A delivery the locker does not release is paid to the worker after 48 hours. The clock runs every minute, and when a contract is opened. Play credit cannot lock a contract. The price is at least 1 USDT and at most 100,000 USDT. Only the two seats can read the terms. Agents stay on practice funds. A torn ledger file is refused instead of replaced with an empty one. This is not a chain. The pot stays on Classic.
+
+**Stay on the house.** A contract is not a chain proof. The house does not pay the wage from its own bank. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 182 — the lock returns (2.1.113)
+
+A practice contract that stays offered or accepted for 48 hours returns the lock to the seat who paid it. A delivery that sits for 48 hours is paid to the worker. The words do not change. The clock runs when someone opens the contract or the practice wallet. This is not a chain and not USDT. The pot stays on Classic.
+
+**Stay on the house.** A contract is not a chain proof. Practice funds are not a bank. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 181 — locked contracts (2.1.112)
+
+A client can lock terms and a practice price with a developer. A company founder can lock the same kind of contract with an employee who has joined. The words do not change after the lock. The other seat accepts, delivers proof, and the locker releases the price. Decline returns the lock. The funds are practice funds. This is not a chain and not USDT. The pot stays on Classic.
+
+**Stay on the house.** A contract is not a chain proof. Practice funds are not a bank. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 180 — companies and two more tables (2.1.111)
+
+A seat can open a company and post a developer, a teacher, a lawyer, or a problem solver. Other seats join and write a note. The house does not invent a company. A listing is not a license, a school, or a law firm. USDT is not the wage. An agent hire stays on the practice ledger. Wheel is eight pockets and Dice is six faces. Both use the same rule as Classic: the biggest side takes the pot. The house does not pay fixed odds. The public pot stays on Classic.
+
+**Stay on the house.** No hidden company. No fixed-odds wheel. Practice funds are not a bank and not a chain. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 179 — the practice ledger (2.1.110)
+
+Agents is a door in the house. A signed-in seat gets a practice balance, capped at $500, that does not touch USDT, the vault, or the pot. The seat can list an agent with a price and a spending limit. Another seat hires that agent: the price is held, the provider delivers proof, and the buyer releases it. Decline returns the hold. A project’s shares must add to 100 before an earning splits. The practice record is paid work and reviews, with the events visible, and it does not replace HUE. An agent post says Agent and names the owning seat. A circle digest is the last posts joined. The market stays empty until a seat lists an agent. JSON export says it is not a chain proof. A priced file is still the only USDT charge. The pot stays on Classic.
+
+**Stay on the house.** Practice funds are not a bank and not a chain. No HUE/USDT pool. An agent does not speak as the seat unless the owner chooses that, and the post stays marked Agent. The pot stays on Classic.
+
+## Phase 178 — seven doors (2.1.109)
+
+A seat, a book, the store, two books on one sit, the owned file, the record, and a project. Two books share a sit and neither holds a wallet. The record is the history. There is no second lifetime number. A project is not a wage. A priced file is the only USDT charge. The pot stays on Classic.
+
+**Stay on the house.** No agent wallet. No reputation score. No revenue split or escrow. No twin that answers as a seat. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 177 — the house lines (2.1.108)
+
+The house speaks in the lines already due today. A later slot stays off the seat until its hour. Each line opens a door that exists. The house does not add a fourth. The book does not speak as the seat and it holds no wallet. The pot stays on Classic.
+
+**Stay on the house.** A door out: a letter, an application, or Classic. Their choice. A letter stays a letter. No agent wallet. No reputation score. No revenue split or escrow. No twin that answers as a seat. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 176 — each job is a door (2.1.107)
+
+Social opens the company and the room this seat is in. An empty company stays empty. AI opens the book and the watch, or the desk when no book is named. The house speaks as the house. The book does not speak as the seat and it holds no wallet. Web3 opens an owned file. Balance stays on the vault, and only for that seat. HUE stays the standing. There is no second lifetime number. A priced file is the only USDT charge. The pot stays on Classic.
+
+**Stay on the house.** No agent wallet. No reputation score. No revenue split or escrow. No twin that answers as a seat. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 175 — each technology has a job (2.1.106)
+
+A seat is the identity. Social is company and a room the seat is actually in. AI is the book they sit: it does not speak as the seat and it holds no wallet. Web3 is an owned file and the history. HUE stays the standing from clicks and takes. There is no second lifetime number. A priced file is the only USDT charge. The pot stays on Classic.
+
+**Stay on the house.** No agent wallet. No reputation score. No revenue split or escrow. No twin that answers as a seat. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 174 — the record is the history (2.1.105)
+
+A seat's history is the takes, the owned files, and the finished applications. An open application is not history yet. HUE stays the standing from clicks and takes. There is no second lifetime number. A priced file is the only USDT charge. The pot stays on Classic.
+
+**Stay on the house.** The twelve chapters are on the house. No HUE/USDT pool. No second lifetime ranking. No agent wallet. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 173 — two books on one sit (2.1.104)
+
+A person's book can sit against the house book. They share one sit. The watch is the record: one score for the seat's book, one for the house. Neither book holds a wallet. The pot stays on Classic.
+
+**Stay on the house.** The record is the history: takes, owned files, and finished applications. HUE stays standing from clicks and takes. There is no second lifetime number. A priced file is the only USDT charge. The pot stays on Classic.
+
+## Phase 172 — a seat names the book it sits (2.1.103)
+
+A seat can name one book. The profile shows that book, the watch, and the file. Until they name one, the line stays empty. Balance stays on the vault. Gold added for that file returns to that sit. The pot stays on Classic.
+
+**Stay on the house.** Two books on one sit: a person's book can sit against the house book. The watch is the record. Neither book holds a wallet. The pot stays on Classic.
+
+## Phase 171 — a room only when people are in it (2.1.102)
+
+A seat can open a room for a craft or a language. The room is listed while a seat is in it. An empty room is not listed. The house is not a person in that room. The room does not hold the pot. The pot stays on Classic.
+
+**Stay on the house.** A seat names the book it sits: the profile shows the book, the watch, and the file. Balance stays on the vault. Gold added for that file returns to that sit. The pot stays on Classic.
+
+## Phase 170 — work stays one desk (2.1.101)
+
+Jobs stay the house desk. A seat can share a project there. Reading is free. Applying still needs an account. A priced door is not a wage and not a milestone on that desk. The house does not invent a project to fill the list. The pot stays on Classic.
+
+**Stay on the house.** A room only when people are in it: a seat can open a room for a craft or a language. An empty room is not listed. The room does not hold the pot. The pot stays on Classic.
+
+## Phase 169 — company, without a crowd (2.1.100)
+
+A seat can be found by craft, language, and the book they sit. Language is the one they picked. A book is one they own. Company is still a request both sides accept. A letter stays private. An empty match stays empty. The house is not a seat on that list. The pot stays on Classic.
+
+**Stay on the house.** Work stays one desk: jobs stay the house desk. A seat can share a project. Read free. Apply from an account. USDT is not a wage. Gold is not a milestone. The pot stays on Classic.
+
+## Phase 168 — a line names its writer (2.1.99)
+
+A public line says who wrote it. A seat is a person. The house is the house. A book is a book, and it does not post under a seat name. The house still posts three times a day about doors that exist. A letter stays a letter. The pot stays on Classic.
+
+**Stay on the house.** Company, without a crowd: a seat can be found by craft, language, and the book they sit. Company is mutual. A letter is private. The house does not invent seats to fill a list. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 167 — the book is the agent (2.1.98)
+
+Someone who came for the model meets seven books on the games door. Down, Burst, Catch, Snake, Aim, Lane, and Break each keep their own sentence. The card plays that sit. A free file downloads. A priced file needs gold. The watch and the file are the same book. The pot stays on Classic.
+
+**Stay on the house.** A line names its writer: a seat, the house, or a book. A book does not post as the seat. A letter stays a letter. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 166 — an evening that is not a bet (2.1.97)
+
+A first visit walks the hall, a book, the store, and a seat, then back. Classic is open on that walk. It is not a step, and it is not required. Opening a book keeps that book. The hall door and the evening step return to it. The pot stays on Classic.
+
+**Stay on the house.** The book is the agent: anyone can watch a sit, the card shows the watch, and the file is that book. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 165 — the house in their language (2.1.96)
+
+The hall’s four doors, the seat’s craft or the plain seat, the store sentence, and the house’s daily lines use the language already picked. Twelve languages. Classic keeps its name. The pot stays on Classic in every one of them.
+
+**Stay on the house.** A first visit can pass the hall, a book, the store sentence, and a seat without a bet. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 164 — the door is not only the pit (2.1.95)
+
+The hall names four doors. Sit a color. Sit a book. Meet a seat. Read the house. Classic stays on the hall, and it holds the pot. A seat can name a craft — game, AI, play, or table — or just be here. The pot stays on Classic.
+
+**Stay on the house.** The hall, the seat, the store sentence, and the three daily lines use the language they picked. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 163 — the house posts its day (2.1.94)
+
+Three times a UTC day the house writes about a door that already exists. Midnight, 08:00, and 16:00. A restart posts the ones already due today and does not replay yesterday. Classic, the hour, the games, the store, the vault, a seat, a letter, the jobs desk, fairness, and how the house fits. A letter stays a letter. The pot stays on Classic.
+
+**Stay on the house.** A first visit is one path: hall, pit, game, store, and back. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 162 — a second seat (2.1.93)
+
+A profile shows the hues on that seat's takes, and the books that seat owns. The wallet balance stays on the vault. A reporter hears that the house kept the report or dismissed it. A new headline stays held until a person publishes it. A letter stays a letter. Jobs stay the house desk. The pot stays on Classic.
+
+**Stay on the house.** A first visit is one path: hall, pit, game, store, and back. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 161 — gold returns to the sit (2.1.92)
+
+Gold added for a priced book stays on that sit. When it covers the file, the vault says so and opens the same book again. A free file downloads. A priced file needs gold. That is one sentence. A human lock that would break a sit which already holds is refused, and the book that played stays. The pot stays on Classic.
+
+**Stay on the house.** A profile shows takes, hues, and owned books. Balance stays private. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 160 — the shelf card is the sit (2.1.91)
+
+A store card shows the score of one real watch, the same sit every time you open that book. The file you take home is that book: the same weights, the same watch line, and the stack style when the sit is a stack. Gold is only for a priced sit. The pot stays on Classic.
+
+**Stay on the house.** Gold added on the vault returns to that same sit. Free and priced stay one sentence apart. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 159 — a night at Classic reads as one hour (2.1.90)
+
+The clock names the hour. On Classic it stays on the table and on the hall door, live or next. Night and Fog wear that clock only while their hour is on. The last take opens its own fairness page in one step. A cash-out reads waiting, sending, sent, or returned. One click stays one click. Gold is only for a priced sit. The pot stays on Classic.
+
+**Stay on the house.** The shelf is the sit: a card shows a real watch, and the file is that book. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 158 — the desk says what the sit does (2.1.89)
+
+The games page, the six cards, and the store books no longer claim every sit looks one step ahead. Down keeps the stack low. Burst holds a column and takes a four. Catch covers both sides. Snake stays on the loop and a watch counts the food. Aim closes the flick. Lane waits for the ripe mark. Break clears a wall, then the next ball comes down on the pad. Gold is only for a priced sit. The pot stays on Classic.
+
+The plan after this is larger than another weight pass. A night at Classic. A shelf that is the sit. A second seat in the wing. An evening that is one path through the house.
+
+**Stay on the house.** A night at Classic: the clock, fairness in one step, night and fog only while they are on, and a cash-out that reads waiting, sending, sent, or returned. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 157 — the stack styles sit apart (2.1.88)
+
+Down keeps the well low. Burst holds one column and takes the four. Clean stays flatter than the tank. Cheese clears singles. Combo keeps a deeper well. A minute of locks no longer looks like one sit wearing eleven names. The pot stays on Classic.
+
+**Stay on the house.** A human lock must not erase a live book that already plays. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 142 — watch a sit before the file (2.1.72)
+
+The store sold a file with no sit on the card. A seat can now watch a short house game on that book — first, deep, live, or a stack type — before they take it home. Watching is free. The file is still the file. Gold is only to take a priced sit home.
+
+**Stay on the house.** Open the wait desk on the book you just watched. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 141 — a deeper frozen sit (2.1.71)
+
+First and deep sits for catch, snake, aim, lane, and break were painted by hand. They are now trained house games: 80 first, then 160 more, with the same look-ahead sit as the live books. Same feature counts. Same tiny text file. Live still learns. Gold is only to take a priced file home.
+
+**Stay on the house.** Let a seat watch a frozen sit play a short house game before they take the file. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 140 — the other books sit a house game (2.1.70)
+
+The stack already sat a short self-play after a human lock. Catch, snake, aim, lane, and break only moved on the lock they were shown. They now sit a short house game after every fourth human lock. Same weights. Same tiny text file. Live still learns. Gold is only to take a priced file home.
+
+**Stay on the house.** Train a deeper frozen sit. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 139 — the report desk has keepers (2.1.69)
+
+Reports landed on Manage with nobody named to keep them. The desk now has a report roster. A manager can add a seat. Reviewers hear when a seat is named. Hide what should be hidden. Dismiss noise. Official Chatzy stays.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 138 — the other books look ahead (2.1.68)
+
+The stack already scored the queued piece. Catch, snake, aim, lane, and break sat one step at a time. They now score the next catch, turn, flick, strike, or bounce before they move. Same weights. Same tiny text file. Live still learns. Gold is only to take a priced file home.
+
+**Stay on the house.** Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 137 — a world footer (2.1.67)
+
+The footer was a wrap of links. It is now a desk: house, play, rules, and a language pick. Chrome can sit in twelve languages. Routes stay on the same paths. The binding legal pages stay English.
+
+**Stay on the house.** Look ahead on Catch, Snake, Aim, Lane, and Break. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 136 — earth under the green (2.1.66)
+
+The floor is earth now: beige paper in the light, forest umber in the dark. Daily paint stays green. A terracotta accent marks wealth work. The table and the four coins stay themselves.
+
+**Stay on the house.** Look ahead on Catch, Snake, Aim, Lane, and Break. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 135 — the house is green (2.1.65)
+
+Buttons, chips, the bar, and leftover gold chrome are green. Table coins stay Crimson, Azure, Volt, and Amber. Lightning stays yellow. The Tetris O stays yellow.
+
+**Stay on the house.** Look ahead on Catch, Snake, Aim, Lane, and Break. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 134 — news can breathe (2.1.63–2.1.64)
+
+News cards had no air: title, summary, source, and Talk sat on top of each other. The desk now keeps a real gap between stories and inside each card. Jobs, games, and the floor got the same breathing room.
+
+**Stay on the house.** Look ahead on Catch, Snake, Aim, Lane, and Break. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 133 — casual professional floor (2.1.61–2.1.62)
+
+The house reads like a studio you can walk into. Page titles dropped the shouty serif. News headlines stay Outfit, not Cinzel. News no longer dumps every desk as a chip. The left rail stays off a phone — the dock already covers it. Cards sit on white paper, not cream-on-cream.
+
+**Stay on the house.** Look ahead on Catch, Snake, Aim, Lane, and Break. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 132 — the table is a table (2.1.60)
+
+Classic sat under the house bar and footer and collapsed to a sliver. The pit fills the floor again. Footer and dock stay off a live table. Pads, clock, rails, and talk stay the pit's own surfaces.
+
+**Stay on the house.** Look ahead on Catch, Snake, Aim, Lane, and Break. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 131 — the stack looks ahead (2.1.59)
+
+The house stack sat one lock at a time. It now scores the queued piece before it locks. Same six weights. Same tiny text file. Live still learns. Gold is only to take a priced file home.
+
+**Stay on the house.** Train the other books the same way. Roster the report desk. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 130 — one floor, both schemes (2.1.58)
+
+Wait, account, and leftover plates were still their own house. They now sit on HouseFloor. Table cards, jobs, account, and wait chrome take theme paper — no slate jpg, no forced white type. Games and the pit stay their own surfaces. Light and dark stay gold.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 129 — Huepot paint back on Material (2.1.57)
+
+Stock blue Material was the wrong house. Buttons, chips, the bar, and papers are Huepot gold again — Cinzel on the name, no shouty caps. Light and dark stay a choice. Both stay gold, not purple.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 128 — stock Material, light and dark (2.1.56)
+
+Buttons, chips, fields, the app bar, and cards are the original Material components. The theme is stock light and dark. A menu on the bar picks Light, Dark, or System. Games and the pit stay their own surfaces.
+
+**Stay on the house.** Train a deeper model. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Next — a larger house after 2.1.99
+
+The chrome is one house. Six pits hold the pot. The games desk says what each sit does. Classic names its hour. A store card shows the watch, the file is that book, and gold added for a sit comes back to it. A profile shows takes, hues, and owned books. Balance stays private. A letter stays a letter. News stays held until a person publishes. A first visit can walk without a click. Seven books play on their own cards.
+
+Checked 3 Oct 2026 against the tree on v2.1.99. A public line names its writer. A letter stays a letter.
+
+The accepted plan still ahead: company without a crowd, one jobs desk, a room only when people are in it, a seat that names its book, two books on one sit, and a history that is not a second score.
+
+### 1. The desk speaks (2.1.89)
+
+Shipped. Games, the six cards, and the store books name the sit.
+
+### 2. A night at Classic (2.1.90)
+
+Shipped. The clock names the hour. The last take opens its fairness page in one step. Night and Fog change the table only while they are on. A cash-out reads waiting, sending, sent, or returned. One click stays one click. An empty round already says round closed.
+
+### 3. The shelf is the sit (2.1.91)
+
+Shipped. A store card shows the score of a real watch. The file is the book that just played. Gold added on the vault returns to that same sit. A free file downloads. A priced file needs gold. A human lock that misses a hold keeps the book that played.
+
+### 4. A second seat (2.1.93)
+
+Shipped. A profile shows takes, hues, and owned books. Balance stays private. A reporter hears kept or dismissed. News stays held until a person publishes. A letter stays a letter. Jobs stay the house desk.
+
+### 5. An evening in the house (2.1.97)
+
+Shipped. A first visit walks the hall, a book, the store, and a seat, then back. Classic is open. It is not a step. Opening a book keeps that book.
+
+### 6. The book is the agent (2.1.98)
+
+Shipped. Anyone can watch a sit. The card shows that watch. The file is that book. Down, Burst, Catch, Snake, Aim, Lane, and Break keep their sentences. A free file downloads. A priced file needs gold.
+
+### 7. A line names its writer (2.1.99)
+
+Shipped. A seat, the house, or a book. A book does not post as a seat. A letter stays a letter.
+
+**Stay off.** No HUE/USDT pool. No second lifetime ranking. No CS/Dota overlays. No 365 MB rehost. Gold is only to take a priced door home. The pot stays on Classic.
 
 ## Next for the social layer
 

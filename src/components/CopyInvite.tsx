@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HouseButton } from "@/components/HouseUi";
 import { inviteText } from "@/lib/invite-copy";
 import type { FogCup } from "@/lib/types";
 
@@ -34,8 +35,13 @@ export function CopyInvite({
   }
 
   return (
-    <button className={className} disabled={!code} onClick={copy} type="button">
+    <HouseButton
+      className={className.replace(/chip-btn(-ghost)?/g, "").trim() || undefined}
+      disabled={!code}
+      ghost={className.includes("ghost")}
+      onClick={copy}
+    >
       {copied ? "Invite copied" : label}
-    </button>
+    </HouseButton>
   );
 }

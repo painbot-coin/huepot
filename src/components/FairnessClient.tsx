@@ -1,7 +1,9 @@
 "use client";
+import { HouseButton, PageHead } from "@/components/HouseUi";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { HouseFloor } from "@/components/HouseFloor";
 import {
   settledSummary,
   settledTakeAmount,
@@ -34,14 +36,36 @@ export function FairnessClient({ slug }: { slug?: string }) {
   }, [slug]);
 
   return (
-    <main className="app-page is-wide">
-      <p className="hall-kicker">The ledger</p>
-      <h1 className="font-display text-4xl text-white">Fairness</h1>
-      <p className="app-lead">
-        The color with the most clicks still takes the pot. The seed does not pick
-        a winner. It is hashed when the round opens and revealed when it settles,
-        so the sheet cannot be rewritten after the round settles.
-      </p>
+    <HouseFloor
+      extra={[
+        { href: "/fairness", label: "Fairness", match: true },
+        { href: "/how-it-works", label: "How it works" },
+        { href: "/board", label: "Leaderboard" },
+      ]}
+      kicker="Fairness"
+      side={
+        <div>
+          <p className="lobby-label">The book</p>
+          <p className="account-note">
+            Seed is hashed when the round opens and revealed when it settles.
+            Most clicks still take the pot.
+          </p>
+          <div className="li-profile-act">
+            <HouseButton href="/rooms/classic">
+              Play Classic
+            </HouseButton>
+            <HouseButton ghost href="/how-it-works">
+              How it works
+            </HouseButton>
+          </div>
+        </div>
+      }
+    >
+    <main className="app-page is-wide is-in-floor">
+      <PageHead
+        lead="The color with the most clicks still takes the pot. The seed does not pick a winner. It is hashed when the round opens and revealed when it settles."
+        title="Fairness"
+      />
       <ol className="app-steps">
         <li>
           <strong>The book opens</strong>
@@ -61,7 +85,7 @@ export function FairnessClient({ slug }: { slug?: string }) {
         {!loaded
           ? "Opening the book…"
           : settled > 0
-            ? `${settled.toLocaleString()} rounds with a bet have settled in this house. The takes are listed below. A round nobody clicked is not written down, because there is nothing in it to check.`
+            ? `${settled.toLocaleString()} rounds with a bet have settled on Huepot. The wins are listed below. A round nobody clicked is not written down, because there is nothing in it to check.`
             : "No rounds with a bet have settled yet."}
       </p>
 
@@ -80,12 +104,13 @@ export function FairnessClient({ slug }: { slug?: string }) {
           <li className="empty-note">
             No color has taken a pot yet.{" "}
             <Link className="underline" href="/rooms/classic">
-              Sit Classic
+              Play Classic
             </Link>{" "}
             to open the first public line.
           </li>
         ) : null}
       </ul>
     </main>
+    </HouseFloor>
   );
 }

@@ -134,6 +134,7 @@ function newUser(
     headline: "",
     about: "",
     location: "",
+    seat: "",
   };
   ensureUserWallets(user);
   return user;

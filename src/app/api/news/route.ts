@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/http";
-import { listHallNews } from "@/lib/news";
+import { listHallNews, newsHref } from "@/lib/news";
 
 export const runtime = "nodejs";
 
@@ -16,8 +16,10 @@ export async function GET() {
       items: rows.map((row) => ({
         id: row.id,
         title: row.title,
+        summary: row.summary,
         source: row.source,
-        url: row.url,
+        image: row.image,
+        url: newsHref(row.id),
         publishedAt: row.publishedAt,
         talkId: row.talkId ?? "",
       })),

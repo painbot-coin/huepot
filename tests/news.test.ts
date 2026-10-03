@@ -15,7 +15,16 @@ import {
   isHallLine,
   wireHeadline,
 } from "@/lib/betting-game";
-import { cleanUrl, parseFeed, talkHref, type NewsSource } from "@/lib/news";
+import {
+  cleanUrl,
+  isNewsHref,
+  newsHref,
+  newsHrefFromPost,
+  parseFeed,
+  parseNewsId,
+  talkHref,
+  type NewsSource,
+} from "@/lib/news";
 
 const desk: NewsSource = {
   name: "NY Post Betting",
@@ -189,4 +198,15 @@ test("Talk only accepts a house post id", () => {
   assert.equal(talkHref("wire-abc"), "/network?post=wire-abc");
   assert.equal(talkHref("wire-abc'; DROP"), "/network?post=wire-abcDROP");
   assert.equal(talkHref("https://evil.example/x"), "");
+});
+
+test("a headline opens on this house, not the original desk", () => {
+  const id = "a".repeat(32);
+  assert.equal(parseNewsId(id), id);
+  assert.equal(parseNewsId("not-a-story"), "");
+  assert.equal(newsHref(id), `/news/${id}`);
+  assert.equal(isNewsHref(`/news/${id}`), true);
+  assert.equal(isNewsHref("https://nypost.com/odds"), false);
+  assert.equal(newsHrefFromPost(`wire-${id}`, "https://nypost.com/odds"), `/news/${id}`);
+  assert.equal(newsHrefFromPost("wire-nope", "https://nypost.com/odds"), "");
 });

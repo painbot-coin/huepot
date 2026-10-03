@@ -1,9 +1,17 @@
 "use client";
+import { HouseButton, HouseField } from "@/components/HouseUi";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
+import { EveningWalk } from "@/components/EveningWalk";
 import { NetworkChrome } from "@/components/NetworkChrome";
+import { useCopy } from "@/components/LocaleRoot";
+import { HOUSE_SEATS, seatLabel, seatTag } from "@/lib/house-seats";
+import { spokenDay, spokenSeat } from "@/lib/house-tongue";
+import { writerLabel } from "@/lib/line-writer";
+import type { PublicProject } from "@/lib/seat-project-public";
+import { newsHrefFromPost } from "@/lib/news-href";
 import { houseCardKind } from "@/lib/take-talk";
 import type { FriendRelation, NetworkCard, NetworkPost, NetworkYou } from "@/lib/types";
 
@@ -13,6 +21,7 @@ type FeedTab = "recent" | "recommended";
 const FEED_STEP = 80;
 
 function seatLine(person: NetworkCard) {
+  if (person.why) return person.why;
   if (person.room) return `Sitting ${person.room.name}`;
   if (person.online) return "In the house";
   return person.headline || "Huepot player";
@@ -28,12 +37,15 @@ function whenLabel(at: number) {
 }
 
 export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
+  const { locale } = useCopy();
   const [you, setYou] = useState<NetworkYou | null>(null);
   const [posts, setPosts] = useState<NetworkPost[]>([]);
   const [recommended, setRecommended] = useState<NetworkPost[]>([]);
   const [people, setPeople] = useState<NetworkCard[]>([]);
   const [tab, setTab] = useState<FeedTab>("recent");
   const [draft, setDraft] = useState("");
+  const [kind, setKind] = useState("");
+  const [filter, setFilter] = useState("");
   const [error, setError] = useState("");
   const [booted, setBooted] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -41,6 +53,7 @@ export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
   // going further back is not undone twelve seconds later.
   const [depth, setDepth] = useState(FEED_STEP);
   const [total, setTotal] = useState(0);
+  const [projects, setProjects] = useState<PublicProject[]>([]);
 
   async function load(want = depth) {
     const query = new URLSearchParams({ limit: String(want) });
@@ -59,13 +72,21 @@ export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
     setRecommended(data.recommended ?? []);
     setPeople(data.people ?? []);
     setYou(data.you ?? null);
+    if (data.you?.seat && !kind) setKind(data.you.seat);
     if (typeof data.total === "number") setTotal(data.total);
+  }
+
+  async function loadProjects() {
+    const response = await fetch("/api/wait/projects");
+    const data = (await response.json()) as { projects?: PublicProject[] };
+    if (response.ok) setProjects(data.projects ?? []);
   }
 
   useEffect(() => {
     void load()
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load"))
       .finally(() => setBooted(true));
+    void loadProjects().catch(() => undefined);
     const id = window.setInterval(() => void load().catch(() => undefined), 12_000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,86 +153,89 @@ export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening seats…</p>
       </NetworkChrome>
     );
   }
-  const shown = tab === "recommended" ? recommended : posts;
   const signedIn = Boolean(you);
+  const pool = tab === "recommended" ? recommended : posts;
+  const shown = filter ? pool.filter((post) => post.kind === filter) : pool;
+  const shownProjects = filter
+    ? projects.filter((row) => row.seat === filter)
+    : projects;
 
   return (
     <NetworkChrome you={you}>
       <main className="li-main is-feed">
-        <aside className="li-card li-side">
-          <div className="li-cover" />
-          {you ? (
-            <>
-              <Avatar avatar={you.avatar} username={you.username} />
-              <Link className="li-name" href={`/network/u/${encodeURIComponent(you.username)}`}>
-                @{you.username}
-              </Link>
-              <p className="li-head">{you.headline}</p>
-            </>
-          ) : (
-            <>
-              <p className="hall-kicker">The wing</p>
-              <p className="li-head">Takes and talk. Sign in to speak.</p>
-              <Link className="chip-btn mt-3" href="/signin?next=/network">
-                Sign in
-              </Link>
-            </>
-          )}
-        </aside>
         <section className="li-col">
+          <EveningWalk />
           {signedIn ? (
             <form
-              className="li-card li-compose"
+              className="li-card li-compose is-stack"
               onSubmit={(event) => {
                 event.preventDefault();
-                void act({ action: "post", body: draft });
+                void act({ action: "post", body: draft, kind: kind || you?.seat || "" });
               }}
             >
-              <Avatar avatar={you?.avatar} size="sm" username={you?.username ?? "you"} />
-              <input
-                className="field"
-                maxLength={500}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="Speak to the wing"
-                value={draft}
-              />
-              <button className="chip-btn" disabled={busy || draft.trim().length < 2} type="submit">
-                Post
-              </button>
+              <div className="li-compose-row">
+                <Avatar avatar={you?.avatar} size="sm" username={you?.username ?? "you"} />
+                <HouseField
+                  inputProps={{ maxLength: 500 }}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="Share a sit, a book, a take, or a project"
+                  value={draft}
+                />
+              </div>
+              <div className="li-compose-foot">
+                <div className="li-kind-row" role="group" aria-label="Post seat">
+                  {HOUSE_SEATS.map((row) => (
+                    <button
+                      className={`wait-tag ${kind === row.id ? "is-on" : ""}`}
+                      key={row.id}
+                      onClick={() => setKind(kind === row.id ? "" : row.id)}
+                      type="button"
+                    >
+                      {spokenSeat(locale, row.id).tag}
+                    </button>
+                  ))}
+                </div>
+                <HouseButton disabled={busy || draft.trim().length < 2} type="submit">
+                  Post
+                </HouseButton>
+              </div>
             </form>
           ) : (
             <p className="li-card li-compose">
-              <Link className="chip-btn" href="/signin?next=/network">
+              <HouseButton href="/signin?next=/network">
                 Sign in to speak
-              </Link>
+              </HouseButton>
             </p>
           )}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              className={`chip-btn ${tab === "recent" ? "" : "chip-btn-ghost"}`}
-              onClick={() => setTab("recent")}
-              type="button"
-            >
+          <div className="house-filters">
+            <HouseButton ghost={tab !== "recent"} onClick={() => setTab("recent")}>
               Recent
-            </button>
-            <button
-              className={`chip-btn ${tab === "recommended" ? "" : "chip-btn-ghost"}`}
-              onClick={() => setTab("recommended")}
-              type="button"
-            >
+            </HouseButton>
+            <HouseButton ghost={tab !== "recommended"} onClick={() => setTab("recommended")}>
               Recommended
-            </button>
+            </HouseButton>
+            {HOUSE_SEATS.map((row) => (
+              <HouseButton
+                ghost={filter !== row.id}
+                key={row.id}
+                onClick={() => setFilter(filter === row.id ? "" : row.id)}
+              >
+                {spokenSeat(locale, row.id).tag}
+              </HouseButton>
+            ))}
           </div>
           {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
           {shown.length === 0 ? (
             <p className="mt-6 text-sm text-zinc-500">
               {tab === "recommended"
                 ? "No recommended lines yet. Recent words from the house land here."
-                : "No lines yet. Anyone signed in can speak, and the wing hears it."}
+                : filter
+                  ? `No ${seatLabel(filter) || "seat"} lines yet.`
+                  : "No posts yet. A seat can name a craft, or just be here."}
             </p>
           ) : (
             <ul className="mt-4 space-y-3">
@@ -233,14 +257,13 @@ export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
               the control never promises more and then delivers the same. */}
           {tab === "recent" && total > posts.length ? (
             <div className="li-deeper">
-              <button
-                className="chip-btn chip-btn-ghost"
+              <HouseButton
                 disabled={busy}
+                ghost
                 onClick={() => setDepth((was) => was + FEED_STEP)}
-                type="button"
               >
                 Show older
-              </button>
+              </HouseButton>
               <span className="li-deeper-n">
                 {posts.length} of {total.toLocaleString()}
               </span>
@@ -248,15 +271,47 @@ export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
           ) : null}
           {tab === "recent" && total > 0 && total <= posts.length ? (
             <p className="li-deeper-n mt-3">
-              That is everything the wing holds — {total.toLocaleString()}{" "}
+              That is everything the network holds — {total.toLocaleString()}{" "}
               {total === 1 ? "line" : "lines"}.
             </p>
           ) : null}
         </section>
-        <aside className="li-card li-suggest">
-          <p className="lobby-label">In the pit</p>
+        <aside className="house-discover">
+          <section className="li-card li-board" aria-label="Projects on the shelf">
+            <p className="lobby-label">Projects on the shelf</p>
+            {shownProjects.length === 0 ? (
+              <p className="li-suggest-empty">
+                {filter
+                  ? `No ${seatLabel(filter) || "seat"} projects yet.`
+                  : "No projects on the shelf yet."}
+              </p>
+            ) : (
+              <ul className="house-project-list">
+                {shownProjects.slice(0, 4).map((row) => {
+                  const house = row.username.toLowerCase() === "house";
+                  return (
+                  <li key={row.id}>
+                    <Link href={house ? "/wait/store" : `/network/u/${encodeURIComponent(row.username)}`}>
+                      <strong>{row.name}</strong>
+                      <em>
+                        {seatTag(row.seat)} · {house ? "The house" : `A seat · @${row.username}`} · {row.priceLabel}
+                      </em>
+                    </Link>
+                  </li>
+                  );
+                })}
+              </ul>
+            )}
+            <Link className="li-more" href="/wait/store">
+              Open the store
+            </Link>
+          </section>
+          <section className="li-card li-suggest">
+          <p className="lobby-label">{signedIn ? "People like you" : "Playing now"}</p>
           <p className="li-suggest-lead">
-            {signedIn ? "Not in your company yet. Send an ask." : "Seats in the house."}
+            {signedIn
+              ? "Same seat first — game, AI, play, or the pot. Then the same pit."
+              : "Game developers, AI developers, gamers, and bettors."}
           </p>
           {people.length === 0 ? (
             <p className="li-suggest-empty">No other seats in the house yet.</p>
@@ -271,7 +326,10 @@ export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
                     <Avatar avatar={person.avatar} size="sm" username={person.username} />
                     <span className="li-suggest-copy">
                       <strong>@{person.username}</strong>
-                      <em>{seatLine(person)}</em>
+                      <em>
+                        {person.seat ? `${seatTag(person.seat)} · ` : ""}
+                        {seatLine(person)}
+                      </em>
                     </span>
                   </Link>
                   {signedIn ? (
@@ -294,14 +352,15 @@ export function NetworkFeed({ focusPost = "" }: { focusPost?: string }) {
             </Link>
           ) : (
             <div className="li-suggest-foot">
-              <Link className="chip-btn" href="/signin?next=/network">
+              <HouseButton href="/signin?next=/network">
                 Sign in to ask
-              </Link>
+              </HouseButton>
               <Link className="li-more" href="/signin?next=/network/people">
                 Show all
               </Link>
             </div>
           )}
+          </section>
         </aside>
       </main>
     </NetworkChrome>
@@ -385,7 +444,9 @@ function PostCard({
   onRelate: (action: string, username: string) => void;
   signedIn: boolean;
 }) {
+  const { locale } = useCopy();
   const [comment, setComment] = useState("");
+  const [wantComment, setWantComment] = useState(Boolean(focused));
   const own = post.username.toLowerCase() === you.toLowerCase();
   const kind = houseCardKind(post.link ?? "");
   const houseCard = Boolean(kind);
@@ -396,13 +457,20 @@ function PostCard({
       id={`post-${post.id}`}
     >
       <div className="li-post-top">
-        <Avatar avatar={post.avatar} size="sm" username={post.username} />
+        {post.writer === "seat" ? (
+          <Avatar avatar={post.avatar} size="sm" username={post.username} />
+        ) : null}
         <div className="min-w-0 flex-1">
-          <Link className="li-name" href={`/network/u/${encodeURIComponent(post.username)}`}>
-            @{post.username}
-          </Link>
+          {post.writer === "seat" ? (
+            <Link className="li-name" href={`/network/u/${encodeURIComponent(post.username)}`}>
+              {writerLabel("seat", post.username)}
+            </Link>
+          ) : (
+            <span className="li-name">{writerLabel(post.writer, post.username)}</span>
+          )}
           <p className="li-head">
-            {post.headline}
+            {seatTag(post.kind) ? <em className="seat-tag">{seatTag(post.kind)}</em> : null}
+            {post.headline && post.headline !== writerLabel(post.writer) ? post.headline : null}
             <span className="li-when"> · {whenLabel(post.createdAt)}</span>
           </p>
         </div>
@@ -425,12 +493,20 @@ function PostCard({
             <span className="li-wire-src">{post.source}</span>
           </span>
         </Link>
+      ) : kind === "house" ? (
+        <Link className="li-wire" href={post.link?.startsWith("/") ? post.link : "/"}>
+          <span className="li-wire-text">
+            <strong className="li-wire-title">{spokenDay(locale, post.title ?? "")?.title ?? post.title}</strong>
+            {(spokenDay(locale, post.title ?? "")?.body ?? post.body) ? (
+              <span className="li-body">{spokenDay(locale, post.title ?? "")?.body ?? post.body}</span>
+            ) : null}
+            <span className="li-wire-src">{post.source || "Huepot"}</span>
+          </span>
+        </Link>
       ) : kind === "wire" ? (
-        <a
+        <Link
           className="li-wire"
-          href={post.link}
-          rel="noopener noreferrer nofollow"
-          target="_blank"
+          href={newsHrefFromPost(post.id, post.link) || "/news"}
         >
           {post.image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -447,14 +523,14 @@ function PostCard({
             {post.body ? <span className="li-body">{post.body}</span> : null}
             <span className="li-wire-src">{post.source}</span>
           </span>
-        </a>
+        </Link>
       ) : (
         <p className="li-body">{post.body}</p>
       )}
-      <div className="li-actions">
+      <div className="li-actions is-bar">
         {signedIn ? (
           <button
-            className={`chip-btn chip-btn-ghost ${post.liked ? "is-on" : ""}`}
+            className={post.liked ? "is-on" : ""}
             disabled={busy}
             onClick={() => onAct({ action: "like", postId: post.id })}
             type="button"
@@ -462,13 +538,19 @@ function PostCard({
             {post.liked ? "Liked" : "Like"} · {post.likes}
           </button>
         ) : (
-          <Link className="chip-btn chip-btn-ghost" href="/signin?next=/network">
-            Like · {post.likes}
+          <Link href="/signin?next=/network">Like · {post.likes}</Link>
+        )}
+        {signedIn ? (
+          <button onClick={() => setWantComment(true)} type="button">
+            Comment{post.comments.length ? ` · ${post.comments.length}` : ""}
+          </button>
+        ) : (
+          <Link href="/signin?next=/network">
+            Comment{post.comments.length ? ` · ${post.comments.length}` : ""}
           </Link>
         )}
         {signedIn && own ? (
           <button
-            className="chip-btn chip-btn-ghost"
             disabled={busy}
             onClick={() => {
               if (!window.confirm("Delete this post? It does not come back.")) return;
@@ -478,10 +560,8 @@ function PostCard({
           >
             Delete
           </button>
-        ) : null}
-        {signedIn && !own ? (
+        ) : signedIn && !own ? (
           <button
-            className="chip-btn chip-btn-ghost"
             disabled={busy}
             onClick={() => {
               if (!window.confirm("Report this to the house?")) return;
@@ -491,7 +571,9 @@ function PostCard({
           >
             Report
           </button>
-        ) : null}
+        ) : (
+          <Link href="/signin?next=/network">Ask</Link>
+        )}
       </div>
       {post.comments.length > 0 ? (
         <ul className="li-comments">
@@ -499,7 +581,13 @@ function PostCard({
             const mine = item.username.toLowerCase() === you.toLowerCase();
             return (
               <li key={item.id}>
-                <Link href={`/network/u/${encodeURIComponent(item.username)}`}>@{item.username}</Link>
+                {item.writer === "seat" ? (
+                  <Link href={`/network/u/${encodeURIComponent(item.username)}`}>
+                    {writerLabel("seat", item.username)}
+                  </Link>
+                ) : (
+                  <span>{writerLabel(item.writer, item.username)}</span>
+                )}
                 {` ${item.body} `}
                 {/* The post's owner can clear their own thread, which is why
                     this shows for a comment that is not yours on your post. */}
@@ -534,7 +622,7 @@ function PostCard({
           })}
         </ul>
       ) : null}
-      {signedIn ? (
+      {signedIn && (wantComment || focused || comment) ? (
         <form
           className="li-comment"
           onSubmit={(event) => {
@@ -545,16 +633,15 @@ function PostCard({
             });
           }}
         >
-          <input
-            autoFocus={focused}
-            className="field"
-            maxLength={240}
+          <HouseField
+            autoFocus={wantComment || focused}
+            inputProps={{ maxLength: 240 }}
             onChange={(event) => setComment(event.target.value)}
             placeholder="Add a comment"
             value={comment}
           />
         </form>
-      ) : (
+      ) : signedIn ? null : (
         <p className="li-comment">
           <Link href="/signin?next=/network">Sign in to comment</Link>
         </p>

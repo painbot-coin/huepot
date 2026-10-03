@@ -16,6 +16,7 @@ import {
   fairPreimage,
   seedCommit,
   settledPreimage,
+  pitFairnessLink,
   settledTakeAmount,
   sha256Hex,
   verifySettledRound,
@@ -167,4 +168,25 @@ test("a round nobody won pays nothing", () => {
     rake: 0,
   });
   assert.equal(settledTakeAmount(empty), 0);
+});
+
+test("the last take opens its fairness page in one step", () => {
+  assert.equal(
+    pitFairnessLink({ roundId: "live", revealing: true, kind: "take", bookedId: "old" }).href,
+    "/fairness/live",
+  );
+  assert.equal(
+    pitFairnessLink({
+      roundId: "open",
+      revealing: false,
+      kind: null,
+      bookedId: "old",
+      bookedNumber: 40,
+    }).href,
+    "/fairness/old",
+  );
+  assert.equal(
+    pitFairnessLink({ roundId: "open", revealing: true, kind: "empty", bookedId: "old" }).label,
+    "Last take",
+  );
 });

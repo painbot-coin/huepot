@@ -1,4 +1,5 @@
 "use client";
+import { HouseButton } from "@/components/HouseUi";
 
 import Link from "next/link";
 import { ShareTake } from "@/components/ShareTake";
@@ -54,13 +55,13 @@ export function TakeHangout({
         </p>
       ) : null}
       <p className="take-hangout-doors">
-        <Link className="chip-btn" href={`/rooms/${take.slug}`}>
+        <HouseButton href={`/rooms/${take.slug}`}>
           Sit the next round
-        </Link>
+        </HouseButton>
         {winnerSit ? (
-          <Link className="chip-btn chip-btn-ghost" href={`/rooms/${winnerSit.slug}`}>
+          <HouseButton ghost href={`/rooms/${winnerSit.slug}`}>
             {sitWithThemLabel()}
-          </Link>
+          </HouseButton>
         ) : null}
       </p>
     </div>

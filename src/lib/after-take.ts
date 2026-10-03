@@ -24,7 +24,7 @@ export function afterTakeNoticeTitle(username: string) {
 }
 
 export function afterTakeNoticeBody() {
-  return "Sit with them. 30 minutes.";
+  return "Play with them. 30 minutes.";
 }
 
 export function findOpenAfterTake(

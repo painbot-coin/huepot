@@ -73,6 +73,22 @@ export function RoomMark({ slug, fog, className = "room-mark" }: RoomMarkProps) 
           fill="rgba(106,124,255,0.45)"
         />
       </>
+    ) : slug === "wheel" ? (
+      <>
+        <circle cx="40" cy="40" r="22" fill="#1a0c08" stroke="#ff6a2a" strokeWidth="2" />
+        <path d="M40 18 L46 40 L40 62 L34 40 Z" fill="#ffb020" />
+        <path d="M18 40 L40 34 L62 40 L40 46 Z" fill="#ff355e" />
+        <circle cx="40" cy="40" r="4" fill="#ffe08a" />
+      </>
+    ) : slug === "dice" ? (
+      <>
+        <rect x="22" y="22" width="36" height="36" rx="6" fill="#0e2420" stroke="#3dffb0" strokeWidth="2" />
+        <circle cx="32" cy="32" r="3" fill="#3dffb0" />
+        <circle cx="48" cy="32" r="3" fill="#3dffb0" />
+        <circle cx="40" cy="40" r="3" fill="#3dffb0" />
+        <circle cx="32" cy="48" r="3" fill="#3dffb0" />
+        <circle cx="48" cy="48" r="3" fill="#3dffb0" />
+      </>
     ) : slug === "fog" || fog ? (
       <>
         <FeltTable />

@@ -1,9 +1,12 @@
+import { HouseButton } from "@/components/HouseUi";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AfterTakeDoor } from "@/components/AfterTakeDoor";
 import { Avatar } from "@/components/Avatar";
+import { HouseFloor } from "@/components/HouseFloor";
 import { TakeHangout } from "@/components/TakeHangout";
 import { getHeaderUser } from "@/lib/auth";
+import { floorYou } from "@/lib/house-you";
 import { classicHourAt, classicHourClock } from "@/lib/classic-hour";
 import { fogCupAt, fogCupClock } from "@/lib/fog-cup";
 import { seatedAt } from "@/lib/friends";
@@ -93,16 +96,18 @@ export default async function TakePage({
   const [found, user] = await Promise.all([loadTake(id), getHeaderUser()]);
   if (!found) {
     return (
-      <main className="prose-page">
-        <p className="hall-kicker">The take</p>
-        <h1 className="font-display text-4xl text-white">That take is gone</h1>
-        <p>Sit a live table and wait for the next one.</p>
+      <HouseFloor kicker="Win" you={floorYou(user)}>
+      <main className="prose-page is-in-floor">
+        <p className="hall-kicker">Win</p>
+        <h1 className="font-display text-4xl text-white">That win is gone</h1>
+        <p>Play a live table and wait for the next one.</p>
         <p>
-          <Link className="chip-btn" href="/rooms/classic">
-            Sit Classic
-          </Link>
+          <HouseButton href="/rooms/classic">
+            Play Classic
+          </HouseButton>
         </p>
       </main>
+      </HouseFloor>
     );
   }
 
@@ -112,8 +117,13 @@ export default async function TakePage({
   const cup = fogCupAt();
 
   return (
-    <main className="prose-page take-page">
-      <p className="hall-kicker">The take</p>
+    <HouseFloor
+      extra={[{ href: `/fairness/${take.id}`, label: "Fairness" }]}
+      kicker="Win"
+      you={floorYou(user)}
+    >
+    <main className="prose-page take-page is-in-floor">
+      <p className="hall-kicker">Win</p>
       <p className="lobby-kicker">{take.roomName}</p>
       {winners.length === 1 ? (
         <Avatar avatar={winners[0].avatar} size="lg" username={winners[0].username} />
@@ -162,5 +172,6 @@ export default async function TakePage({
       </p>
       <AfterTakeDoor at={take.at} />
     </main>
+    </HouseFloor>
   );
 }

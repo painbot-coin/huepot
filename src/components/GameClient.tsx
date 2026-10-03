@@ -1,4 +1,5 @@
 "use client";
+import { HouseButton, HouseField } from "@/components/HouseUi";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,17 +40,14 @@ import { RoomFeed } from "@/components/RoomFeed";
 import { SearchDock } from "@/components/SearchDock";
 import { SoundToggle } from "@/components/SoundToggle";
 import { colorById, type ColorId } from "@/lib/colors";
-import { REVEAL_SECONDS } from "@/lib/config";
-import { shortHash } from "@/lib/fairness";
+import { pitFairnessLink, shortHash } from "@/lib/fairness";
 import { publishBank } from "@/lib/bank-sync";
 import { emitFx, emitPads } from "@/lib/fx";
 import { hallClass, hallFor } from "@/lib/hall";
-import { classicHourClock } from "@/lib/classic-hour";
-import { cupSendsToFog, hourSendsToClassic, hourSendsToNight } from "@/lib/hour-door";
-import { fogCupClock } from "@/lib/fog-cup";
-import { nightHourClock } from "@/lib/night-hour";
+import { FIRST_SIT_LINE } from "@/lib/classic-sit";
+import { tableClockMark, tableHourMood, takeSitWhen } from "@/lib/hour-door";
 import { inviteText } from "@/lib/invite-copy";
-import { formatClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
+import { formatClock, formatGraphClock, formatUsdt, fromCents, rakeFromPot, toCents } from "@/lib/money";
 import { formatTakeLine, withSitWhen } from "@/lib/take-copy";
 import type { GameState, PublicRound } from "@/lib/types";
 
@@ -90,6 +88,7 @@ export function GameClient({ slug }: { slug: string }) {
   const [renaming, setRenaming] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [state, setState] = useState<GameState | null>(null);
+  const [bookedTake, setBookedTake] = useState<{ id: string; number: number } | null>(null);
   const [error, setError] = useState("");
   const [busyColor, setBusyColor] = useState<ColorId | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -110,7 +109,7 @@ export function GameClient({ slug }: { slug: string }) {
       if (lastPot.current > 0) {
         emitFx({
           kind: "pot",
-          color: "#ffb020",
+          color: "#2f9e62",
           label: `Pot surge · ${formatUsdt(next.round.pot)} USDT`,
         });
       }
@@ -162,6 +161,24 @@ export function GameClient({ slug }: { slug: string }) {
       }
     }
   }, [applyState, router, slug]);
+
+  useEffect(() => {
+    let alive = true;
+    void fetch(`/api/fairness?slug=${encodeURIComponent(slug)}`)
+      .then(
+        (response) =>
+          response.json() as Promise<{ rounds?: { id?: string; number?: number }[] }>,
+      )
+      .then((data) => {
+        const row = data.rounds?.[0];
+        if (!alive || !row?.id) return;
+        setBookedTake({ id: row.id, number: row.number ?? 0 });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [slug, state?.round.number, state?.round.status]);
 
   useEffect(() => {
     lastPot.current = 0;
@@ -366,6 +383,14 @@ export function GameClient({ slug }: { slug: string }) {
   // Most rounds on a quiet table settle with nobody clicking. That is not a take.
   const tookPot = Boolean(revealing && winnerColor);
   const emptyRound = revealing && round.result?.kind === "empty";
+  const fair = pitFairnessLink({
+    roundId: round.id,
+    revealing,
+    kind: round.result?.kind,
+    bookedId: bookedTake?.id,
+    bookedNumber: bookedTake?.number,
+  });
+  const waitingFirst = slug === "classic" && !revealing && !room.paused && round.pot <= 0;
   const youSat = Object.values(round.yourClicks ?? {}).some((n) => n > 0);
 
   return (
@@ -515,16 +540,15 @@ export function GameClient({ slug }: { slug: string }) {
               })();
             }}
           >
-            <input
+            <HouseField
               autoFocus
-              className="field"
-              maxLength={28}
+              inputProps={{ maxLength: 28 }}
               onChange={(event) => setRoomName(event.target.value)}
               value={roomName}
             />
-            <button className="chip-btn" type="submit">
+            <HouseButton type="submit">
               Save
-            </button>
+            </HouseButton>
           </form>
         ) : (
           <span
@@ -538,25 +562,10 @@ export function GameClient({ slug }: { slug: string }) {
           >
             {room.name}
             {room.paused ? " · paused" : ""}
-            {slug === "classic" && hour
-              ? hour.live
-                ? " · hour is on"
-                : hourSendsToClassic(hour, now)
-                  ? " · hour soon"
-                  : ` · hour ${classicHourClock(hour.hour)}`
-              : slug === "night" && night
-                ? night.live
-                  ? " · hour is on"
-                  : hourSendsToNight(night, now)
-                    ? " · hour soon"
-                    : ` · hour ${nightHourClock(night.hour)}`
-                : slug === "fog" && cup
-                  ? cup.live
-                    ? " · cup is on"
-                    : cupSendsToFog(cup, now)
-                      ? " · cup soon"
-                      : ` · cup ${fogCupClock(cup.weekday, cup.hour)}`
-                  : ""}
+            {(() => {
+              const mark = tableClockMark(slug, hour, night, cup, now);
+              return mark ? ` · ${mark}` : "";
+            })()}
           </span>
         )}
         <span>
@@ -564,7 +573,7 @@ export function GameClient({ slug }: { slug: string }) {
           {liveLeft != null ? ` · table ${formatClock(liveLeft)}` : ""}
           {room.slowMode ? " · slow chat" : ""}
           {" · "}
-          <Link href={`/fairness?slug=${slug}`}>Ledger</Link>
+          <Link href={fair.href}>{fair.label}</Link>
         </span>
       </div>
       <section className={`arena ${revealing ? "is-revealing" : ""} ${urgent ? "is-urgent" : ""} ${fog ? "is-fog" : ""}`}>
@@ -604,7 +613,7 @@ export function GameClient({ slug }: { slug: string }) {
                     : "Time"}
             </p>
             <p className="mt-1 font-mono text-sm tabular-nums text-zinc-200">
-              {formatClock(Math.max(0, remainingMs))}
+              {formatGraphClock(Math.max(0, remainingMs))}
             </p>
             {round.seedCommit ? (
               <p className="mt-1 font-mono text-[10px] text-zinc-500">
@@ -626,11 +635,11 @@ export function GameClient({ slug }: { slug: string }) {
           ) as Record<ColorId, number>}
           fog={fog}
           remainingMs={remainingMs}
-          durationMs={
-            revealing
-              ? REVEAL_SECONDS * 1000
-              : Math.max(1, round.endsAt - round.startedAt)
-          }
+          durationMs={Math.max(1, round.endsAt - round.startedAt)}
+          startedAt={round.startedAt}
+          endsAt={round.endsAt}
+          revealUntil={round.revealUntil}
+          clockSkew={Date.now() - now}
           paused={room.paused}
           revealing={revealing}
           urgent={urgent}
@@ -649,10 +658,10 @@ export function GameClient({ slug }: { slug: string }) {
         </p>
         <p className="pit-mood">
           {room.paused
-            ? "The host paused the pit."
+            ? "The host paused the table."
             : revealing
               ? tookPot
-                ? "The take."
+                ? "The payout."
                 : emptyRound
                   ? "Nobody clicked. The board comes back."
                   : "The round closed."
@@ -666,59 +675,57 @@ export function GameClient({ slug }: { slug: string }) {
                     : "The board is dark."
                   : urgent
                     ? "Last seconds."
-                    : slug === "classic" && hour?.live
-                      ? hall?.hour ?? "Classic hour is on."
-                      : slug === "classic" && hour && hourSendsToClassic(hour, now)
-                        ? "Classic hour soon."
-                      : slug === "night" && night?.live
-                        ? hall?.hour ?? "Night hour is on."
-                        : slug === "night" && night && hourSendsToNight(night, now)
-                          ? "Night hour soon."
-                        : slug === "fog" && cup?.live
-                          ? hall?.cup ?? "Fog cup is on."
-                          : hall?.calm ?? "The pit is open."}
+                    : waitingFirst
+                      ? FIRST_SIT_LINE
+                      : tableHourMood(slug, hour, night, cup, now) ||
+                        hall?.calm ||
+                        "The table is open."}
         </p>
         {tookPot && user && youSat && !user.blocked ? (
           <p className="pit-cta">
             <AfterTakeButton inviteCode={user.inviteCode} />
-            <span>30 minutes of Fog. Company hears.</span>
+            <span>30 minutes of Fog. Connections hear.</span>
           </p>
         ) : !user ? (
           <p className="pit-cta">
-            <Link className="chip-btn" href="/signin">
-              Sign in to sit
-            </Link>
-            <span>Watch the round live either way.</span>
+            <HouseButton href="/signin">
+              {waitingFirst ? "Sign in to play first" : "Sign in to play"}
+            </HouseButton>
+            <span>
+              {waitingFirst
+                ? FIRST_SIT_LINE
+                : "Watch the round live either way."}
+            </span>
           </p>
         ) : !user.emailVerified ? (
           <p className="pit-cta">
-            <Link className="chip-btn" href="/signin">
-              Cross the gate
-            </Link>
+            <HouseButton href="/signin">
+              Sign in
+            </HouseButton>
             <span>Then you can click colors.</span>
           </p>
         ) : user.blocked ? (
           <p className="pit-cta">
-            <Link className="chip-btn" href="/account">
-              Seat limits
-            </Link>
+            <HouseButton href="/account">
+              Table limits
+            </HouseButton>
             <span>{user.blockMessage || "Play is paused on this account."}</span>
           </p>
         ) : (user.balance ?? 0) + (user.bonus ?? 0) < round.clickPrice ? (
           <p className="pit-cta">
             {(user.bonus ?? 0) > 0 ? (
-              <Link className="chip-btn" href="/rooms/classic">
-                Sit Classic with the chip
-              </Link>
+              <HouseButton href="/rooms/classic">
+                Play Classic with credit
+              </HouseButton>
             ) : (
-              <Link className="chip-btn" href="/invest">
-                Add USDT to sit
-              </Link>
+              <HouseButton href="/invest">
+                Add USDT to play
+              </HouseButton>
             )}
             <span>
               {(user.bonus ?? 0) > 0
-                ? "Sit chips do not cover this table."
-                : "Not enough to sit. Add USDT or wait for tomorrow's sit chip."}
+                ? "Play credits do not cover this table."
+                : "Not enough to play. Add USDT or wait for tomorrow's play credit."}
             </span>
           </p>
         ) : room.paused ? (
@@ -789,15 +796,7 @@ export function GameClient({ slug }: { slug: string }) {
               buttonCount={room.buttonCount}
               clickPrice={round.clickPrice}
               roundSeconds={room.roundSeconds}
-              sitWhen={
-                night?.live
-                  ? `Night hour ${nightHourClock(night.hour)}`
-                  : cup
-                    ? `Fog cup ${fogCupClock(cup.weekday, cup.hour)}`
-                    : hour
-                      ? `Classic hour ${classicHourClock(hour.hour)}`
-                      : ""
-              }
+              sitWhen={takeSitWhen(slug, hour, night, cup)}
               wash={winnerColor?.hex}
             />
           ) : null}
@@ -968,7 +967,7 @@ function ResultCard({
   const sheet = (
     <p className="mt-2 text-xs text-zinc-500">
       <Link className="underline" href={`/fairness/${round.id}`}>
-        Open the ledger
+        Check fairness
       </Link>
       {round.fairHash ? ` · ${shortHash(round.fairHash)}` : ""}
     </p>
@@ -980,7 +979,7 @@ function ResultCard({
   if (result.kind === "void") {
     return (
       <div className="result-card is-quiet">
-        <p className="hall-kicker">The rite</p>
+        <p className="hall-kicker">Result</p>
         Staff voided this round. Everyone who clicked got their USDT back.
         {yours ? ` You received ${formatUsdt(yours.amount)} USDT.` : ""}
         {sheet}
@@ -1002,7 +1001,7 @@ function ResultCard({
   if (result.kind === "push") {
     return (
       <div className="result-card" style={cardStyle}>
-        <p className="hall-kicker">The rite</p>
+        <p className="hall-kicker">Result</p>
         All colors tied. Everyone who clicked got their USDT back.
         {yours ? ` You received ${formatUsdt(yours.amount)} USDT.` : ""}
         {sheet}
@@ -1012,16 +1011,16 @@ function ResultCard({
 
   return (
     <div className="result-card" style={cardStyle}>
-      <p className="hall-kicker">The rite</p>
+      <p className="hall-kicker">Result</p>
       <strong>{names}</strong> had the most clicks and took the other colors’
       money.
       {result.rake
-        ? ` House took ${formatUsdt(result.rake)} USDT. `
+        ? ` House fee ${formatUsdt(result.rake)} USDT. `
         : " "}
       {formatUsdt(result.payoutPerWinningClick)} USDT per winning click.
       {yours ? (
         <span className="result-payout">
-          You take <CountUsdt value={yours.amount} /> USDT
+          You won <CountUsdt value={yours.amount} /> USDT
         </span>
       ) : playerId ? (
         " You were not on the winning color."

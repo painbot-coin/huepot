@@ -25,7 +25,7 @@ export function AfterTakeDoor({ at }: { at: number }) {
   return (
     <p className="app-actions">
       <AfterTakeButton inviteCode={inviteCode} />
-      <span className="text-sm text-zinc-500">30 minutes of Fog. Company hears.</span>
+      <span className="text-sm text-zinc-500">30 minutes of Fog. Connections hear.</span>
     </p>
   );
 }

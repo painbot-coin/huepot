@@ -1,7 +1,18 @@
+import { HouseFloor } from "@/components/HouseFloor";
+
 export default function TermsPage() {
   return (
-    <main className="prose-page">
-      <p className="hall-kicker">House law</p>
+    <HouseFloor
+      extra={[
+        { href: "/how-it-works", label: "How it works" },
+        { href: "/fairness", label: "Fairness" },
+        { href: "/terms", label: "Terms", match: true },
+        { href: "/privacy", label: "Privacy" },
+      ]}
+      kicker="Terms"
+    >
+    <main className="prose-page is-in-floor">
+      <p className="hall-kicker">Terms</p>
       <h1 className="font-display text-4xl text-white">Terms</h1>
       <p>
         Huepot is an 18+ color-pot game. By signing in with Google you confirm you
@@ -27,5 +38,6 @@ export default function TermsPage() {
         freeze an account or void a live round, which refunds clicks.
       </p>
     </main>
+    </HouseFloor>
   );
 }

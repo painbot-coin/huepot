@@ -2,28 +2,30 @@
 
 import {
   useEffect,
-  useMemo,
   useRef,
-  useState,
   type CSSProperties,
   type PointerEvent,
 } from "react";
 import { colorById, type ColorId } from "@/lib/colors";
 import {
-  elapsed01,
+  axisTicks,
   graphScale,
   headMarks,
+  holdScale,
   holdTotals,
-  niceMax,
   plotX,
   plotY,
   pushSample,
+  readRoundClock,
+  stacksForColor,
+  syncRoundClock,
   timeBarPct,
   withLiveTip,
   type ClickSample,
   type PlotBox,
+  type RoundClock,
 } from "@/lib/click-graph";
-import { formatClock, formatUsdt } from "@/lib/money";
+import { formatGraphClock, formatUsdt } from "@/lib/money";
 import type { PublicSeat } from "@/lib/types";
 
 const PAD = { left: 36, right: 18, top: 36, bottom: 22 };
@@ -37,6 +39,25 @@ function plotBox(width: number, height: number): PlotBox {
   };
 }
 
+function strokeSteps(
+  ctx: CanvasRenderingContext2D,
+  points: { x: number; y: number }[],
+  floor?: number,
+) {
+  if (points.length === 0) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i - 1].y);
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  if (floor != null) {
+    ctx.lineTo(points[points.length - 1].x, floor);
+    ctx.lineTo(points[0].x, floor);
+    ctx.closePath();
+  }
+}
+
 function drawChart(
   canvas: HTMLCanvasElement,
   width: number,
@@ -45,6 +66,7 @@ function drawChart(
   buttonIds: ColorId[],
   totals: Record<ColorId, number>,
   t: number,
+  scale: number,
   fog: boolean,
   urgent: boolean,
   revealing: boolean,
@@ -61,8 +83,8 @@ function drawChart(
   ctx.clearRect(0, 0, width, height);
 
   const box = plotBox(width, height);
-  const live = withLiveTip(series, t, totals);
-  const scale = niceMax(graphScale(totals, buttonIds));
+  const live = withLiveTip(series, t, totals, buttonIds);
+  const axis = Math.max(1, scale);
 
   ctx.fillStyle = "#07080d";
   ctx.fillRect(0, 0, width, height);
@@ -104,37 +126,25 @@ function drawChart(
     const dimmed = revealing && winners.length > 0 && !taken;
     const points = live.map((sample) => ({
       x: plotX(sample.t, box),
-      y: plotY(sample.totals[id] ?? 0, scale, box),
+      y: plotY(sample.totals[id] ?? 0, axis, box),
     }));
     if (points.length < 2) continue;
 
     ctx.globalAlpha = fog && !taken ? 0.28 : dimmed ? 0.22 : 1;
-    const trace = (close = false) => {
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].x, points[i].y);
-      }
-      if (close) {
-        ctx.lineTo(points[points.length - 1].x, box.top + box.height);
-        ctx.lineTo(points[0].x, box.top + box.height);
-        ctx.closePath();
-      }
-    };
-    trace(true);
+    strokeSteps(ctx, points, box.top + box.height);
     const fill = ctx.createLinearGradient(0, box.top, 0, box.top + box.height);
     fill.addColorStop(0, fog ? "rgba(180, 186, 210, 0.12)" : `${color.hex}33`);
     fill.addColorStop(1, "rgba(7, 8, 13, 0)");
     ctx.fillStyle = fill;
     ctx.fill();
 
-    trace(false);
+    strokeSteps(ctx, points);
     ctx.strokeStyle = fog ? "#9aa0b5" : color.hex;
-    ctx.lineWidth = taken ? 3.2 : 2.2;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    ctx.lineWidth = taken ? 3 : 2;
+    ctx.lineJoin = "miter";
+    ctx.lineCap = "butt";
     ctx.shadowColor = fog ? "transparent" : color.hex;
-    ctx.shadowBlur = taken ? 22 : 14;
+    ctx.shadowBlur = taken ? 12 : 8;
     ctx.stroke();
     ctx.shadowBlur = 0;
 
@@ -156,9 +166,9 @@ function drawChart(
   ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  for (const tick of [0, scale / 2, scale]) {
-    const y = plotY(tick, scale, box);
-    ctx.fillText(String(Math.round(tick)), box.left - 8, y);
+  for (const tick of axisTicks(axis)) {
+    const y = plotY(tick, axis, box);
+    ctx.fillText(String(tick), box.left - 8, y);
   }
 }
 
@@ -173,6 +183,10 @@ export function ClickGraph({
   fog,
   remainingMs,
   durationMs,
+  startedAt,
+  endsAt,
+  revealUntil,
+  clockSkew = 0,
   paused,
   revealing,
   urgent,
@@ -192,6 +206,10 @@ export function ClickGraph({
   fog: boolean;
   remainingMs: number;
   durationMs: number;
+  startedAt: number;
+  endsAt: number;
+  revealUntil: number | null;
+  clockSkew?: number;
   paused: boolean;
   revealing: boolean;
   urgent: boolean;
@@ -203,51 +221,100 @@ export function ClickGraph({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+  const clockRef = useRef<HTMLElement>(null);
+  const marksRef = useRef<HTMLDivElement>(null);
   const seriesRef = useRef<ClickSample[]>([]);
   const heldRef = useRef(totals);
   const roundRef = useRef(roundId);
+  const lastTRef = useRef(0);
+  const scaleRef = useRef(1);
+  const pausedTRef = useRef<number | null>(null);
+  const pausedLeftRef = useRef<number | null>(null);
+  const drawnRef = useRef(totals);
+  const sizeRef = useRef({ w: 640, h: 280 });
+  const clockHold = useRef<RoundClock>({
+    perf: 0,
+    remaining: Math.max(0, remainingMs),
+    duration: Math.max(1, durationMs),
+  });
   const drawRef = useRef({
     buttonIds,
     totals,
     remainingMs,
     durationMs,
+    startedAt,
+    endsAt,
+    revealUntil,
+    clockSkew,
     fog,
     urgent,
     revealing,
+    paused,
     winners,
   });
-  const [size, setSize] = useState({ w: 640, h: 280 });
+  const seatsRef = useRef(seats);
+  seatsRef.current = seats;
+  clockHold.current = syncRoundClock(
+    clockHold.current,
+    Math.max(0, remainingMs),
+    Math.max(1, durationMs),
+    performance.now(),
+  );
 
   if (roundRef.current !== roundId) {
     seriesRef.current = [];
     heldRef.current = totals;
     roundRef.current = roundId;
+    lastTRef.current = 0;
+    scaleRef.current = 1;
+    pausedTRef.current = null;
+    pausedLeftRef.current = null;
+    clockHold.current = {
+      perf: performance.now(),
+      remaining: Math.max(0, remainingMs),
+      duration: Math.max(1, durationMs),
+    };
   }
   if (!fog) heldRef.current = totals;
   const drawnTotals = holdTotals(totals, heldRef.current, fog);
-  seriesRef.current = pushSample(
-    seriesRef.current,
-    { t: elapsed01(remainingMs, durationMs), totals: drawnTotals },
-    buttonIds,
-  );
+  drawnRef.current = drawnTotals;
+  const totalsKey = buttonIds.map((id) => `${id}:${drawnTotals[id] ?? 0}`).join("|");
 
   drawRef.current = {
     buttonIds,
     totals: drawnTotals,
     remainingMs,
     durationMs,
+    startedAt,
+    endsAt,
+    revealUntil,
+    clockSkew,
     fog,
     urgent,
     revealing,
+    paused,
     winners,
   };
+
+  useEffect(() => {
+    seriesRef.current = pushSample(
+      seriesRef.current,
+      { t: lastTRef.current, totals: drawnRef.current },
+      buttonIds,
+    );
+  }, [buttonIds, totalsKey]);
 
   useEffect(() => {
     const node = frameRef.current;
     if (!node) return;
     const fit = () => {
       const rect = node.getBoundingClientRect();
-      setSize({ w: Math.max(240, rect.width), h: Math.max(220, rect.height) });
+      const w = Math.max(240, Math.round(rect.width));
+      const h = Math.max(220, Math.round(rect.height));
+      const prev = sizeRef.current;
+      if (Math.abs(prev.w - w) < 2 && Math.abs(prev.h - h) < 2) return;
+      sizeRef.current = { w, h };
     };
     fit();
     const observer = new ResizeObserver(fit);
@@ -260,6 +327,31 @@ export function ClickGraph({
     const tick = () => {
       const canvas = canvasRef.current;
       const snap = drawRef.current;
+      const size = sizeRef.current;
+      const read = readRoundClock(clockHold.current, performance.now());
+      let t = read.t;
+      let left = read.left;
+      if (snap.paused) {
+        if (pausedTRef.current == null) {
+          pausedTRef.current = t;
+          pausedLeftRef.current = left;
+        }
+        t = pausedTRef.current;
+        left = pausedLeftRef.current ?? 0;
+      } else {
+        pausedTRef.current = null;
+        pausedLeftRef.current = null;
+        if (snap.revealing) t = 1;
+      }
+      lastTRef.current = t;
+      scaleRef.current = holdScale(scaleRef.current, graphScale(snap.totals, snap.buttonIds));
+      const pct = snap.revealing ? 0 : timeBarPct(left, Math.max(1, snap.durationMs));
+      if (fillRef.current) {
+        fillRef.current.style.transform = `scaleX(${pct / 100})`;
+      }
+      if (clockRef.current) {
+        clockRef.current.textContent = snap.paused ? "Paused" : formatGraphClock(left);
+      }
       if (canvas) {
         drawChart(
           canvas,
@@ -268,28 +360,41 @@ export function ClickGraph({
           seriesRef.current,
           snap.buttonIds,
           snap.totals,
-          elapsed01(snap.remainingMs, snap.durationMs),
+          t,
+          scaleRef.current,
           snap.fog,
           snap.urgent,
           snap.revealing,
           snap.winners,
         );
       }
+      const layer = marksRef.current;
+      if (layer) {
+        const box = plotBox(size.w, size.h);
+        const marks = headMarks(
+          snap.buttonIds,
+          seatsRef.current,
+          snap.totals,
+          t,
+          scaleRef.current,
+          box,
+          snap.fog,
+        );
+        for (const child of layer.children) {
+          const node = child as HTMLElement;
+          const mark = marks.find((item) => item.id === node.dataset.color);
+          if (!mark) continue;
+          node.style.left = `${mark.x}px`;
+          node.style.top = `${mark.y}px`;
+          node.classList.add("is-ready");
+        }
+      }
       frame = window.requestAnimationFrame(tick);
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [size.h, size.w]);
+  }, []);
 
-  const t = elapsed01(remainingMs, durationMs);
-  const pct = timeBarPct(remainingMs, durationMs);
-  const clock = paused ? "Paused" : formatClock(Math.max(0, remainingMs));
-  const box = plotBox(size.w, size.h);
-  const scale = niceMax(graphScale(drawnTotals, buttonIds));
-  const marks = useMemo(
-    () => headMarks(buttonIds, seats, drawnTotals, t, scale, box, fog),
-    [box, buttonIds, drawnTotals, fog, scale, seats, t],
-  );
   const lead = !fog && leader[0] ? colorById(leader[0]) : null;
   const take = revealing && winners[0] ? colorById(winners[0]) : null;
 
@@ -301,12 +406,20 @@ export function ClickGraph({
       <div className="click-crash" ref={frameRef}>
         <div className="click-graph-time">
           <div className={`timer-track ${urgent ? "is-urgent" : ""}`} aria-hidden>
-            <div className="timer-fill" style={{ width: `${pct}%` }} />
+            <div
+              className="timer-fill"
+              ref={fillRef}
+              style={{
+                transform: `scaleX(${timeBarPct(Math.max(0, remainingMs), Math.max(1, durationMs)) / 100})`,
+              }}
+            />
           </div>
         </div>
         <canvas ref={canvasRef} className="click-crash-canvas" />
         <div className="click-crash-hud">
-          <strong>{clock}</strong>
+          <strong ref={clockRef}>
+            {paused ? "Paused" : formatGraphClock(Math.max(0, remainingMs))}
+          </strong>
           <span>
             {paused
               ? "Paused"
@@ -319,29 +432,31 @@ export function ClickGraph({
                     : "Open"}
           </span>
         </div>
-        <div className="click-crash-marks">
-          {marks.map((mark) => {
-            const color = colorById(mark.id);
+        <div className="click-crash-marks" ref={marksRef}>
+          {buttonIds.map((id) => {
+            const stacks = stacksForColor(seats, id, fog);
+            const extra = Math.max(0, stacks.length - 4);
+            if (stacks.length === 0 && (drawnTotals[id] ?? 0) <= 0) return null;
+            const color = colorById(id);
             return (
               <div
                 className="click-crash-mark"
-                key={mark.id}
+                data-color={id}
+                key={id}
                 style={
                   {
                     "--pad": color.hex,
                     "--ink": color.ink,
-                    left: mark.x,
-                    top: mark.y,
                   } as CSSProperties
                 }
               >
-                {mark.stacks.map((seat) => (
+                {stacks.slice(0, 4).map((seat) => (
                   <b className={seat.you ? "is-you" : ""} key={seat.userId}>
                     @{seat.username}
                     <em>{seat.clicks}</em>
                   </b>
                 ))}
-                {mark.extra > 0 ? <b>+{mark.extra}</b> : null}
+                {extra > 0 ? <b>+{extra}</b> : null}
               </div>
             );
           })}

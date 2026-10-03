@@ -9,6 +9,8 @@ import {
   sendQueuedWithdrawal,
   sweepDueInboxes,
 } from "@/lib/chain";
+import { notify } from "@/lib/notifications";
+import { reportReply } from "@/lib/report-desk";
 import {
   hideReportedChat,
   listReportedPlayers,
@@ -42,6 +44,9 @@ import {
 } from "@/lib/staff";
 import { listStaffLogs, writeStaffLog } from "@/lib/staff-log";
 import { requireStaff } from "@/lib/staff-auth";
+import { listStaffBids } from "@/lib/house-job-bids";
+import { grantManager, revokeManager } from "@/lib/house-managers";
+import { grantReviewer, revokeReviewer } from "@/lib/house-reviewers";
 import { withStore, withStoreRead } from "@/lib/store";
 import type { Tx } from "@/lib/types";
 
@@ -86,6 +91,13 @@ export async function GET(request: Request) {
       return NextResponse.json({
         reports: await listReports(),
         reported: await listReportedPlayers(),
+        house,
+        you,
+      });
+    }
+    if (tab === "posts") {
+      return NextResponse.json({
+        posts: await listStaffBids(),
         house,
         you,
       });
@@ -208,6 +220,30 @@ export async function POST(request: Request) {
       await writeStaffLog(actor, body.action, body.userId, body.note ?? "");
       return NextResponse.json({ users });
     }
+    if (body.action === "grant-manager" || body.action === "revoke-manager") {
+      if (!body.userId) throw new Error("Pick a player.");
+      const users = await withStore((store) => {
+        const user = store.users[body.userId!];
+        if (!user) throw new Error("That player was not found.");
+        if (body.action === "grant-manager") grantManager(store, user.username);
+        else revokeManager(store, user.username);
+        return searchStaffUsers(store, user.username);
+      });
+      await writeStaffLog(actor, body.action, body.userId, body.note ?? "");
+      return NextResponse.json({ users });
+    }
+    if (body.action === "grant-reviewer" || body.action === "revoke-reviewer") {
+      if (!body.userId) throw new Error("Pick a player.");
+      const users = await withStore((store) => {
+        const user = store.users[body.userId!];
+        if (!user) throw new Error("That player was not found.");
+        if (body.action === "grant-reviewer") grantReviewer(store, user.username);
+        else revokeReviewer(store, user.username);
+        return searchStaffUsers(store, user.username);
+      });
+      await writeStaffLog(actor, body.action, body.userId, body.note ?? "");
+      return NextResponse.json({ users });
+    }
     if (body.action === "adjust") {
       if (!body.userId) throw new Error("Pick a player.");
       const users = await withStore((store) => {
@@ -237,6 +273,16 @@ export async function POST(request: Request) {
       } else {
         await setReportStatus(row.id, "dismissed");
       }
+      const reply = reportReply(body.action === "hide-report");
+      await withStore((store) => {
+        if (!row.reporterId || !store.users[row.reporterId]) return;
+        notify(store, row.reporterId, {
+          kind: "system",
+          title: reply.title,
+          body: reply.body,
+          href: "/notifications",
+        });
+      });
       await writeStaffLog(actor, body.action, body.id, row.roomSlug ? `/${row.roomSlug}` : row.kind);
       return NextResponse.json({
         reports: await listReports(),

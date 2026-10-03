@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionToken, requireUser, requireVerified } from "@/lib/auth";
 import { jsonError } from "@/lib/http";
+import { notifyNewReport } from "@/lib/house-reviewers";
 import { insertReport, reportChat } from "@/lib/reports";
 import { withStore } from "@/lib/store";
 
@@ -20,6 +21,9 @@ export async function POST(
       return reportChat(store, slug, user.id, body.eventId ?? "");
     });
     await insertReport(row);
+    await withStore((store) => {
+      notifyNewReport(store, row);
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return jsonError(error);

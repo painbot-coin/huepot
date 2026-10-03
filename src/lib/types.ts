@@ -1,3 +1,4 @@
+import type { Pact, ProjectPay, Task } from "@/lib/atrium/types";
 import type { ColorId } from "./colors";
 import type { NetworkId } from "./networks";
 import type { PlayerRecord } from "./record";
@@ -13,7 +14,10 @@ export type TxType =
   | "rake"
   | "invite"
   | "bonus"
-  | "sit";
+  | "sit"
+  | "mark"
+  | "contract"
+  | "hire";
 export type NoticeKind =
   | "welcome"
   | "verify"
@@ -151,8 +155,24 @@ export type User = {
   headline: string;
   about: string;
   location: string;
+  /** Who they sit as: game, ai, gamer, better. Empty means no pick. */
+  seat?: string;
+  /** Reads hire applications and is notified when someone applies. */
+  manager?: boolean;
+  /** Keeps the report desk and is notified when a seat is named. */
+  reviewer?: boolean;
+  /** House pit this seat names as theirs. Empty means no pick. */
+  sitSlug?: string;
+  /** Doors out — X, Telegram, Discord. Empty strings mean none. */
+  doors?: { x?: string; telegram?: string; discord?: string };
   /** "" for initials, "hue:<id>" for a house colour, or an uploaded URL. */
   avatar?: string;
+  /** Language this seat picked. Empty until they pick one. */
+  locale?: string;
+  /** The book this seat names. Empty until they name one. */
+  book?: string;
+  /** Same rules as avatar. Empty means the house plate. */
+  cover?: string;
   /** When the name last changed, so it cannot be churned. */
   nameChangedAt?: number;
   /** Names this account used before, newest first. */
@@ -203,6 +223,9 @@ export type StoreData = {
   round: Round | null;
   roundNumber: number;
   txs: Tx[];
+  pacts: Pact[];
+  hires: Task[];
+  pays: ProjectPay[];
 };
 
 export type PublicWallet = {
@@ -261,6 +284,12 @@ export type PublicUser = {
   inviteEarned: number;
   inviteEarnedToday: number;
   inviteDailyLeft: number;
+  seat?: string;
+  avatar?: string;
+  cover?: string;
+  headline?: string;
+  manager?: boolean;
+  reviewer?: boolean;
 };
 
 export type PublicSession = {
@@ -390,13 +419,31 @@ export type TakeWinner = {
 
 export type SearchHit = {
   rooms: PublicRoomCard[];
-  users: { username: string; rooms: { slug: string; name: string }[] }[];
+  users: {
+    username: string;
+    avatar?: string;
+    headline?: string;
+    why?: string;
+    rooms: { slug: string; name: string }[];
+  }[];
 };
 
 export type CompanySit = {
   username: string;
   slug: string;
   name: string;
+};
+
+export type HallAlike = {
+  username: string;
+  avatar: string;
+  headline: string;
+  why: string;
+};
+
+export type HallHome = {
+  lastPit: { slug: string; name: string; sitting: boolean } | null;
+  alike: HallAlike[];
 };
 
 export type LobbyState = {
@@ -408,6 +455,8 @@ export type LobbyState = {
   fogCup: FogCup;
   /** Friends with a click on a live round. Empty means do not mention company. */
   companySitting: CompanySit[];
+  /** Signed-in hall strip. Null for a guest or a seat with nothing to show. */
+  hallHome: HallHome | null;
 };
 
 export type Friendship = {
@@ -424,18 +473,26 @@ export type NetworkCard = {
   username: string;
   avatar: string;
   headline: string;
+  seat: string;
   createdAt: number;
   online: boolean;
   lastSeen: number | null;
   room: { slug: string; name: string } | null;
   relation: FriendRelation;
   friends: number;
+  /** Language they picked. Empty until they pick one. */
+  tongue?: string;
+  /** A book they sit, when the find asked for one. */
+  book?: string;
+  /** Why this seat was named. Empty when there is no likeness. */
+  why?: string;
 };
 
 export type NetworkYou = {
   username: string;
   avatar: string;
   headline: string;
+  seat: string;
   pendingIn: number;
   unreadMessages: number;
   friends: number;
@@ -445,6 +502,7 @@ export type NetworkState = {
   now: number;
   tab: NetworkTab;
   q: string;
+  seat: string;
   pendingIn: number;
   you: NetworkYou;
   cards: NetworkCard[];
@@ -453,6 +511,8 @@ export type NetworkState = {
 export type NetworkPost = {
   id: string;
   username: string;
+  /** Who wrote the line: a person, the house, or a book. */
+  writer: "seat" | "house" | "book";
   avatar: string;
   headline: string;
   body: string;
@@ -468,9 +528,11 @@ export type NetworkPost = {
   likes: number;
   liked: boolean;
   relation: FriendRelation;
+  kind: string;
   comments: {
     id: string;
     username: string;
+    writer: "seat" | "house" | "book";
     avatar: string;
     body: string;
     createdAt: number;
@@ -494,6 +556,17 @@ export type NetworkMessage = {
   createdAt: number;
 };
 
+export type SeatNote = {
+  id: string;
+  username: string;
+  avatar: string;
+  headline: string;
+  body: string;
+  mark: string;
+  createdAt: number;
+  you: boolean;
+};
+
 export type NetworkProfile = {
   username: string;
   avatar: string;
@@ -511,4 +584,13 @@ export type NetworkProfile = {
   place: number | null;
   lastTakes: PublicTake[];
   inviteCode: string;
+  cover: string;
+  sitSlug: string;
+  doors: { x: string; telegram: string; discord: string };
+  seat: string;
+  alike: { username: string; avatar: string; headline: string; why: string }[];
+  /** The book this seat names. Empty until they name one. */
+  book: string;
+  notes: SeatNote[];
+  yourNote: SeatNote | null;
 };

@@ -20,6 +20,8 @@ function post(input: Partial<NetworkPost> & { id: string; username: string }): N
     likes: 0,
     liked: false,
     relation: "none",
+    kind: "",
+    writer: "seat",
     comments: [],
     ...input,
   };

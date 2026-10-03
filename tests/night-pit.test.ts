@@ -11,7 +11,7 @@ test("Night has its own hall voice", () => {
   const lightning = hallFor("lightning");
   const fog = hallFor("fog");
   assert.ok(night);
-  assert.equal(night?.kicker, "Night hall");
+  assert.equal(night?.kicker, "Night table");
   assert.match(night?.enter ?? "", /eight/i);
   assert.match(night?.enter ?? "", /Fifteen/i);
   assert.match(lightning?.enter ?? "", /Fifteen/i);

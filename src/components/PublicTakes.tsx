@@ -6,6 +6,7 @@ import { IconPot } from "@/components/Icons";
 import { MiniCoin } from "@/components/MiniCoin";
 import { classicHourClock, classicHourUtc } from "@/lib/classic-hour";
 import { formatUsdt } from "@/lib/money";
+import { sitDoorLabel } from "@/lib/take-copy";
 import type { PublicTake } from "@/lib/types";
 
 function ageLabel(at: number, now: number) {
@@ -16,6 +17,10 @@ function ageLabel(at: number, now: number) {
   const hours = Math.floor(mins / 60);
   if (hours < 48) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function prefetchTable() {
+  void import("@/components/GameClient");
 }
 
 export function PublicTakes() {
@@ -50,23 +55,31 @@ export function PublicTakes() {
         <p className="strip-empty">
           <IconPot />
           A take lands when one color beats another.{" "}
-          <Link href="/rooms/classic">Sit Classic {classicHourClock(classicHourUtc())}</Link>
+          <Link href="/rooms/classic">Play Classic {classicHourClock(classicHourUtc())}</Link>
           .
         </p>
       ) : (
         <ul>
           {takes.map((item) => (
             <li key={item.id}>
-              <Link href={`/take/${item.id}`}>
-                {/* The coin says "this is a colour" faster than any wording can. */}
+              <Link
+                className="take-sit"
+                href={`/rooms/${item.slug}`}
+                onFocus={prefetchTable}
+                onMouseEnter={prefetchTable}
+              >
                 <span className="take-coins" aria-hidden="true">
                   {(item.winners ?? []).map((id) => (
                     <MiniCoin id={id} key={id} size={14} />
                   ))}
                 </span>
                 <strong>{item.names}</strong>
-                took {formatUsdt(item.amount)} · {item.roomName}
+                took {formatUsdt(item.amount)}
+                <em>{sitDoorLabel(item.slug, item.roomName)}</em>
                 <span>{ageLabel(item.at, now)}</span>
+              </Link>
+              <Link className="take-open" href={`/take/${item.id}`}>
+                Take
               </Link>
             </li>
           ))}

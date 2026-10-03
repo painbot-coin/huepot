@@ -23,7 +23,7 @@ function cinzel() {
 
 function hueOf(names: string) {
   const first = names.split("&")[0]?.trim().toLowerCase() ?? "";
-  return COLORS.find((color) => color.name.toLowerCase() === first)?.hex ?? "#ffd27a";
+  return COLORS.find((color) => color.name.toLowerCase() === first)?.hex ?? "#2f9e62";
 }
 
 export default async function TakeImage({
@@ -66,7 +66,7 @@ export default async function TakeImage({
           // Gradients only. A photographic plate here pushed the PNG past
           // 700kB, and a share image has to load fast.
           backgroundColor: "#08070f",
-          backgroundImage: `radial-gradient(900px 620px at 78% 18%, ${hue}2e, transparent 70%), radial-gradient(700px 500px at 8% 96%, #ffd27a1a, transparent 70%)`,
+          backgroundImage: `radial-gradient(900px 620px at 78% 18%, ${hue}2e, transparent 70%), radial-gradient(700px 500px at 8% 96%, #8ee4a81a, transparent 70%)`,
           color: "#f6f3ec",
           fontFamily: "Cinzel",
         }}
@@ -93,7 +93,7 @@ export default async function TakeImage({
             padding: "64px 76px 58px 98px",
           }}
         >
-          <div style={{ display: "flex", fontSize: 27, letterSpacing: 12, color: "#ffd27a" }}>
+          <div style={{ display: "flex", fontSize: 27, letterSpacing: 12, color: "#8ee4a8" }}>
             HUEPOT
           </div>
 
@@ -153,7 +153,7 @@ export default async function TakeImage({
             <div style={{ display: "flex", fontSize: 26, letterSpacing: 4, color: "#9a9aa8" }}>
               BIGGEST COLOR TAKES THE POT
             </div>
-            <div style={{ display: "flex", fontSize: 31, letterSpacing: 3, color: "#ffd27a" }}>
+            <div style={{ display: "flex", fontSize: 31, letterSpacing: 3, color: "#8ee4a8" }}>
               HUEPOT.NET
             </div>
           </div>

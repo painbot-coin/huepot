@@ -33,6 +33,16 @@ export function formatClock(ms: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+export function formatGraphClock(ms: number) {
+  const safe = Math.max(0, ms);
+  if (safe >= 60_000) {
+    const minutes = Math.floor(safe / 60_000);
+    const seconds = (safe % 60_000) / 1000;
+    return `${minutes}:${seconds.toFixed(1).padStart(4, "0")}`;
+  }
+  return (safe / 1000).toFixed(1);
+}
+
 export function formatWait(ms: number) {
   const safe = Math.max(0, ms);
   const total = Math.ceil(safe / 1000);

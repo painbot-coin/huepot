@@ -1,7 +1,10 @@
 "use client";
+import { HouseFloor, floorYou } from "@/components/HouseFloor";
+import { HouseButton, HouseField, HouseTabs } from "@/components/HouseUi";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { Avatar } from "@/components/Avatar";
 import { LogoutButton } from "@/components/LogoutButton";
 import { publishBank } from "@/lib/bank-sync";
 import { COOL_OFF_HOURS, SELF_EXCLUDE_DAYS } from "@/lib/limits";
@@ -9,8 +12,11 @@ import { CopyInvite } from "@/components/CopyInvite";
 import { inviteSitLead } from "@/lib/invite-copy";
 import { lastInviteCredit } from "@/lib/invite-rake";
 import { hueExplorerTx, type HueClaim } from "@/lib/hue-claim";
+import { hueHexOf } from "@/lib/hues";
 import { formatUsdt } from "@/lib/money";
+import { seatLabel, seatTag } from "@/lib/house-seats";
 import type { ClassicHour, FogCup, NightHour, PublicSession, PublicUser, Tx } from "@/lib/types";
+import { PAGE } from "@/lib/voice";
 
 const TX_LABEL: Record<Tx["type"], string> = {
   deposit: "In",
@@ -21,22 +27,66 @@ const TX_LABEL: Record<Tx["type"], string> = {
   adjust: "Staff",
   rake: "House",
   invite: "Invite",
-  bonus: "Sit chip",
-  sit: "Sit",
+  bonus: "Play credit",
+  sit: "Play",
+  mark: "Model",
+  contract: "Contract",
+  hire: "Hire",
 };
+
+const TABS = [
+  { id: "you", label: "Profile" },
+  { id: "vault", label: "Wallet" },
+  { id: "invite", label: "Invite" },
+  { id: "standing", label: "Standing" },
+  { id: "ledger", label: "Activity" },
+  { id: "limits", label: "Limits" },
+  { id: "signin", label: "Sign-in" },
+] as const;
+
+type AccountTab = (typeof TABS)[number]["id"];
+
+function parseTab(raw: string | null | undefined): AccountTab {
+  const id = (raw ?? "").trim().toLowerCase();
+  return TABS.some((tab) => tab.id === id) ? (id as AccountTab) : "you";
+}
+
+function coverStyle(cover: string): CSSProperties {
+  if (cover.startsWith("hue:")) {
+    const hex = hueHexOf(cover.slice(4));
+    return hex ? { background: hex } : {};
+  }
+  if (cover.startsWith("https://")) {
+    return {
+      backgroundImage: `url("${cover}")`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
+  }
+  return {};
+}
+
+function goTab(tab: AccountTab) {
+  const href = tab === "you" ? "/account" : `/account?tab=${tab}`;
+  window.history.replaceState(null, "", href);
+}
 
 export function AccountClient() {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [hour, setHour] = useState<ClassicHour | null>(null);
   const [night, setNight] = useState<NightHour | null>(null);
   const [cup, setCup] = useState<FogCup | null>(null);
+  const [tab, setTab] = useState<AccountTab>("you");
+  const [place, setPlace] = useState<number | null>(null);
+  const [coin, setCoin] = useState(0);
 
   useEffect(() => {
+    setTab(parseTab(new URLSearchParams(window.location.search).get("tab")));
     void (async () => {
       const response = await fetch("/api/auth/me");
       const data = (await response.json()) as { user: PublicUser | null };
       if (!data.user) {
-        window.location.href = "/signin";
+        window.location.href = "/signin?next=/account";
         return;
       }
       setUser(data.user);
@@ -57,123 +107,254 @@ export function AccountClient() {
         if (data.fogCup) setCup(data.fogCup);
       })
       .catch(() => undefined);
+    void fetch("/api/hue")
+      .then((response) => response.json() as Promise<{ coin?: number; place?: number | null }>)
+      .then((data) => {
+        setCoin(data.coin ?? 0);
+        setPlace(typeof data.place === "number" ? data.place : null);
+      })
+      .catch(() => undefined);
   }, []);
+
+  function open(next: AccountTab) {
+    setTab(next);
+    goTab(next);
+  }
 
   if (!user) {
     return (
-      <main className="app-page">
-        <p className="hall-kicker">The vault</p>
-        <h1 className="font-display text-4xl text-white">Account</h1>
-        <p className="app-lead">Opening your vault…</p>
-      </main>
+      <HouseFloor kicker={PAGE.account}>
+        <p className="account-loading">Opening your account…</p>
+      </HouseFloor>
     );
   }
 
+  const me = `/network/u/${encodeURIComponent(user.username)}`;
+  const seat = seatLabel(user.seat);
+  const tag = seatTag(user.seat);
+
   return (
-    <main className="app-page">
-      <p className="hall-kicker">The vault</p>
-      <h1 className="font-display text-4xl text-white">Account</h1>
-      <p className="app-lead">
-        Signed in as <strong className="text-zinc-200">@{user.username}</strong>
-      </p>
-
-      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StandingCard />
-        <div className="app-card is-flush">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-            Balance
+    <HouseFloor
+      kicker={PAGE.account}
+      side={
+        <div>
+          <p className="lobby-label">This account</p>
+          <p className="account-side-stat">
+            <strong>{formatUsdt(user.balance)} USDT</strong>
+            <em>Balance</em>
           </p>
-          <p className="font-display text-3xl text-white">
-            {formatUsdt(user.balance)} USDT
+          <p className="account-side-stat">
+            <strong>{formatUsdt(user.bonus)}</strong>
+            <em>Sit chips · play only</em>
           </p>
+          <p className="account-side-stat">
+            <strong>{place ? `#${place}` : "—"}</strong>
+            <em>{Math.floor(coin).toLocaleString()} HUE on the board</em>
+          </p>
+          <p className="account-side-stat">
+            <strong className="is-code">{user.inviteCode || "—"}</strong>
+            <em>Invite · rake share only</em>
+          </p>
+          <div className="li-profile-act">
+            <HouseButton ghost href="/jobs/you">
+              Applications
+            </HouseButton>
+            {user.manager || user.reviewer ? (
+              <HouseButton ghost href="/manage">
+                Manage
+              </HouseButton>
+            ) : null}
+            <HouseButton ghost href="/board">
+              Leaderboard
+            </HouseButton>
+            <HouseButton ghost href="/rooms/classic">
+              Classic
+            </HouseButton>
+          </div>
         </div>
-        <div className="app-card is-flush">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-            Sit chips
-          </p>
-          <p className="font-display text-3xl text-white">
-            {formatUsdt(user.bonus)}{" "}
-            <span className="text-base text-zinc-500">USDT</span>
-          </p>
-          <p className="mt-2 text-sm text-zinc-500">
-            {user.bonus > 0
-              ? "Play only. Not withdrawable."
-              : "Next chip at 00:00 UTC. Play only."}
-          </p>
-        </div>
-        <div className="app-card is-flush">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-            Invite earned
-          </p>
-          <p className="font-display text-3xl text-white">
-            {formatUsdt(user.inviteEarned)}{" "}
-            <span className="text-base text-zinc-500">USDT</span>
-          </p>
-        </div>
-      </section>
+      }
+      you={floorYou(user)}
+    >
+      <div className="house-stage">
+        <section className="li-card overflow-hidden">
+          <div
+            className={`li-cover is-tall${user.cover?.startsWith("https://") ? " has-pic" : ""}${user.cover?.startsWith("hue:") ? " has-hue" : ""}`}
+            style={coverStyle(user.cover ?? "")}
+          />
+          <div className="li-profile">
+            <div className="li-profile-top">
+              <Avatar avatar={user.avatar} size="lg" username={user.username} />
+              <div className="li-profile-id">
+                <h1>@{user.username}</h1>
+                <p className="li-head">{user.headline || seat || "Huepot player"}</p>
+                {tag ? (
+                  <p className="li-profile-place">
+                    <em className="seat-tag">{tag}</em>
+                    {seat}
+                  </p>
+                ) : (
+                  <p className="li-profile-place">
+                    <Link href="/seat?next=/account">Pick a role</Link>
+                  </p>
+                )}
+                <p className="li-profile-meta">
+                  {user.email} · Google · Joined{" "}
+                  {new Date(user.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            <div className="li-profile-act">
+              <HouseButton href={me}>
+                View profile
+              </HouseButton>
+              <HouseButton href="/invest">
+                Add USDT
+              </HouseButton>
+              <HouseButton ghost href="/withdraw">
+                Withdraw
+              </HouseButton>
+              <LogoutButton />
+            </div>
+          </div>
+        </section>
 
-      <p className="mt-6 text-sm text-zinc-500">
-        {user.email} · Google · since{" "}
-        {new Date(user.createdAt).toLocaleDateString()}
-      </p>
+        <nav aria-label="Account sections" className="account-tabs">
+          <HouseTabs
+            items={TABS.map((item) => ({ id: item.id, label: item.label }))}
+            onChange={(id) => open(id as AccountTab)}
+            value={tab}
+          />
+        </nav>
 
-      <div className="app-actions">
-        <Link className="chip-btn" href="/invest">
-          Add USDT
-        </Link>
-        <Link className="chip-btn chip-btn-ghost" href="/withdraw">
-          Withdraw
-        </Link>
-        <LogoutButton />
+        <section className="li-card account-pane">
+          {tab === "you" ? <ProfileCard onUser={setUser} user={user} /> : null}
+          {tab === "vault" ? <VaultCard user={user} /> : null}
+          {tab === "invite" ? (
+            <InviteCard cup={cup} hour={hour} night={night} user={user} />
+          ) : null}
+          {tab === "standing" ? (
+            <StandingPane coin={coin} place={place} withdrawAddress={user.withdrawAddress} />
+          ) : null}
+          {tab === "ledger" ? <LedgerCard txs={user.txs} /> : null}
+          {tab === "limits" ? <LimitsCard onUser={setUser} user={user} /> : null}
+          {tab === "signin" ? <SecurityCard user={user} /> : null}
+        </section>
       </div>
+    </HouseFloor>
+  );
+}
 
-      <InviteCard cup={cup} hour={hour} night={night} user={user} />
-      <HueClaimCard withdrawAddress={user.withdrawAddress} />
-      <ProfileCard user={user} onUser={setUser} />
-      <LimitsCard user={user} onUser={setUser} />
-      <SecurityCard user={user} />
-      <LedgerCard txs={user.txs} />
+function VaultCard({ user }: { user: PublicUser }) {
+  const live = user.wallets.filter((wallet) => wallet.live);
+  return (
+    <div className="account-block">
+      <p className="hall-kicker">Wallet</p>
+      <h2>USDT on this account</h2>
+      <p>
+        Cash is USDT on BNB Chain. Play credits are play-only and not
+        withdrawable. Invite is rake share only.
+      </p>
+      <div className="account-stats">
+        <div>
+          <em>Balance</em>
+          <strong>{formatUsdt(user.balance)} USDT</strong>
+        </div>
+        <div>
+          <em>Play credits</em>
+          <strong>{formatUsdt(user.bonus)}</strong>
+          <span>
+            {user.bonus > 0 ? "Play only. Not withdrawable." : "Next chip at 00:00 UTC."}
+          </span>
+        </div>
+        <div>
+          <em>Invite earned</em>
+          <strong>{formatUsdt(user.inviteEarned)} USDT</strong>
+        </div>
+      </div>
+      <p className="guide-cta">
+        <HouseButton href="/invest">
+          Add USDT
+        </HouseButton>
+        <HouseButton ghost href="/withdraw">
+          Withdraw
+        </HouseButton>
+      </p>
+      {live.length ? (
+        <ul className="account-wallets">
+          {live.map((wallet) => (
+            <li key={wallet.id}>
+              <p>
+                {wallet.name}{" "}
+                <span>
+                  {wallet.standard} {wallet.asset} · live
+                </span>
+              </p>
+              <code>{wallet.address}</code>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="account-empty">No live deposit door yet. Add USDT to open one.</p>
+      )}
+    </div>
+  );
+}
 
-      <ul className="mt-10 space-y-2">
-        {user.wallets
-          .filter((wallet) => wallet.live)
-          .map((wallet) => (
-          <li
-            className="ledger-row is-stack"
-            key={wallet.id}
-          >
-            <p className="text-sm text-white">
-              {wallet.name}{" "}
-              <span className="text-zinc-500">
-                {wallet.standard} {wallet.asset} · live
-              </span>
-            </p>
-            <p className="mt-1 break-all font-mono text-xs text-zinc-500">
-              {wallet.address}
-            </p>
-          </li>
-        ))}
-      </ul>
-    </main>
+function StandingPane({
+  coin,
+  place,
+  withdrawAddress,
+}: {
+  coin: number;
+  place: number | null;
+  withdrawAddress: string;
+}) {
+  return (
+    <div className="account-block">
+      <p className="hall-kicker">Standing</p>
+      <h2>On the board</h2>
+      <p>
+        HUE is standing from play. Not money. No price. Testnet claim is a
+        mark, not a cash-out.
+      </p>
+      <div className="account-stats">
+        <div>
+          <em>Place</em>
+          <strong>{place ? `#${place}` : "—"}</strong>
+        </div>
+        <div>
+          <em>HUE</em>
+          <strong>{Math.floor(coin).toLocaleString()}</strong>
+        </div>
+      </div>
+      <p className="guide-cta">
+        <HouseButton ghost href="/board">
+          The board
+        </HouseButton>
+        <HouseButton ghost href="/rooms/classic">
+          Play Classic
+        </HouseButton>
+      </p>
+      <HueClaimCard withdrawAddress={withdrawAddress} />
+    </div>
   );
 }
 
 const LEDGER_FILTERS: { id: string; label: string; types?: Tx["type"][] }[] = [
   { id: "all", label: "All" },
   { id: "in", label: "In", types: ["deposit", "invite", "bonus"] },
-  { id: "out", label: "Out", types: ["withdraw"] },
+  { id: "out", label: "Out", types: ["withdraw", "mark"] },
   { id: "click", label: "Click", types: ["click"] },
   { id: "win", label: "Win", types: ["payout"] },
   { id: "back", label: "Back", types: ["refund"] },
   { id: "staff", label: "Staff", types: ["adjust", "rake"] },
+  { id: "work", label: "Work", types: ["contract", "hire"] },
 ];
 
 function txSigned(tx: Tx) {
-  // Sit chips are not cash. A bonus grant must not lift the running bank.
-  // Sit rows are signed and offset a click or a refund, same as the books.
   if (tx.type === "bonus") return 0;
-  // An adjust already carries its own sign; the rest take it from the type.
-  const out = tx.type === "withdraw" || tx.type === "click" || tx.type === "rake";
+  if (tx.type === "contract" || tx.type === "hire") return tx.amount;
+  const out = tx.type === "withdraw" || tx.type === "click" || tx.type === "rake" || tx.type === "mark";
   return out ? -tx.amount : tx.amount;
 }
 
@@ -202,22 +383,20 @@ function InviteCard({
   const last = lastInviteCredit(user.txs);
 
   return (
-    <section className="app-card">
-      <p className="hall-kicker">Bring a seat</p>
-      <h2 className="font-display text-2xl text-white">Invite</h2>
-      <p className="mt-1 text-sm text-zinc-500">
+    <div className="account-block">
+      <p className="hall-kicker">Invite</p>
+      <h2>Invite</h2>
+      <p>
         New Google accounts from your link are tagged once. When they sit and a
         house take is created from their losing clicks, you get 20% of that
-        rake — not their stake, not a bank bonus. Cap {formatUsdt(user.inviteEarnedToday + user.inviteDailyLeft)} USDT
-        per UTC day.
+        rake — not their stake, not a bank bonus. Cap{" "}
+        {formatUsdt(user.inviteEarnedToday + user.inviteDailyLeft)} USDT per UTC
+        day.
       </p>
-      {sit ? <p className="mt-3 text-sm text-zinc-300">{sit}</p> : null}
-      <p className="mt-5 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Your code
-      </p>
-      <p className="mt-2 font-mono text-2xl text-white">{user.inviteCode || "—"}</p>
+      {sit ? <p className="account-note">{sit}</p> : null}
+      <p className="account-code">{user.inviteCode || "—"}</p>
       <CopyInvite
-        className="chip-btn mt-4"
+        className="chip-btn"
         code={user.inviteCode}
         cup={cup}
         hour={hour?.hour}
@@ -225,60 +404,21 @@ function InviteCard({
         night={night?.hour}
       />
       {last ? (
-        <p className="mt-4 text-sm text-zinc-300">
+        <p className="account-note">
           Last credit {formatUsdt(last.amount)} USDT
           {last.from ? ` from @${last.from}` : ""}
           {last.room ? ` · ${last.room}` : ""}
         </p>
       ) : (
-        <p className="mt-4 text-sm text-zinc-500">
+        <p className="account-empty">
           No invite credit yet. It lands after someone from your link sits a
           rake-making take.
         </p>
       )}
-      <p className="mt-2 text-sm text-zinc-400">
-        Today {formatUsdt(user.inviteEarnedToday)} USDT · {formatUsdt(user.inviteDailyLeft)} USDT left
-        today · lifetime {formatUsdt(user.inviteEarned)} USDT
-      </p>
-    </section>
-  );
-}
-
-function StandingCard() {
-  const [coin, setCoin] = useState(0);
-  const [place, setPlace] = useState<number | null>(null);
-  const [booted, setBooted] = useState(false);
-
-  useEffect(() => {
-    void fetch("/api/hue")
-      .then((response) => response.json() as Promise<{ coin?: number; place?: number | null }>)
-      .then((data) => {
-        setCoin(data.coin ?? 0);
-        setPlace(typeof data.place === "number" ? data.place : null);
-      })
-      .catch(() => undefined)
-      .finally(() => setBooted(true));
-  }, []);
-
-  return (
-    <div className="app-card is-flush">
-      <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        On the board
-      </p>
-      <p className="font-display text-3xl text-white">
-        {booted && place ? `#${place}` : booted ? "—" : "…"}
-      </p>
-      <p className="mt-2 text-sm text-zinc-400">
-        {Math.floor(coin).toLocaleString()} HUE
-      </p>
-      <p className="mt-2 text-sm text-zinc-500">
-        <Link className="underline" href="/board">
-          The board
-        </Link>
-        {" · "}
-        <Link className="underline" href="/rooms/classic">
-          Sit Classic
-        </Link>
+      <p className="account-note">
+        Today {formatUsdt(user.inviteEarnedToday)} USDT ·{" "}
+        {formatUsdt(user.inviteDailyLeft)} USDT left today · lifetime{" "}
+        {formatUsdt(user.inviteEarned)} USDT
       </p>
     </div>
   );
@@ -352,55 +492,40 @@ function HueClaimCard({ withdrawAddress }: { withdrawAddress: string }) {
   }
 
   return (
-    <section className="app-card">
-      <p className="hall-kicker">The coin</p>
-      <h2 className="font-display text-2xl text-white">Claim HUE</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Standing from play. Testnet only. Not USDT. No price.
-      </p>
-      <p className="mt-4 font-display text-3xl text-white">
-        {Math.floor(coin).toLocaleString()} HUE
-      </p>
-      <p className="mt-1 text-sm text-zinc-400">
+    <div className="account-claim">
+      <h3>Claim HUE</h3>
+      <p>Standing from play. Testnet only. Not USDT. No price.</p>
+      <p className="account-code is-small">{Math.floor(coin).toLocaleString()} HUE</p>
+      <p className="account-note">
         {booted
           ? configured
             ? `${claimable.toLocaleString()} left to claim`
             : "Send is off until the testnet token and hot key are set."
           : "Opening the book…"}
       </p>
-      <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        BSC testnet address
-      </label>
-      <input
-        className="field mt-2"
+      <HouseField
+        label="BSC testnet address"
         onChange={(event) => setAddress(event.target.value)}
         placeholder="0x…"
         value={address}
       />
-      <button
-        className="chip-btn mt-4"
+      <HouseButton
         disabled={busy || !configured || claimable < 1}
         onClick={() => void claim()}
-        type="button"
       >
         {busy ? "Claiming…" : "Claim on testnet"}
-      </button>
-      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
-      {note ? <p className="mt-3 text-sm text-zinc-300">{note}</p> : null}
+      </HouseButton>
+      {error ? <p className="account-err">{error}</p> : null}
+      {note ? <p className="account-note">{note}</p> : null}
       {claims.length ? (
-        <ul className="mt-5 space-y-2">
+        <ul className="account-claims">
           {claims.map((row) => (
-            <li className="text-sm text-zinc-400" key={row.id}>
+            <li key={row.id}>
               {row.amount} HUE · {row.status}
               {row.txHash ? (
                 <>
                   {" · "}
-                  <a
-                    className="text-zinc-200 underline"
-                    href={hueExplorerTx(row.txHash)}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
+                  <a href={hueExplorerTx(row.txHash)} rel="noreferrer" target="_blank">
                     BscScan
                   </a>
                 </>
@@ -409,7 +534,7 @@ function HueClaimCard({ withdrawAddress }: { withdrawAddress: string }) {
           ))}
         </ul>
       ) : null}
-    </section>
+    </div>
   );
 }
 
@@ -444,11 +569,13 @@ function ProfileCard({
   }
 
   return (
-    <section className="app-card">
-      <p className="hall-kicker">Your seat</p>
-      <h2 className="font-display text-2xl text-white">Profile</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        Name shows on the table. Email comes from Google and stays with that account.
+    <div className="account-block">
+      <p className="hall-kicker">You</p>
+      <h2>Profile</h2>
+      <p>
+        Name shows on the table and the network. Email comes from Google and stays
+        with that account. Cover, role, and about sit on{" "}
+        <Link href={`/network/u/${encodeURIComponent(user.username)}`}>your public profile</Link>.
       </p>
       <form
         onSubmit={(event) => {
@@ -457,31 +584,26 @@ function ProfileCard({
           void save({ action: "username", username });
         }}
       >
-      <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Username
-      </label>
-      <div className="mt-2 flex flex-wrap gap-3">
-        <input
-          className="field"
-          maxLength={20}
-          onChange={(event) => setUsername(event.target.value)}
-          value={username}
-        />
-        <button
-          className="chip-btn"
-          disabled={busy || username === user.username}
-          type="submit"
-        >
-          {busy ? "Saving…" : "Save"}
-        </button>
-      </div>
+        <label>
+          Username
+          <span className="account-field-row">
+            <HouseField
+              inputProps={{ maxLength: 20 }}
+              onChange={(event) => setUsername(event.target.value)}
+              value={username}
+            />
+            <HouseButton disabled={busy || username === user.username} type="submit">
+              {busy ? "Saving…" : "Save"}
+            </HouseButton>
+          </span>
+        </label>
       </form>
-      <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+      <label>
         Email
+        <p className="account-note">{user.email}</p>
       </label>
-      <p className="mt-2 break-all text-sm text-zinc-300">{user.email}</p>
-      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
-    </section>
+      {error ? <p className="account-err">{error}</p> : null}
+    </div>
   );
 }
 
@@ -522,63 +644,52 @@ function LedgerCard({ txs }: { txs: Tx[] }) {
   }
 
   return (
-    <section className="mt-12">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="account-block">
+      <div className="account-pane-head">
         <div>
-          <h2 className="font-display text-2xl text-white">Ledger</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Clicks, wins, refunds, cash in and out. Balance after each move.
-          </p>
+          <p className="hall-kicker">Activity</p>
+          <h2>Activity</h2>
+          <p>Clicks, wins, refunds, cash in and out. Balance after each move.</p>
         </div>
-        <button
-          className="chip-btn chip-btn-ghost"
-          disabled={visible.length === 0}
-          onClick={download}
-          type="button"
-        >
+        <HouseButton disabled={visible.length === 0} ghost onClick={download}>
           CSV
-        </button>
+        </HouseButton>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="account-chips">
         {LEDGER_FILTERS.map((item) => (
-          <button
-            className={`chip-btn ${filter === item.id ? "" : "chip-btn-ghost"}`}
+          <HouseButton
+            ghost={filter !== item.id}
             key={item.id}
             onClick={() => setFilter(item.id)}
-            type="button"
           >
             {item.label}
-          </button>
+          </HouseButton>
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="account-chips">
         {[
           { id: 0, label: "All time" },
           { id: 1, label: "24h" },
           { id: 7, label: "7 days" },
           { id: 30, label: "30 days" },
         ].map((item) => (
-          <button
-            className={`chip-btn ${days === item.id ? "" : "chip-btn-ghost"}`}
+          <HouseButton
+            ghost={days !== item.id}
             key={item.id}
             onClick={() => setDays(item.id)}
-            type="button"
           >
             {item.label}
-          </button>
+          </HouseButton>
         ))}
       </div>
       {visible.length === 0 ? (
-        <p className="mt-4 text-sm text-zinc-500">No moves in this filter.</p>
+        <p className="account-empty">No moves in this filter.</p>
       ) : (
-        <ul className="mt-4 space-y-2">
+        <ul className="account-ledger">
           {visible.map((tx) => {
             const amount = txSigned(tx);
             return (
-              <li
-                className="ledger-row"
-                key={tx.id}
-              >
+              <li className="ledger-row" key={tx.id}>
                 <div>
                   <p className="text-zinc-200">
                     <span className="mr-2 text-[10px] uppercase tracking-[0.16em] text-amber-200/80">
@@ -599,7 +710,7 @@ function LedgerCard({ txs }: { txs: Tx[] }) {
           })}
         </ul>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -634,16 +745,16 @@ function LimitsCard({
   }
 
   return (
-    <section className="app-card">
+    <div className="account-block">
       <p className="hall-kicker">Seat limits</p>
-      <h2 className="font-display text-2xl text-white">Play limits</h2>
-      <p className="mt-1 text-sm text-zinc-500">
+      <h2>Play limits</h2>
+      <p>
         Today’s play loss {formatUsdt(user.playLossToday)} USDT. A tighter cap
         holds at once; a looser one waits a day. Cool-off and self-exclude
         cannot be shortened once they start.
       </p>
       {user.pendingLossCap != null ? (
-        <p className="mt-2 text-sm text-amber-300">
+        <p className="account-warn">
           {user.pendingLossCap === 0
             ? "No cap"
             : `A cap of ${formatUsdt(user.pendingLossCap)} USDT`}{" "}
@@ -658,51 +769,48 @@ function LimitsCard({
           void save({ dailyLossCap: Number(cap || 0) });
         }}
       >
-      <label className="mt-5 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Daily loss cap
-      </label>
-      <div className="mt-2 flex flex-wrap gap-3">
-        <input
-          className="field"
-          onChange={(event) => setCap(event.target.value)}
-          placeholder="0 = no cap"
-          value={cap}
-        />
-        <button className="chip-btn" disabled={busy} type="submit">
-          {busy ? "Saving…" : "Save"}
-        </button>
-      </div>
+        <label>
+          Daily loss cap
+          <span className="account-field-row">
+            <HouseField
+              onChange={(event) => setCap(event.target.value)}
+              placeholder="0 = no cap"
+              value={cap}
+            />
+            <HouseButton disabled={busy} type="submit">
+              {busy ? "Saving…" : "Save"}
+            </HouseButton>
+          </span>
+        </label>
       </form>
-      <p className="mt-5 text-[10px] uppercase tracking-[0.22em] text-zinc-500">Cool-off</p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <p className="account-sub">Cool-off</p>
+      <div className="account-chips">
         {COOL_OFF_HOURS.map((hours) => (
-          <button
-            className="chip-btn chip-btn-ghost"
+          <HouseButton
             disabled={busy || user.blockKind === "frozen" || user.blockKind === "self-exclude"}
+            ghost
             key={hours}
             onClick={() => void save({ coolOffHours: hours })}
-            type="button"
           >
             {hours === 168 ? "7 days" : hours === 24 ? "24 hours" : "1 hour"}
-          </button>
+          </HouseButton>
         ))}
       </div>
-      <p className="mt-5 text-[10px] uppercase tracking-[0.22em] text-zinc-500">Self-exclude</p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <p className="account-sub">Self-exclude</p>
+      <div className="account-chips">
         {SELF_EXCLUDE_DAYS.map((days) => (
-          <button
-            className="chip-btn chip-btn-ghost"
+          <HouseButton
             disabled={busy}
+            ghost
             key={days}
             onClick={() => void save({ selfExcludeDays: days })}
-            type="button"
           >
             {days} days
-          </button>
+          </HouseButton>
         ))}
       </div>
-      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
-    </section>
+      {error ? <p className="account-err">{error}</p> : null}
+    </div>
   );
 }
 
@@ -762,108 +870,82 @@ function SecurityCard({ user: _user }: { user: PublicUser }) {
   }
 
   return (
-    <section className="app-card">
-      <p className="hall-kicker">This seat</p>
-      <h2 className="font-display text-2xl text-white">Sign-in</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        This account signs in with Google. Kick other devices here.
-      </p>
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <h3 className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">Devices</h3>
-        <button
-          className="chip-btn chip-btn-ghost"
+    <div className="account-block">
+      <p className="hall-kicker">This account</p>
+      <h2>Sign-in</h2>
+      <p>This account signs in with Google. Kick other devices here.</p>
+      <div className="account-pane-head">
+        <h3>Devices</h3>
+        <HouseButton
           disabled={busy || sessions.filter((item) => !item.current).length === 0}
+          ghost
           onClick={() => void post({ action: "revoke-others" })}
-          type="button"
         >
           Sign out others
-        </button>
+        </HouseButton>
       </div>
-      <ul className="mt-3 space-y-2">
+      <ul className="account-ledger">
         {sessions.map((session) => (
-          <li
-            className="ledger-row"
-            key={session.hint}
-          >
+          <li className="ledger-row" key={session.hint}>
             <div>
-              <p className="text-zinc-200">
-                {session.current ? "This device" : "Other device"}
-              </p>
+              <p className="text-zinc-200">{session.current ? "This device" : "Other device"}</p>
               <p className="mt-1 text-xs text-zinc-500">
                 {session.userAgent.slice(0, 80) || "Unknown"} ·{" "}
                 {new Date(session.createdAt).toLocaleString()}
               </p>
             </div>
             {session.current ? null : (
-              <button
-                className="chip-btn chip-btn-ghost"
+              <HouseButton
                 disabled={busy}
+                ghost
                 onClick={() => void post({ action: "revoke", hint: session.hint })}
-                type="button"
               >
                 Kick
-              </button>
+              </HouseButton>
             )}
           </li>
         ))}
       </ul>
-
-      <h3 className="mt-8 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Your data
-      </h3>
-      <p className="mt-2 text-sm text-zinc-500">
-        Everything the house holds about this seat, as a file: the ledger, the
+      <h3>Your data</h3>
+      <p>
+        Everything Huepot holds about this account, as a file: the activity, the
         play record, your limits, and anything you posted.
       </p>
-      <p className="mt-3">
-        <a className="chip-btn chip-btn-ghost" href="/api/account/export">
+      <p className="guide-cta">
+        <HouseButton ghost href="/api/account/export">
           Download my data
-        </a>
+        </HouseButton>
       </p>
-
-      <h3 className="mt-8 text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        Close this account
-      </h3>
-      <p className="mt-2 text-sm text-zinc-500">
-        The seat, the profile and every device go. Transaction rows stay, because
-        they are the house books too. Withdraw any balance first.
+      <h3>Close this account</h3>
+      <p>
+        The role, the profile and every device go. Transaction rows stay,
+        because they are the books too. Withdraw any balance first.
       </p>
       {closeOpen ? (
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <input
-            className="field"
+        <div className="account-field-row">
+          <HouseField
             onChange={(event) => setConfirm(event.target.value)}
             placeholder="Type your username"
             value={confirm}
           />
-          <button
-            className="chip-btn"
+          <HouseButton
             disabled={busy || !confirm.trim()}
             onClick={() => void closeSeat()}
-            type="button"
           >
             {busy ? "Closing…" : "Close for good"}
-          </button>
-          <button
-            className="chip-btn chip-btn-ghost"
-            onClick={() => setCloseOpen(false)}
-            type="button"
-          >
+          </HouseButton>
+          <HouseButton ghost onClick={() => setCloseOpen(false)}>
             Keep it
-          </button>
+          </HouseButton>
         </div>
       ) : (
-        <p className="mt-3">
-          <button
-            className="chip-btn chip-btn-ghost"
-            onClick={() => setCloseOpen(true)}
-            type="button"
-          >
+        <p className="guide-cta">
+          <HouseButton ghost onClick={() => setCloseOpen(true)}>
             Close my account
-          </button>
+          </HouseButton>
         </p>
       )}
-      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
-    </section>
+      {error ? <p className="account-err">{error}</p> : null}
+    </div>
   );
 }

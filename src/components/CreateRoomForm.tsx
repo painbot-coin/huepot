@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { HouseAlert, HouseButton, HouseCheck, HouseField, HouseSelect, MenuItem } from "@/components/HouseUi";
 import {
   FOG_SECONDS,
   LIVE_MINUTE_OPTIONS,
@@ -64,10 +65,8 @@ export function CreateRoomForm({
       <div className="create-room-body">
         <label className="create-field">
           <span>Room name</span>
-          <input
-            className="field"
-            maxLength={28}
-            minLength={3}
+          <HouseField
+            inputProps={{ maxLength: 28, minLength: 3 }}
             onChange={(event) => setName(event.target.value)}
             placeholder="My fog table"
             required
@@ -78,10 +77,8 @@ export function CreateRoomForm({
         <div className="create-grid">
           <label className="create-field">
             <span>Coins ({MIN_BUTTONS}–{MAX_BUTTONS})</span>
-            <input
-              className="field"
-              max={MAX_BUTTONS}
-              min={MIN_BUTTONS}
+            <HouseField
+              inputProps={{ max: MAX_BUTTONS, min: MIN_BUTTONS }}
               onChange={(event) => setButtonCount(Number(event.target.value))}
               required
               type="number"
@@ -90,23 +87,18 @@ export function CreateRoomForm({
           </label>
           <label className="create-field">
             <span>Click USDT</span>
-            <input
-              className="field"
-              max={MAX_CLICK_PRICE}
-              min={MIN_CLICK_PRICE}
+            <HouseField
+              inputProps={{ max: MAX_CLICK_PRICE, min: MIN_CLICK_PRICE, step: 0.1 }}
               onChange={(event) => setClickPrice(Number(event.target.value))}
               required
-              step="0.1"
               type="number"
               value={clickPrice}
             />
           </label>
           <label className="create-field">
             <span>Round sec</span>
-            <input
-              className="field"
-              max={MAX_ROUND_SECONDS}
-              min={MIN_ROUND_SECONDS}
+            <HouseField
+              inputProps={{ max: MAX_ROUND_SECONDS, min: MIN_ROUND_SECONDS }}
               onChange={(event) => setRoundSeconds(Number(event.target.value))}
               required
               type="number"
@@ -115,39 +107,37 @@ export function CreateRoomForm({
           </label>
           <label className="create-field">
             <span>Live time</span>
-            <select
-              className="field"
-              onChange={(event) => setLiveMinutes(Number(event.target.value))}
+            <HouseSelect
+              onChange={(next) => setLiveMinutes(Number(next))}
               value={liveMinutes}
             >
               {LIVE_MINUTE_OPTIONS.map((mins) => (
-                <option key={mins} value={mins}>
+                <MenuItem key={mins} value={mins}>
                   {mins < 60 ? `${mins}m` : `${mins / 60}h`}
-                </option>
+                </MenuItem>
               ))}
-            </select>
+            </HouseSelect>
           </label>
         </div>
 
-        <label className="fog-check">
-          <input
-            checked={fog}
-            onChange={(event) => setFog(event.target.checked)}
-            type="checkbox"
-          />
-          <span>
-            Fog last {FOG_SECONDS}s
-            <small>Public counts go dark. Your clicks stay visible.</small>
-          </span>
-        </label>
+        <HouseCheck
+          checked={fog}
+          label={
+            <span>
+              Fog last {FOG_SECONDS}s
+              <small>Public counts go dark. Your clicks stay visible.</small>
+            </span>
+          }
+          onChange={setFog}
+        />
 
-        {error ? <p className="error-toast create-room-error">{error}</p> : null}
+        {error ? <HouseAlert>{error}</HouseAlert> : null}
       </div>
 
       <footer className="create-room-actions">
-        <button className="chip-btn create-room-submit" disabled={busy} type="submit">
+        <HouseButton className="create-room-submit" disabled={busy} type="submit">
           {busy ? "Opening…" : "Open the table"}
-        </button>
+        </HouseButton>
       </footer>
     </form>
   );

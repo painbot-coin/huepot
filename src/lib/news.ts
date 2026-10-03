@@ -9,6 +9,9 @@ import {
   type BettingTrust,
 } from "@/lib/betting-game";
 import { prisma } from "@/lib/db";
+import { newsHref, parseNewsId } from "@/lib/news-href";
+
+export { isNewsHref, newsHref, newsHrefFromPost, parseNewsId, talkHref } from "@/lib/news-href";
 
 /**
  * Betting-game headlines, fetched on a timer and put on the wire.
@@ -21,8 +24,8 @@ import { prisma } from "@/lib/db";
  * Two kinds of source, both probed from the droplet before they went in:
  * betting desks with their own feeds, and topic scrapes that search the
  * open web for betting-game news. A desk is trusted to stay on subject; a
- * scrape has to read as a betting game or it is dropped. Never an article
- * body — a link is not republishing.
+ * scrape has to read as a betting game or it is dropped. The story opens on
+ * Huepot. The publisher's own summary is what we show, never the article body.
  *
  * Writes straight to its own table and never touches the in-memory store, so a
  * fetch cannot sit in the lane that settles rounds.
@@ -101,16 +104,6 @@ export type NewsItem = {
   talkId?: string;
 };
 
-/**
- * Where a headline is discussed. The id is the house's, so anything that is
- * not a post id is dropped rather than being written into a link.
- */
-export function talkHref(talkId: string) {
-  const id = talkId.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80);
-  if (!id.startsWith("wire-") || id.length < 6) return "";
-  return `/network?post=${encodeURIComponent(id)}`;
-}
-
 let ready = false;
 
 export async function ensureNewsTables() {
@@ -147,6 +140,7 @@ export async function ensureNewsTables() {
   ready = true;
   // Promo copy that landed before the spam check knew those titles.
   await retireSpamNews();
+  await rewireNewsPosts();
 }
 
 const ENTITIES: Record<string, string> = {
@@ -271,7 +265,7 @@ export function parseFeed(xml: string, source: NewsSource): NewsItem[] {
     const link = tagText(block, "link") || attr(block, "link", "href");
     const url = cleanUrl(/^https?:\/\//i.test(guid) ? guid : link);
     if (!title || !url) continue;
-    const summary = source.wire ? "" : summaryOf(block, title, publisher || source.name);
+    const summary = summaryOf(block, title, publisher || source.name);
     if (!isBettingGameNews(title, summary, trust)) continue;
     const when = tagText(block, "pubDate") || tagText(block, "published") || tagText(block, "updated");
     const at = when ? Date.parse(when) : Number.NaN;
@@ -307,7 +301,7 @@ async function saveItems(items: NewsItem[]) {
       INSERT OR IGNORE INTO NewsItem
         (id, source, tag, title, summary, url, image, publishedAt, fetchedAt, hidden, status)
       VALUES (${item.id}, ${item.source}, ${item.tag}, ${item.title}, ${item.summary}, ${item.url},
-              ${item.image}, ${item.publishedAt}, ${now}, 0, 'live')
+              ${item.image}, ${item.publishedAt}, ${now}, 0, 'held')
     `;
     added += done;
     // IGNORE skips a row the feed offers again, so anything stored before
@@ -323,9 +317,11 @@ async function saveItems(items: NewsItem[]) {
       // A card already on the feed carries a copy of the old text, so it gets
       // the same correction rather than being left reading worse than the wire.
       try {
+        const here = newsHref(item.id);
         await prisma.$executeRaw`
-          UPDATE NetworkPost SET body = ${item.summary}
-           WHERE link = ${item.url} AND body <> ${item.summary}
+          UPDATE NetworkPost SET body = ${item.summary}, link = ${here}
+           WHERE (link = ${item.url} OR link = ${here} OR id = ${`wire-${item.id}`})
+             AND body <> ${item.summary}
         `;
       } catch {
         /* the posts table may not exist yet on a fresh database */
@@ -342,6 +338,24 @@ async function saveItems(items: NewsItem[]) {
  * writes something.
  */
 const WING_PER_RUN = 12;
+
+/**
+ * Old feed cards still hold the publisher URL. Rewrite them onto this house
+ * so a leftover card, or anything that reads `link`, stays here.
+ */
+async function rewireNewsPosts() {
+  try {
+    await prisma.$executeRawUnsafe(`
+      UPDATE NetworkPost
+         SET link = '/news/' || substr(id, 6)
+       WHERE id LIKE 'wire-%'
+         AND length(id) = 37
+         AND link NOT LIKE '/news/%'
+    `);
+  } catch {
+    /* the posts table may not exist yet on a fresh database */
+  }
+}
 
 /**
  * Puts the newest headlines into the Wing feed as link cards, authored by the
@@ -365,10 +379,15 @@ export async function postNewsToWing(limit = WING_PER_RUN) {
       FROM NewsItem n
      WHERE n.hidden = 0 AND n.status = 'live'
        AND n.tag IN ('sport', 'casino', 'betting')
-       AND NOT EXISTS (SELECT 1 FROM NetworkPost p WHERE p.link = n.url)
+       AND NOT EXISTS (
+        SELECT 1 FROM NetworkPost p
+         WHERE p.id = ('wire-' || n.id) OR p.link = n.url OR p.link = ('/news/' || n.id)
+      )
      ORDER BY n.publishedAt DESC
      LIMIT ${Math.max(1, Math.min(20, Math.floor(limit)))}
   `;
+
+  await rewireNewsPosts();
 
   let posted = 0;
   for (const row of rows) {
@@ -377,7 +396,7 @@ export async function postNewsToWing(limit = WING_PER_RUN) {
     const id = `wire-${row.id}`;
     const done = await prisma.$executeRaw`
       INSERT OR IGNORE INTO NetworkPost (id, userId, body, link, image, title, source, createdAt)
-      VALUES (${id}, ${HOUSE_USER_ID}, ${row.summary}, ${row.url}, ${row.image},
+      VALUES (${id}, ${HOUSE_USER_ID}, ${row.summary}, ${newsHref(row.id)}, ${row.image},
               ${row.title}, ${row.source}, ${Date.now()})
     `;
     posted += Number(done);
@@ -472,6 +491,37 @@ export async function listNews(input: NewsQuery | number = {}) {
     publishedAt: Number(row.publishedAt),
     talkId: (row.talkId ?? "").trim(),
   }));
+}
+
+export async function getNews(id: string) {
+  const clean = parseNewsId(id);
+  if (!clean) return null;
+  await ensureNewsTables();
+  const { ensureSocialTables } = await import("@/lib/social");
+  await ensureSocialTables();
+  const rows = await prisma.$queryRaw<Row[]>`
+    SELECT n.id, n.source, n.tag, n.title, n.summary, n.url, n.image,
+           CAST(n.publishedAt AS TEXT) AS publishedAt,
+           COALESCE(p.id, '') AS talkId
+      FROM NewsItem n
+      LEFT JOIN NetworkPost p ON p.id = ('wire-' || n.id)
+     WHERE n.id = ${clean} AND n.hidden = 0 AND n.status = 'live'
+     LIMIT 1
+  `;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    ...row,
+    publishedAt: Number(row.publishedAt),
+    talkId: (row.talkId ?? "").trim(),
+  };
+}
+
+export async function listRelatedNews(id: string, tag = "", limit = 6) {
+  const clean = parseNewsId(id);
+  if (!clean) return [];
+  const rows = await listNews({ tag, limit: Math.max(limit + 1, 8) });
+  return rows.filter((row) => row.id !== clean).slice(0, limit);
 }
 
 /**
@@ -582,7 +632,10 @@ export async function retireSpamNews() {
     await prisma.$executeRaw`UPDATE NewsItem SET hidden = 1 WHERE id = ${row.id}`;
     try {
       await prisma.$executeRaw`
-        DELETE FROM NetworkPost WHERE id = ${`wire-${row.id}`} OR link = ${row.url}
+        DELETE FROM NetworkPost
+         WHERE id = ${`wire-${row.id}`}
+            OR link = ${row.url}
+            OR link = ${`/news/${row.id}`}
       `;
     } catch {
       /* the social tables may not exist yet on a fresh database */

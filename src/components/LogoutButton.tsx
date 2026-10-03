@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { HouseButton } from "@/components/HouseUi";
+import { useCopy } from "@/components/LocaleRoot";
 
 export function LogoutButton() {
   const [busy, setBusy] = useState(false);
+  const { copy } = useCopy();
 
   async function logout() {
     setBusy(true);
@@ -12,13 +15,8 @@ export function LogoutButton() {
   }
 
   return (
-    <button
-      className="nav-link"
-      disabled={busy}
-      onClick={() => void logout()}
-      type="button"
-    >
-      {busy ? "Signing out…" : "Log out"}
-    </button>
+    <HouseButton disabled={busy} ghost onClick={() => void logout()}>
+      {busy ? copy.cta.signingOut : copy.cta.logOut}
+    </HouseButton>
   );
 }

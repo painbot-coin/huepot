@@ -5,7 +5,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { inviteCutCents, lastInviteCredit } from "@/lib/invite-rake";
-import { seatTakesFromNotes, takePayoutNote } from "@/lib/take-copy";
+import { seatHueNames, seatTakesFromNotes, takePayoutNote } from "@/lib/take-copy";
 import type { PublicTake } from "@/lib/types";
 
 test("20% of that seat's rake, floored", () => {
@@ -54,4 +54,13 @@ test("a seat take matches the payout note the house already writes", () => {
   const hits = seatTakesFromNotes([older, take], [note], 6);
   assert.equal(hits.length, 1);
   assert.equal(hits[0]?.id, "r1");
+});
+
+test("a seat lists the favoured hue, then the hues on its takes", () => {
+  assert.deepEqual(seatHueNames("Azure", [{ names: "Crimson & Azure" }, { names: "Gold" }]), [
+    "Azure",
+    "Crimson",
+    "Gold",
+  ]);
+  assert.deepEqual(seatHueNames("", []), []);
 });

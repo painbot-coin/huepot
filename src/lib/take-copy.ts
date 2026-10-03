@@ -1,6 +1,22 @@
 import { formatUsdt } from "@/lib/money";
 import type { PublicTake } from "@/lib/types";
 
+const SIT_DOORS: Record<string, string> = {
+  classic: "Classic",
+  lightning: "Lightning",
+  duo: "Duo",
+  high: "High",
+  fog: "Fog",
+  night: "Night",
+  wheel: "Wheel",
+  dice: "Dice",
+};
+
+export function sitDoorLabel(slug: string, roomName: string) {
+  const door = SIT_DOORS[slug];
+  return door ? `Sit ${door}` : `Sit ${roomName}`;
+}
+
 export function formatTakeLine(names: string, amount: number, roomName: string) {
   return `${names} took ${formatUsdt(amount)} USDT on ${roomName} — sit the next round`;
 }
@@ -12,6 +28,21 @@ export function takeLine(take: PublicTake) {
 export function withSitWhen(line: string, when?: string) {
   if (!when) return line;
   return `${line}. ${when}`;
+}
+
+/** Favoured hue first, then the hues named on this seat's takes. */
+export function seatHueNames(favoured: string, takes: { names: string }[]) {
+  const names: string[] = [];
+  const add = (name: string) => {
+    const clean = name.trim();
+    if (!clean || names.includes(clean)) return;
+    names.push(clean);
+  };
+  add(favoured);
+  for (const take of takes) {
+    for (const part of take.names.split("&")) add(part);
+  }
+  return names;
 }
 
 export function takePayoutNote(take: Pick<PublicTake, "roomName" | "number" | "names">) {

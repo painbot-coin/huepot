@@ -6,11 +6,11 @@ const HOUSE_USER_ID = "house";
 export const SIT_PULSE_MS = 60 * 60 * 1000;
 
 export function sitPulseTitle(roomName: string, username: string) {
-  return `${roomName} · @${username} is sitting`;
+  return `${roomName} · @${username} is playing`;
 }
 
 export function sitPulseBody() {
-  return "Sit with them before the round ends.";
+  return "Play with them before the round ends.";
 }
 
 export function alreadyPulsed(

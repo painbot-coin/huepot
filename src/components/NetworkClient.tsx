@@ -6,11 +6,16 @@ import { useCallback, useEffect, useState } from "react";
 import { MessageLink } from "@/components/MessageDock";
 import { Avatar } from "@/components/Avatar";
 import { NetworkChrome, SignInGate } from "@/components/NetworkChrome";
+import { HouseButton } from "@/components/HouseUi";
 import {
   COMPANY_CLASSIC_HREF,
   sitClassicLabel,
   sitWithThemLabel,
 } from "@/lib/company-door";
+import { useCopy } from "@/components/LocaleRoot";
+import { HOUSE_SEATS, seatOf, seatTag } from "@/lib/house-seats";
+import { spokenSeat } from "@/lib/house-tongue";
+import { LOCALES, localeMeta, parseLocale } from "@/lib/locale";
 import type { NetworkCard, NetworkState, NetworkTab } from "@/lib/types";
 
 function ageLabel(at: number | null, now: number) {
@@ -27,7 +32,18 @@ function sinceLabel(at: number) {
   return new Date(at).toLocaleDateString();
 }
 
+const FIND_BOOKS = [
+  { id: "wait-down", label: "Down" },
+  { id: "wait-burst", label: "Burst" },
+  { id: "catch-first", label: "Catch" },
+  { id: "snake-first", label: "Snake" },
+  { id: "aim-first", label: "Aim" },
+  { id: "lane-first", label: "Lane" },
+  { id: "break-first", label: "Break" },
+] as const;
+
 export function NetworkClient() {
+  const { locale } = useCopy();
   const params = useSearchParams();
   const focus = params.get("u") ?? "";
   const startTab = (params.get("tab") as NetworkTab | null) ?? "pit";
@@ -36,6 +52,11 @@ export function NetworkClient() {
   );
   const [q, setQ] = useState("");
   const [lookup, setLookup] = useState("");
+  const [seat, setSeat] = useState(seatOf(params.get("seat") ?? ""));
+  const [lang, setLang] = useState(parseLocale(params.get("lang") ?? "") ?? "");
+  const [book, setBook] = useState(
+    FIND_BOOKS.some((row) => row.id === (params.get("book") ?? "")) ? (params.get("book") ?? "") : "",
+  );
   const [state, setState] = useState<NetworkState | null>(null);
   const [error, setError] = useState("");
   const [needSignIn, setNeedSignIn] = useState(false);
@@ -48,12 +69,18 @@ export function NetworkClient() {
   }, [q]);
 
   const load = useCallback(
-    async (next?: Partial<{ tab: NetworkTab; q: string }>) => {
+    async (next?: Partial<{ tab: NetworkTab; q: string; seat: string; lang: string; book: string }>) => {
       const useTab = next?.tab ?? tab;
       const useQ = next?.q ?? lookup;
+      const useSeat = next?.seat ?? seat;
+      const useLang = next?.lang ?? lang;
+      const useBook = next?.book ?? book;
       const search = new URLSearchParams();
       search.set("tab", useTab);
       if (useQ) search.set("q", useQ);
+      if (useSeat) search.set("seat", useSeat);
+      if (useLang) search.set("lang", useLang);
+      if (useBook) search.set("book", useBook);
       if (focus) search.set("u", focus);
       const response = await fetch(`/api/network?${search.toString()}`);
       if (response.status === 401) {
@@ -66,7 +93,7 @@ export function NetworkClient() {
       setState(data);
       setError("");
     },
-    [tab, lookup, focus],
+    [tab, lookup, focus, seat, lang, book],
   );
 
   useEffect(() => {
@@ -85,14 +112,14 @@ export function NetworkClient() {
       void fetch("/api/network", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ping", tab, q: lookup, u: focus }),
+        body: JSON.stringify({ action: "ping", tab, q: lookup, u: focus, seat, lang, book }),
       }).catch(() => undefined);
     }, 15_000);
     return () => {
       window.clearInterval(poll);
       window.clearInterval(ping);
     };
-  }, [load, tab, lookup, focus]);
+  }, [load, tab, lookup, focus, seat, lang, book]);
 
   async function act(action: string, username: string) {
     setBusy(`${action}:${username}`);
@@ -101,7 +128,7 @@ export function NetworkClient() {
       const response = await fetch("/api/network", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, username, tab, q: lookup, u: focus }),
+        body: JSON.stringify({ action, username, tab, q: lookup, u: focus, seat, lang, book }),
       });
       const data = (await response.json()) as NetworkState & { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not update");
@@ -116,7 +143,7 @@ export function NetworkClient() {
   if (!booted) {
     return (
       <NetworkChrome>
-        <p className="px-4 py-16 text-center text-zinc-400">Opening the wing…</p>
+        <p className="px-4 py-16 text-center text-zinc-400">Opening people…</p>
       </NetworkChrome>
     );
   }
@@ -131,15 +158,15 @@ export function NetworkClient() {
 
   return (
     <NetworkChrome you={state?.you}>
-    <main className="li-main is-wide">
-      <aside className="li-card li-manage">
-        <p className="lobby-label">Company</p>
+    <main className="li-main is-directory">
+      <aside className="li-card li-manage is-hidden-rail">
+        <p className="lobby-label">People</p>
         <button
           className={tab === "friends" ? "is-on" : ""}
           onClick={() => openTab("friends")}
           type="button"
         >
-          <span>Company</span>
+          <span>Connections</span>
           <b>{state?.you.friends ?? 0}</b>
         </button>
         <button
@@ -147,7 +174,7 @@ export function NetworkClient() {
           onClick={() => openTab("requests")}
           type="button"
         >
-          <span>Asks</span>
+          <span>Requests</span>
           <b>{state?.pendingIn ?? 0}</b>
         </button>
         <button
@@ -155,37 +182,94 @@ export function NetworkClient() {
           onClick={() => openTab("pit")}
           type="button"
         >
-          <span>In the pit</span>
+          <span>Playing</span>
         </button>
       </aside>
       <div className="li-col">
       <h1 className="font-display text-3xl text-white">
-        {tab === "friends" ? "Company" : tab === "requests" ? "Asks" : "In the pit"}
+        {tab === "friends" ? "Connections" : tab === "requests" ? "Requests" : "Playing now"}
       </h1>
       <p className="mt-2 text-zinc-400">
         {tab === "friends"
-          ? "People already in your company."
+          ? "People already in your network."
           : tab === "requests"
-            ? "Asks you sent or received."
-            : "Everyone sitting the house. Send an ask."}
+            ? "Requests you sent or received."
+            : "A seat can be found by craft, language, or the book they sit. Company is a request both sides accept. A letter stays private."}
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {(
           [
-            { id: "pit", label: "In the pit" },
-            { id: "friends", label: "Company" },
-            { id: "requests", label: `Asks${state?.pendingIn ? ` · ${state.pendingIn}` : ""}` },
+            { id: "pit", label: "Playing" },
+            { id: "friends", label: "Connections" },
+            { id: "requests", label: `Requests${state?.pendingIn ? ` · ${state.pendingIn}` : ""}` },
           ] as { id: NetworkTab; label: string }[]
         ).map((item) => (
-          <button
-            className={`chip-btn ${tab === item.id ? "" : "chip-btn-ghost"}`}
+          <HouseButton
+            ghost={tab !== item.id}
             key={item.id}
             onClick={() => openTab(item.id)}
-            type="button"
           >
             {item.label}
-          </button>
+          </HouseButton>
+        ))}
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Find a seat">
+        {HOUSE_SEATS.map((row) => (
+          <HouseButton
+            ghost={seat !== row.id}
+            key={row.id}
+            onClick={() => {
+              const next = seat === row.id ? "" : row.id;
+              setSeat(next);
+              void load({ seat: next }).catch((err) => {
+                setError(err instanceof Error ? err.message : "Could not load");
+              });
+            }}
+          >
+            {spokenSeat(locale, row.id).tag}
+          </HouseButton>
+        ))}
+      </div>
+
+      <label className="mt-6 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        Language
+      </label>
+      <select
+        className="field mt-2"
+        onChange={(event) => {
+          const next = parseLocale(event.target.value) ?? "";
+          setLang(next);
+          void load({ lang: next }).catch((err) => {
+            setError(err instanceof Error ? err.message : "Could not load");
+          });
+        }}
+        value={lang}
+      >
+        <option value="">Any</option>
+        {LOCALES.map((row) => (
+          <option key={row.id} value={row.id}>
+            {row.name}
+          </option>
+        ))}
+      </select>
+
+      <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Book they sit">
+        {FIND_BOOKS.map((row) => (
+          <HouseButton
+            ghost={book !== row.id}
+            key={row.id}
+            onClick={() => {
+              const next = book === row.id ? "" : row.id;
+              setBook(next);
+              void load({ book: next }).catch((err) => {
+                setError(err instanceof Error ? err.message : "Could not load");
+              });
+            }}
+          >
+            {row.label}
+          </HouseButton>
         ))}
       </div>
 
@@ -195,21 +279,23 @@ export function NetworkClient() {
       <input
         className="field mt-2"
         onChange={(event) => setQ(event.target.value)}
-        placeholder="@username"
+        placeholder="@name"
         value={q}
       />
 
       {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
 
       {!state ? (
-        <p className="mt-10 text-center text-zinc-500">Opening the wing…</p>
+        <p className="mt-10 text-center text-zinc-500">Opening people…</p>
       ) : state.cards.length === 0 ? (
         <p className="mt-10 text-sm text-zinc-500">
           {tab === "friends"
-            ? "No company yet. Open In the pit and send an ask."
+            ? "No connections yet. Open Playing and send a request."
             : tab === "requests"
               ? "No open invitations."
-              : "No players match."}
+              : seat || lang || book
+                ? "No seats match. The house does not add one."
+                : "No players match."}
         </p>
       ) : (
         <ul className="li-people-list">
@@ -262,6 +348,9 @@ function PlayerCard({
           <strong>@{player.username}</strong>
           <em>
             {line}
+            {player.seat ? ` · ${seatTag(player.seat)}` : ""}
+            {player.tongue ? ` · ${localeMeta(parseLocale(player.tongue) ?? "en").name}` : ""}
+            {player.book ? ` · ${player.book}` : ""}
             {` · ${player.friends} in company · since ${sinceLabel(player.createdAt)}`}
           </em>
         </span>

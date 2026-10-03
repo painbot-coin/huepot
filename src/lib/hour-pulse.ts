@@ -6,7 +6,7 @@ export function classicHourNoticeTitle() {
 }
 
 export function classicHourNoticeBody() {
-  return "Sit Classic with company. The named hour just opened.";
+  return "Play Classic with your network. The hour just opened.";
 }
 
 export function fogCupNoticeTitle() {
@@ -14,7 +14,7 @@ export function fogCupNoticeTitle() {
 }
 
 export function fogCupNoticeBody(clock: string) {
-  return `Sit Fog with company. ${clock}.`;
+  return `Play Fog with your network. ${clock}.`;
 }
 
 export function nightHourNoticeTitle() {
@@ -22,7 +22,7 @@ export function nightHourNoticeTitle() {
 }
 
 export function nightHourNoticeBody() {
-  return "Sit Night with company. The named hour just opened.";
+  return "Play Night with your network. The hour just opened.";
 }
 
 /**

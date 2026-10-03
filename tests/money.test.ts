@@ -12,6 +12,8 @@ import assert from "node:assert/strict";
 import {
   floorPayoutPerClick,
   formatCents,
+  formatClock,
+  formatGraphClock,
   fromCents,
   rakeFromPot,
   splitCentsByClicks,
@@ -115,4 +117,12 @@ test("money reads the way a player expects", () => {
   assert.equal(formatCents(1), "0.01");
   assert.equal(formatCents(123456), "1,234.56");
   assert.equal(formatCents(-500), "-5.00", "a debit reads as a debit");
+});
+
+test("the graph clock counts tenths instead of hanging on a second", () => {
+  assert.equal(formatGraphClock(15_000), "15.0");
+  assert.equal(formatGraphClock(5_500), "5.5");
+  assert.equal(formatGraphClock(0), "0.0");
+  assert.equal(formatGraphClock(65_400), "1:05.4");
+  assert.equal(formatClock(15_000), "0:15");
 });

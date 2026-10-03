@@ -5,6 +5,7 @@
  * the take page already uses. The link is what makes a house post visible.
  */
 
+import { isNewsHref } from "@/lib/news-href";
 import { formatTakeLine } from "@/lib/take-copy";
 
 export const TAKE_POST_TITLE = "The take";
@@ -32,11 +33,13 @@ export function isTakePostHref(href: string) {
   return /^\/take\/[A-Za-z0-9-]+$/.test(href.trim());
 }
 
-/** House link cards: a take is ours, anything else with a link is the wire. */
-export function houseCardKind(link: string): "take" | "wire" | "" {
+/** A take is ours. A news story is the wire. Any other house door is the daily desk. */
+export function houseCardKind(link: string): "take" | "wire" | "house" | "" {
   const href = (link ?? "").trim();
   if (!href) return "";
-  return isTakePostHref(href) ? "take" : "wire";
+  if (isTakePostHref(href)) return "take";
+  if (href.startsWith("/") && !href.startsWith("//") && !isNewsHref(href)) return "house";
+  return "wire";
 }
 
 export function shouldTalkAboutTake(take: TakeTalk | null | undefined) {

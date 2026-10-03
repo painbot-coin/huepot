@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { afterGatePath } from "@/lib/after-gate";
 import { loginWithGoogle, setSessionCookie, takeOAuthState } from "@/lib/auth";
 import { appUrl } from "@/lib/config";
 import { googleProfile } from "@/lib/google";
@@ -18,20 +19,21 @@ export async function GET(request: Request) {
   const state = url.searchParams.get("state") ?? "";
   try {
     const profile = await googleProfile(code);
-    let next = "";
+    let dest = "/";
     const session = await withStore((store) => {
       const oauth = takeOAuthState(store, state);
-      next = oauth.next;
-      return loginWithGoogle(
+      const session = loginWithGoogle(
         store,
         profile,
         oauth.ageConfirmed,
         requestAgent(request),
         oauth.inviteCode,
       );
+      dest = afterGatePath(store.users[session.userId]?.seat, oauth.next);
+      return session;
     });
     await setSessionCookie(session.token, session.maxAge);
-    return NextResponse.redirect(`${appUrl()}${next || "/"}`);
+    return NextResponse.redirect(`${appUrl()}${dest}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Google sign-in failed";
     return NextResponse.redirect(

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { HouseFloor } from "@/components/HouseFloor";
 import { colorById } from "@/lib/colors";
 import {
   settledDollars,
@@ -33,25 +34,36 @@ export function FairnessDetail({ id }: { id: string }) {
 
   if (missing) {
     return (
-      <main className="app-page is-wide">
-        <p className="hall-kicker">The ledger</p>
-        <p className="app-lead">That round is not in the ledger.</p>
+      <HouseFloor extra={[{ href: "/fairness", label: "Fairness", match: true }]} kicker="Fairness">
+      <main className="app-page is-wide is-in-floor">
+        <p className="hall-kicker">Fairness</p>
+        <p className="app-lead">That round is not in the book.</p>
         <Link className="nav-link mt-4 inline-block" href="/fairness">
           All pages
         </Link>
       </main>
+      </HouseFloor>
     );
   }
 
   if (!row || !check) {
     return (
-      <p className="px-4 py-16 text-center text-zinc-400">Opening the ledger…</p>
+      <HouseFloor extra={[{ href: "/fairness", label: "Fairness", match: true }]} kicker="Fairness">
+        <p className="px-4 py-16 text-center text-zinc-400">Opening fairness…</p>
+      </HouseFloor>
     );
   }
 
   return (
-    <main className="app-page is-wide">
-      <p className="hall-kicker">The ledger</p>
+    <HouseFloor
+      extra={[
+        { href: "/fairness", label: "Fairness", match: true },
+        { href: `/rooms/${row.roomSlug}`, label: row.roomName },
+      ]}
+      kicker="Fairness"
+    >
+    <main className="app-page is-wide is-in-floor">
+      <p className="hall-kicker">Fairness</p>
       <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         {row.roomName} · round #{row.number}
       </p>
@@ -133,5 +145,6 @@ export function FairnessDetail({ id }: { id: string }) {
         Back to {row.roomName}
       </Link>
     </main>
+    </HouseFloor>
   );
 }

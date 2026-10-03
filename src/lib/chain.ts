@@ -802,13 +802,10 @@ export async function resolveWithdrawal(
   if (row.status === "paid" || row.status === "rejected") {
     throw new Error("That payout is already resolved.");
   }
-  if (action === "rejected" && row.status !== "queued") {
-    throw new Error("That payout is already sending.");
-  }
 
   const claimed = await claimWithdrawal(
     id,
-    action === "rejected" ? "queued" : ["queued", "sending"],
+    ["queued", "sending"],
     action,
   );
   if (!claimed) throw new Error("That payout is already resolved.");
@@ -967,10 +964,19 @@ export async function sweepDueInboxes(): Promise<InboxSweep[]> {
   }
 }
 
+export async function hasOpenCashOut(userId: string) {
+  await ensureChainTables();
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM Withdrawal WHERE userId = ${userId} AND status IN ('queued', 'sending') LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
 export async function drainQueuedWithdrawals() {
   if (!withdrawSendEnabled()) return;
-  const rows = await listWithdrawals("queued");
-  for (const row of [...rows].reverse()) {
+  const queued = await listWithdrawals("queued");
+  const held = (await listWithdrawals("sending")).filter((row) => (row.txHash ?? "").trim());
+  for (const row of [...queued, ...held].reverse()) {
     try {
       await sendQueuedWithdrawal(row.id);
     } catch {

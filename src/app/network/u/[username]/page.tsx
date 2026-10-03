@@ -1,4 +1,5 @@
 import { LazyNetworkProfile } from "@/components/LazyViews";
+import { sendToSeatIfNeeded } from "@/lib/send-to-seat";
 
 export default async function NetworkProfilePage({
   params,
@@ -6,5 +7,7 @@ export default async function NetworkProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  return <LazyNetworkProfile username={decodeURIComponent(username)} />;
+  const name = decodeURIComponent(username);
+  await sendToSeatIfNeeded(`/network/u/${encodeURIComponent(name)}`);
+  return <LazyNetworkProfile username={name} />;
 }

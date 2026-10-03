@@ -1,3 +1,5 @@
+import { isManagerUser } from "@/lib/house-managers";
+import { isReviewerUser } from "@/lib/house-reviewers";
 import { notify } from "@/lib/notifications";
 import { emptyLimits, userLimits } from "@/lib/limits";
 import { formatCents, fromCents, toCents } from "@/lib/money";
@@ -14,6 +16,8 @@ export type StaffUserRow = {
   dailyLossCap: number;
   coolOffUntil: number;
   selfExcludeUntil: number;
+  manager: boolean;
+  reviewer: boolean;
 };
 
 export function searchStaffUsers(store: StoreData, query: string): StaffUserRow[] {
@@ -43,6 +47,8 @@ function toStaffUser(user: User): StaffUserRow {
     dailyLossCap: fromCents(limits.dailyLossCap),
     coolOffUntil: limits.coolOffUntil,
     selfExcludeUntil: limits.selfExcludeUntil,
+    manager: isManagerUser(user),
+    reviewer: isReviewerUser(user),
   };
 }
 

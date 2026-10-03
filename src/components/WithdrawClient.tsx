@@ -1,22 +1,20 @@
 "use client";
+import { HouseButton, HouseField } from "@/components/HouseUi";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { HouseFloor, floorYou } from "@/components/HouseFloor";
 import { publishBank } from "@/lib/bank-sync";
 import {
   MAX_DAILY_WITHDRAW,
   MAX_WITHDRAW,
   MIN_WITHDRAW,
 } from "@/lib/config";
+import { cashOutWord } from "@/lib/cash-words";
 import { formatUsdt } from "@/lib/money";
 import type { GameState, Withdrawal } from "@/lib/types";
 
 const EXPLORER = "https://bscscan.com";
-
-function statusLabel(status: Withdrawal["status"]) {
-  if (status === "queued" || status === "sending") return "Sending";
-  if (status === "paid") return "Sent";
-  return "Rejected — bank refunded";
-}
 
 function isOpen(item: Withdrawal) {
   return item.status === "queued" || item.status === "sending";
@@ -130,22 +128,44 @@ export function WithdrawClient() {
 
   if (!state?.user) {
     return (
-      <main className="app-page">
-        <p className="hall-kicker">Leave the vault</p>
-        <h1 className="font-display text-4xl text-white">Withdraw</h1>
-        <p className="app-lead">Opening your vault…</p>
-      </main>
+      <CashFloor>
+        <main className="app-page is-in-floor">
+          <p className="hall-kicker">Leave the vault</p>
+          <h1 className="font-display text-4xl text-white">Withdraw</h1>
+          <p className="app-lead">Opening your vault…</p>
+        </main>
+      </CashFloor>
     );
   }
 
   return (
-    <main className="app-page">
+    <CashFloor
+      you={state.user}
+      side={
+        <div>
+          <p className="lobby-label">Bank</p>
+          <p className="account-side-stat">
+            <strong>{formatUsdt(state.user.balance)} USDT</strong>
+            <em>Sit chips stay in the house.</em>
+          </p>
+          <div className="li-profile-act">
+            <HouseButton href="/rooms/classic">
+              Play Classic
+            </HouseButton>
+            <HouseButton ghost href="/invest">
+              Add gold
+            </HouseButton>
+          </div>
+        </div>
+      }
+    >
+    <main className="app-page is-in-floor">
       <p className="hall-kicker">Leave the vault</p>
       <h1 className="font-display text-4xl text-white">Withdraw</h1>
       <p className="app-lead">
         Cash out BEP-20 USDT. Min {MIN_WITHDRAW}, max {MAX_WITHDRAW} per send,
-        {` ${MAX_DAILY_WITHDRAW}`} per day. If the house is short, the send stays
-        queued and retries.
+        {` ${MAX_DAILY_WITHDRAW}`} per day. A cash-out reads waiting, sending,
+        sent, or returned. If the house is short, it stays waiting and retries.
       </p>
 
       <section className="app-card">
@@ -175,8 +195,8 @@ export function WithdrawClient() {
         <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
           Destination address
         </label>
-        <input
-          className="field font-mono"
+        <HouseField
+          className="font-mono"
           onChange={(event) => setAddress(event.target.value)}
           placeholder="0x…"
           value={address}
@@ -185,24 +205,27 @@ export function WithdrawClient() {
         <label className="mt-4 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
           Amount
         </label>
-        <input
-          className="field"
-          min={MIN_WITHDRAW}
-          max={MAX_WITHDRAW}
+        <HouseField
+          inputProps={{ min: MIN_WITHDRAW, max: MAX_WITHDRAW, step: 1 }}
           onChange={(event) => setAmount(event.target.value)}
           placeholder={String(MIN_WITHDRAW)}
-          step="1"
           type="number"
           value={amount}
         />
 
-        <button
-          className="chip-btn mt-4 w-full justify-center"
+        <HouseButton
+          className="mt-4 w-full justify-center"
           disabled={!canSend}
           type="submit"
         >
-          {busy ? "Leaving…" : pending ? "Already sending" : "Leave with gold"}
-        </button>
+          {busy
+            ? "Leaving…"
+            : withdrawals.some((item) => item.status === "sending")
+              ? "Already sending"
+              : withdrawals.some((item) => item.status === "queued")
+                ? "Already waiting"
+                : "Leave with gold"}
+        </HouseButton>
         </form>
         {left != null ? (
           <p className="vault-rite">Leaving the vault · {formatUsdt(left)} USDT</p>
@@ -210,11 +233,15 @@ export function WithdrawClient() {
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
         {houseReady === false ? (
           <p className="mt-3 text-sm text-zinc-500">
-            House is topping the pot. Queued cash-outs retry on their own.
+            Waiting. The house has not sent this yet.
           </p>
-        ) : pending ? (
+        ) : withdrawals.some((item) => item.status === "sending") ? (
           <p className="mt-3 text-sm text-zinc-500">
-            Sending. This list updates when the tx lands.
+            Sending. This list updates when it lands.
+          </p>
+        ) : withdrawals.some((item) => item.status === "queued") ? (
+          <p className="mt-3 text-sm text-zinc-500">
+            Waiting. The house has not sent this yet.
           </p>
         ) : null}
       </section>
@@ -231,7 +258,7 @@ export function WithdrawClient() {
               key={item.id}
             >
               <span>
-                {statusLabel(item.status)}
+                {cashOutWord(item.status)}
                 {item.txHash ? (
                   <>
                     {" · "}
@@ -244,8 +271,6 @@ export function WithdrawClient() {
                       BscScan
                     </a>
                   </>
-                ) : isOpen(item) ? (
-                  " · watching"
                 ) : null}
               </span>
               <span className="text-zinc-200">{formatUsdt(item.amount)} USDT</span>
@@ -254,5 +279,31 @@ export function WithdrawClient() {
         )}
       </ul>
     </main>
+    </CashFloor>
+  );
+}
+
+function CashFloor({
+  you,
+  side,
+  children,
+}: {
+  you?: GameState["user"];
+  side?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <HouseFloor
+      extra={[
+        { href: "/invest", label: "Add gold" },
+        { href: "/withdraw", label: "Cash out", match: true },
+        { href: "/account", label: "Wallet" },
+      ]}
+      kicker="Leave the vault"
+      side={side}
+      you={floorYou(you)}
+    >
+      {children}
+    </HouseFloor>
   );
 }

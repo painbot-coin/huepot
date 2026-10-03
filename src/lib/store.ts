@@ -8,6 +8,7 @@ import { emptyLimits } from "@/lib/limits";
 import { publishRoom } from "@/lib/live";
 import { NOTICE_CAP } from "@/lib/notifications";
 import { ROOM_EVENT_CAP, ensureRooms } from "@/lib/rooms";
+import type { Pact, ProjectPay, Task } from "@/lib/atrium/types";
 import type {
   Notice,
   Room,
@@ -29,6 +30,9 @@ const emptyStore = (): StoreData => ({
   round: null,
   roundNumber: 0,
   txs: [],
+  pacts: [],
+  hires: [],
+  pays: [],
 });
 
 function parseJson<T>(raw: string | null | undefined, fallback: T): T {
@@ -117,10 +121,16 @@ function userFromRow(
     headline: "",
     about: "",
     location: "",
+    seat: "",
+    sitSlug: "",
+    cover: "",
+    doors: { x: "", telegram: "", discord: "" },
     avatar: "",
     nameChangedAt: 0,
     pastNames: [] as string[],
     closedAt: 0,
+    locale: "",
+    book: "",
   };
 }
 
@@ -273,10 +283,16 @@ async function loadUserAuth() {
           headline: "",
           about: "",
           location: "",
+          seat: "",
+          sitSlug: "",
+          cover: "",
+          doors: { x: "", telegram: "", discord: "" },
           avatar: "",
           nameChangedAt: 0,
           pastNames: [] as string[],
           closedAt: 0,
+          locale: "",
+          book: "",
         });
         return [row.id, parsed] as const;
       }),
@@ -294,10 +310,16 @@ async function loadUserAuth() {
         headline: string;
         about: string;
         location: string;
+        seat: string;
+        sitSlug: string;
+        cover: string;
+        doors: { x: string; telegram: string; discord: string };
         avatar: string;
         nameChangedAt: number;
         pastNames: string[];
         closedAt: number;
+        locale: string;
+        book: string;
       }
     >();
   }
@@ -600,10 +622,16 @@ async function readStore(): Promise<StoreData> {
     user.headline = extra.headline ?? "";
     user.about = extra.about ?? "";
     user.location = extra.location ?? "";
+    user.seat = extra.seat ?? "";
+    user.sitSlug = extra.sitSlug ?? "";
+    user.cover = extra.cover ?? "";
+    user.doors = extra.doors ?? { x: "", telegram: "", discord: "" };
     user.avatar = extra.avatar ?? "";
     user.nameChangedAt = extra.nameChangedAt ?? 0;
     user.pastNames = extra.pastNames ?? [];
     user.closedAt = extra.closedAt ?? 0;
+    user.locale = extra.locale ?? "";
+    user.book = extra.book ?? "";
   }
   const sessionExtra = await loadSessionExtra();
   for (const session of Object.values(store.sessions)) {
@@ -614,8 +642,92 @@ async function readStore(): Promise<StoreData> {
   }
   store.roundNumber = metaRows[0]?.roundNumber ?? 0;
   store.round = parseJson(metaRows[0]?.legacyRound ?? null, null);
+  store.pacts = await loadPacts();
+  store.hires = await loadHires();
+  store.pays = await loadPays();
   ensureRooms(store);
   return store;
+}
+
+async function loadPacts(): Promise<Pact[]> {
+  const rows = await prisma.$queryRawUnsafe<
+    {
+      id: string;
+      kind: string;
+      companyId: string;
+      status: string;
+      fromId: string;
+      toId: string;
+      title: string;
+      terms: string;
+      price: number;
+      proof: string;
+      createdAt: string;
+      stepAt: string;
+    }[]
+  >(
+    "SELECT id, kind, companyId, status, fromId, toId, title, terms, price, proof, CAST(createdAt AS TEXT) as createdAt, CAST(stepAt AS TEXT) as stepAt FROM Pact",
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind === "company" ? "company" : "client",
+    companyId: row.companyId ?? "",
+    status: row.status as Pact["status"],
+    fromId: row.fromId,
+    toId: row.toId,
+    title: row.title,
+    terms: row.terms,
+    priceCents: Math.round(Number(row.price) || 0),
+    proof: row.proof ?? "",
+    createdAt: ms(row.createdAt),
+    stepAt: ms(row.stepAt),
+  }));
+}
+
+async function loadHires(): Promise<Task[]> {
+  const rows = await prisma.$queryRawUnsafe<
+    {
+      id: string;
+      fromAgentId: string;
+      toAgentId: string;
+      buyerId: string;
+      providerId: string;
+      brief: string;
+      price: number;
+      status: string;
+      proof: string;
+      createdAt: string;
+      stepAt: string;
+    }[]
+  >(
+    "SELECT id, fromAgentId, toAgentId, buyerId, providerId, brief, price, status, proof, CAST(createdAt AS TEXT) as createdAt, CAST(stepAt AS TEXT) as stepAt FROM Hire",
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    fromAgentId: row.fromAgentId,
+    toAgentId: row.toAgentId,
+    buyerId: row.buyerId,
+    providerId: row.providerId,
+    brief: row.brief,
+    priceCents: Math.round(Number(row.price) || 0),
+    status: row.status as Task["status"],
+    proof: row.proof ?? "",
+    createdAt: ms(row.createdAt),
+    stepAt: ms(row.stepAt),
+  }));
+}
+
+async function loadPays(): Promise<ProjectPay[]> {
+  const rows = await prisma.$queryRawUnsafe<
+    { id: string; projectId: string; ownerId: string; cents: number; at: string }[]
+  >("SELECT id, projectId, ownerId, cents, CAST(at AS TEXT) as at FROM ProjectPay");
+  return rows.map((row) => ({
+    id: row.id,
+    projectId: row.projectId,
+    ownerId: row.ownerId,
+    cents: Math.round(Number(row.cents) || 0),
+    at: ms(row.at),
+  }));
 }
 
 function same(a: unknown, b: unknown) {
@@ -682,10 +794,16 @@ async function persistStore(prev: StoreData, next: StoreData) {
           headline: user.headline ?? "",
           about: user.about ?? "",
           location: user.location ?? "",
+          seat: user.seat ?? "",
+          sitSlug: user.sitSlug ?? "",
+          cover: user.cover ?? "",
+          doors: user.doors ?? { x: "", telegram: "", discord: "" },
           avatar: user.avatar ?? "",
           nameChangedAt: user.nameChangedAt ?? 0,
           pastNames: user.pastNames ?? [],
           closedAt: user.closedAt ?? 0,
+          locale: user.locale ?? "",
+          book: user.book ?? "",
         });
         if (
           !same(before?.ageConfirmedAt, user.ageConfirmedAt) ||
@@ -696,10 +814,16 @@ async function persistStore(prev: StoreData, next: StoreData) {
           !same(before?.headline, user.headline) ||
           !same(before?.about, user.about) ||
           !same(before?.location, user.location) ||
+          !same(before?.seat, user.seat) ||
+          !same(before?.sitSlug, user.sitSlug) ||
+          !same(before?.cover, user.cover) ||
+          !same(before?.doors, user.doors) ||
           !same(before?.avatar, user.avatar) ||
           !same(before?.nameChangedAt, user.nameChangedAt) ||
           !same(before?.pastNames, user.pastNames) ||
-          !same(before?.closedAt, user.closedAt)
+          !same(before?.closedAt, user.closedAt) ||
+          !same(before?.locale, user.locale) ||
+          !same(before?.book, user.book)
         ) {
           await tx.$executeRawUnsafe(
             `UPDATE User SET auth = '${authJson.replace(/'/g, "''")}' WHERE id = '${user.id.replace(/'/g, "''")}'`,
@@ -782,6 +906,40 @@ async function persistStore(prev: StoreData, next: StoreData) {
           .join(", ");
         await tx.$executeRawUnsafe(
           `INSERT OR IGNORE INTO Tx (id, playerId, type, amount, createdAt, note) VALUES ${values}`,
+        );
+      }
+
+      const prevPacts = new Map((prev.pacts ?? []).map((row) => [row.id, row]));
+      for (const pact of next.pacts ?? []) {
+        if (same(prevPacts.get(pact.id), pact)) continue;
+        await tx.$executeRawUnsafe(
+          `INSERT INTO Pact (id, kind, companyId, status, fromId, toId, title, terms, price, proof, createdAt, stepAt)
+           VALUES (${sqlStr(pact.id)}, ${sqlStr(pact.kind)}, ${sqlStr(pact.companyId)}, ${sqlStr(pact.status)}, ${sqlStr(pact.fromId)}, ${sqlStr(pact.toId)}, ${sqlStr(pact.title)}, ${sqlStr(pact.terms)}, ${sqlInt(pact.priceCents)}, ${sqlStr(pact.proof)}, ${sqlInt(pact.createdAt)}, ${sqlInt(pact.stepAt ?? pact.createdAt)})
+           ON CONFLICT(id) DO UPDATE SET
+             kind=excluded.kind, companyId=excluded.companyId, status=excluded.status, fromId=excluded.fromId, toId=excluded.toId,
+             title=excluded.title, terms=excluded.terms, price=excluded.price, proof=excluded.proof, createdAt=excluded.createdAt, stepAt=excluded.stepAt`,
+        );
+      }
+
+      const prevHires = new Map((prev.hires ?? []).map((row) => [row.id, row]));
+      for (const hire of next.hires ?? []) {
+        if (same(prevHires.get(hire.id), hire)) continue;
+        await tx.$executeRawUnsafe(
+          `INSERT INTO Hire (id, fromAgentId, toAgentId, buyerId, providerId, brief, price, status, proof, createdAt, stepAt)
+           VALUES (${sqlStr(hire.id)}, ${sqlStr(hire.fromAgentId)}, ${sqlStr(hire.toAgentId)}, ${sqlStr(hire.buyerId)}, ${sqlStr(hire.providerId)}, ${sqlStr(hire.brief)}, ${sqlInt(hire.priceCents)}, ${sqlStr(hire.status)}, ${sqlStr(hire.proof)}, ${sqlInt(hire.createdAt)}, ${sqlInt(hire.stepAt ?? hire.createdAt)})
+           ON CONFLICT(id) DO UPDATE SET
+             fromAgentId=excluded.fromAgentId, toAgentId=excluded.toAgentId, buyerId=excluded.buyerId, providerId=excluded.providerId,
+             brief=excluded.brief, price=excluded.price, status=excluded.status, proof=excluded.proof, createdAt=excluded.createdAt, stepAt=excluded.stepAt`,
+        );
+      }
+
+      const prevPays = new Map((prev.pays ?? []).map((row) => [row.id, row]));
+      for (const pay of next.pays ?? []) {
+        if (same(prevPays.get(pay.id), pay)) continue;
+        await tx.$executeRawUnsafe(
+          `INSERT INTO ProjectPay (id, projectId, ownerId, cents, at)
+           VALUES (${sqlStr(pay.id)}, ${sqlStr(pay.projectId)}, ${sqlStr(pay.ownerId)}, ${sqlInt(pay.cents)}, ${sqlInt(pay.at)})
+           ON CONFLICT(id) DO UPDATE SET projectId=excluded.projectId, ownerId=excluded.ownerId, cents=excluded.cents, at=excluded.at`,
         );
       }
 
@@ -1059,10 +1217,16 @@ async function importJsonStore() {
       user.headline ??= "";
       user.about ??= "";
       user.location ??= "";
+      user.seat ??= "";
+      user.sitSlug ??= "";
+      user.cover ??= "";
+      user.doors ??= { x: "", telegram: "", discord: "" };
       user.avatar ??= "";
       user.nameChangedAt ??= 0;
       user.pastNames ??= [];
       user.closedAt ??= 0;
+      user.locale ??= "";
+      user.book ??= "";
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;
@@ -1084,10 +1248,16 @@ async function importJsonStore() {
       user.headline ??= "";
       user.about ??= "";
       user.location ??= "";
+      user.seat ??= "";
+      user.sitSlug ??= "";
+      user.cover ??= "";
+      user.doors ??= { x: "", telegram: "", discord: "" };
       user.avatar ??= "";
       user.nameChangedAt ??= 0;
       user.pastNames ??= [];
       user.closedAt ??= 0;
+      user.locale ??= "";
+      user.book ??= "";
     }
     for (const session of Object.values(store.sessions)) {
       session.createdAt ??= 0;
@@ -1166,8 +1336,49 @@ async function ensureDb() {
       } catch {
         /* column already exists */
       }
+      await prisma.$executeRawUnsafe(
+        `CREATE TABLE IF NOT EXISTS Pact (
+          id TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          companyId TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL,
+          fromId TEXT NOT NULL,
+          toId TEXT NOT NULL,
+          title TEXT NOT NULL,
+          terms TEXT NOT NULL,
+          price INTEGER NOT NULL,
+          proof TEXT NOT NULL DEFAULT '',
+          createdAt INTEGER NOT NULL,
+          stepAt INTEGER NOT NULL
+        )`,
+      );
+      await prisma.$executeRawUnsafe(
+        `CREATE TABLE IF NOT EXISTS Hire (
+          id TEXT PRIMARY KEY,
+          fromAgentId TEXT NOT NULL,
+          toAgentId TEXT NOT NULL,
+          buyerId TEXT NOT NULL,
+          providerId TEXT NOT NULL,
+          brief TEXT NOT NULL,
+          price INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          proof TEXT NOT NULL DEFAULT '',
+          createdAt INTEGER NOT NULL,
+          stepAt INTEGER NOT NULL
+        )`,
+      );
+      await prisma.$executeRawUnsafe(
+        `CREATE TABLE IF NOT EXISTS ProjectPay (
+          id TEXT PRIMARY KEY,
+          projectId TEXT NOT NULL,
+          ownerId TEXT NOT NULL,
+          cents INTEGER NOT NULL,
+          at INTEGER NOT NULL
+        )`,
+      );
       const rooms = await prisma.room.count();
-      if (rooms === 0) await importJsonStore();
+      const seated = await prisma.user.count();
+      if (rooms === 0 && seated === 0) await importJsonStore();
       const { ensureChainTables, startChainWatcher } = await import("@/lib/chain");
       const { ensureReportTables } = await import("@/lib/reports");
       const { ensureFriendTables } = await import("@/lib/friends");
@@ -1202,6 +1413,10 @@ async function ensureDb() {
       startSitWindowWatcher();
       startNewsWatcher();
       startEmailDrainer();
+      const { startHouseDayWatcher } = await import("@/lib/house-day");
+      startHouseDayWatcher();
+      const { startPactClock } = await import("@/lib/vault-contracts");
+      startPactClock();
     })().catch((error) => {
       boot = null;
       throw error;

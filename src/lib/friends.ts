@@ -9,8 +9,13 @@ import {
   companyFormedHref,
   companyFormedTitle,
 } from "@/lib/company-door";
+import { findCompany } from "@/lib/company-find";
+import { agentBookById } from "@/lib/house-mark-list";
+import { parseLocale } from "@/lib/locale";
 import { boardSitDoor, type BoardSitDoor } from "@/lib/board-sit";
 import { notify } from "@/lib/notifications";
+import { seatHeadline, seatOf } from "@/lib/house-seats";
+import { alikeScore, alikeWhy, tasteOf, withWhy } from "@/lib/seat-alike";
 import { isOnline, presenceAt, touchPresence } from "@/lib/presence";
 import type {
   FriendRelation,
@@ -172,21 +177,25 @@ export function companyIds(userId: string) {
 }
 
 export function headlineOf(user: User) {
-  return (user.headline ?? "").trim() || "Huepot player";
+  return (user.headline ?? "").trim() || seatHeadline(user.seat);
 }
 
-function toCard(store: StoreData, viewerId: string, user: User, at: number): NetworkCard {
+function toCard(store: StoreData, viewerId: string, user: User, at: number, book = ""): NetworkCard {
   const row = findPair(viewerId, user.id);
+  const tongue = parseLocale(user.locale) ?? "";
   return {
     username: user.username,
     avatar: (user.avatar ?? "").trim(),
     headline: headlineOf(user),
+    seat: seatOf(user.seat),
     createdAt: user.createdAt,
     online: isOnline(user.id, at),
     lastSeen: presenceAt(user.id),
     room: seatedRoom(store, user.id),
     relation: relationFor(row, viewerId),
     friends: friendCount(user.id),
+    tongue,
+    book,
   };
 }
 
@@ -214,11 +223,14 @@ export function listNetwork(
   tab: NetworkTab,
   query: string,
   focus = "",
+  seat = "",
+  find: { locale?: string; book?: string; books?: Record<string, string[]> } = {},
 ) {
   const at = Date.now();
   touchPresence(viewer.id, at);
   const q = query.trim().toLowerCase();
   const focusName = focus.trim().toLowerCase();
+  const wantSeat = seatOf(seat);
   // A blocked pair should not turn up in each other's lists at all, whichever
   // side asked for it.
   const hidden = blockedIds(viewer.id);
@@ -236,6 +248,29 @@ export function listNetwork(
     });
   }
 
+  if (wantSeat) {
+    picked = picked.filter((user) => seatOf(user.seat) === wantSeat);
+  }
+
+  const tongue = parseLocale(find.locale) ?? "";
+  const book = (find.book ?? "").trim();
+  if (tongue || book) {
+    const books = find.books ?? {};
+    const found = new Set(
+      findCompany(
+        picked.map((user) => ({
+          id: user.id,
+          seat: user.seat ?? "",
+          locale: user.locale ?? "",
+          books: books[user.id] ?? [],
+          house: isHouseUser(user),
+        })),
+        { craft: wantSeat, locale: tongue, book },
+      ).map((row) => row.id),
+    );
+    picked = picked.filter((user) => found.has(user.id));
+  }
+
   if (q) {
     picked = picked.filter((user) => user.username.toLowerCase().includes(q));
   }
@@ -247,7 +282,14 @@ export function listNetwork(
     }
   }
 
-  const cards = sortCards(picked.map((user) => toCard(store, viewer.id, user, at)));
+  const askedBook = (find.book ?? "").trim();
+  const cards = sortCards(
+    picked.map((user) => {
+      const owned = find.books?.[user.id] ?? [];
+      const held = askedBook && owned.includes(askedBook) ? askedBook : "";
+      return toCard(store, viewer.id, user, at, agentBookById(held)?.label ?? "");
+    }),
+  );
   const limited = tab === "pit" && !q ? cards.slice(0, PIT_LIMIT) : cards.slice(0, 200);
 
   if (tab === "pit") {
@@ -287,10 +329,13 @@ export function listNetwork(
     now: at,
     tab,
     q: query.trim(),
+    seat: wantSeat,
     pendingIn: pendingInCount(viewer.id),
     you: {
       username: viewer.username,
+      avatar: (viewer.avatar ?? "").trim(),
       headline: headlineOf(viewer),
+      seat: viewer.seat ?? "",
       pendingIn: pendingInCount(viewer.id),
       unreadMessages: 0,
       friends: friendCount(viewer.id),
@@ -307,16 +352,54 @@ export function listPublicPeople(store: StoreData, limit = 8): NetworkCard[] {
   );
 }
 
+export function listAlikeSeats(
+  store: StoreData,
+  subject: User,
+  limit = 6,
+): { username: string; avatar: string; headline: string; why: string }[] {
+  const yours = tasteOf(subject, { sitting: seatedRoom(store, subject.id)?.slug ?? "" });
+  const company = new Set(companyIds(subject.id));
+  return visibleUsers(store)
+    .filter((user) => user.id !== subject.id)
+    .map((user) => {
+      const theirs = tasteOf(user, { sitting: seatedRoom(store, user.id)?.slug ?? "" });
+      const sameCompany = companyIds(user.id).some((id) => company.has(id));
+      return {
+        username: user.username,
+        avatar: (user.avatar ?? "").trim(),
+        headline: headlineOf(user),
+        why: alikeWhy(yours, theirs, sameCompany),
+        score: alikeScore(yours, theirs, sameCompany),
+      };
+    })
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score || a.username.localeCompare(b.username))
+    .slice(0, limit)
+    .map(({ score: _score, ...row }) => row);
+}
+
 export function listSuggestedPeople(store: StoreData, viewer: User, limit = 8): NetworkCard[] {
   const at = Date.now();
-  const cards = visibleUsers(store)
+  const yours = tasteOf(viewer, { sitting: seatedRoom(store, viewer.id)?.slug ?? "" });
+  const company = new Set(companyIds(viewer.id));
+  const scored = visibleUsers(store)
     .filter((user) => user.id !== viewer.id)
-    .map((user) => toCard(store, viewer.id, user, at));
-  const open = sortCards(cards.filter((card) => card.relation === "none"));
-  const pending = sortCards(
-    cards.filter((card) => card.relation === "incoming" || card.relation === "outgoing"),
-  );
-  return [...open, ...pending].slice(0, limit);
+    .map((user) => {
+      const card = toCard(store, viewer.id, user, at);
+      const theirs = tasteOf(user, { sitting: card.room?.slug ?? "" });
+      const sameCompany = companyIds(user.id).some((id) => company.has(id));
+      const score = alikeScore(yours, theirs, sameCompany);
+      const why = alikeWhy(yours, theirs, sameCompany);
+      return { card: withWhy(card, why), score, relation: card.relation };
+    })
+    .filter((row) => row.score > 0)
+    .filter((row) => row.relation === "none" || row.relation === "incoming" || row.relation === "outgoing");
+  scored.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    if (a.relation !== b.relation) return a.relation === "none" ? -1 : 1;
+    return a.card.username.localeCompare(b.card.username);
+  });
+  return scored.slice(0, limit).map((row) => row.card);
 }
 
 export function playerRelation(viewerId: string, otherId: string): FriendRelation {

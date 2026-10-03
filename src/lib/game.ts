@@ -21,6 +21,7 @@ import { queueSettledRound } from "./fairness-db";
 import { takeFromLive } from "./takes";
 import { queueTakeTalk } from "./take-talk";
 import { blockedIds } from "./friends";
+import { searchRooms, searchSeats } from "./search";
 import {
   ensureSitChips,
   noteSitOnRound,
@@ -46,6 +47,7 @@ import { fogCupAt } from "./fog-cup";
 import { nightHourAt } from "./night-hour";
 import { afterTakeDraft, findOpenAfterTake } from "./after-take";
 import { listCompanySitting, notifyCompanyOnSit, notifyCompanyOnTable } from "./company-sit";
+import { hallHomeFor } from "./hall-home";
 import { announceSitWindows } from "./sit-windows";
 import type {
   GameState,
@@ -61,6 +63,7 @@ import type {
   SearchHit,
   StoreData,
   Tx,
+  User,
 } from "./types";
 
 function nowMs() {
@@ -643,6 +646,7 @@ export function getLobbyState(store: StoreData, userId: string | null): LobbySta
     nightHour: nightHourAt(),
     fogCup: fogCupAt(),
     companySitting: listCompanySitting(store, userId),
+    hallHome: hallHomeFor(store, userId),
   };
 }
 
@@ -982,26 +986,9 @@ export function searchPit(
   store: StoreData,
   query: string,
   includeUsers = false,
+  viewer: User | null = null,
 ): SearchHit {
-  const q = query.trim().toLowerCase();
-  const rooms = (
-    q.length < 1
-      ? listRoomCards(store).slice(0, 8)
-      : listRoomCards(store).filter(
-          (room) =>
-            room.name.toLowerCase().includes(q) ||
-            room.slug.toLowerCase().includes(q) ||
-            (room.ownerName ?? "").toLowerCase().includes(q),
-        )
-  ).slice(0, 12);
-  if (!includeUsers || q.length < 1) return { rooms, users: [] };
-  const users = Object.values(store.users)
-    .filter((user) => user.id !== HOUSE_USER_ID)
-    .filter((user) => user.username.toLowerCase().includes(q))
-    .slice(0, 12)
-    .map((user) => ({
-      username: user.username,
-      rooms: [] as { slug: string; name: string }[],
-    }));
-  return { rooms, users };
+  const rooms = searchRooms(listRoomCards(store), query);
+  if (!includeUsers || !viewer) return { rooms, users: [] };
+  return { rooms, users: searchSeats(store, query, viewer) };
 }

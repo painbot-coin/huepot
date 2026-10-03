@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionToken, requireUser } from "@/lib/auth";
 import { readyFriends } from "@/lib/friends";
 import { jsonError } from "@/lib/http";
+import { notifyNewReport } from "@/lib/house-reviewers";
 import { insertSocialReport } from "@/lib/reports";
 import {
   listInbox,
@@ -52,12 +53,14 @@ export async function POST(request: Request) {
     if (body.action === "report") {
       // Reporting a message does not send one, so it answers on its own rather
       // than falling through to the send path below.
-      const report = await withStoreRead(async (store) => {
+      const report = await withStore(async (store) => {
         const user = requireUser(store, token);
-        return reportSocial(store, user, "message", body.messageId ?? "");
+        const row = await reportSocial(store, user, "message", body.messageId ?? "");
+        await insertSocialReport(row);
+        notifyNewReport(store, { id: row.id, reporterId: row.reporterId, username: row.username });
+        return row;
       });
-      await insertSocialReport(report);
-      return NextResponse.json({ reported: true });
+      return NextResponse.json({ reported: true, id: report.id });
     }
     const payload = await withStore(async (store) => {
       const user = requireUser(store, token);

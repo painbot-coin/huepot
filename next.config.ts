@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 
 const chainNode = path.join(process.cwd(), "src/lib/chain.ts");
 const chainEdge = path.join(process.cwd(), "src/lib/chain.edge.ts");
+const dbNode = path.join(process.cwd(), "src/lib/db.ts");
+const dbBrowser = path.join(process.cwd(), "src/lib/db-browser.ts");
 
 const nextConfig: NextConfig = {
   // A build normally rewrites .next underneath the process still serving from
@@ -10,7 +12,7 @@ const nextConfig: NextConfig = {
   // cannot find its manifest. Setting this lets a deploy build somewhere else
   // and move the finished directory into place in one step.
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  serverExternalPackages: ["@prisma/client", "prisma"],
+  serverExternalPackages: ["@prisma/client", "prisma", "mongodb", "node-sql-parser"],
   async redirects() {
     return [
       { source: "/signup", destination: "/signin", permanent: true },
@@ -26,11 +28,15 @@ const nextConfig: NextConfig = {
       if (Array.isArray(alias)) {
         alias.push({ name: "@/lib/chain", alias: chainEdge });
         alias.push({ name: chainNode, alias: chainEdge });
+        alias.push({ name: "@/lib/db", alias: dbBrowser });
+        alias.push({ name: dbNode, alias: dbBrowser });
       } else {
         config.resolve.alias = {
           ...alias,
           "@/lib/chain": chainEdge,
           [chainNode]: chainEdge,
+          "@/lib/db": dbBrowser,
+          [dbNode]: dbBrowser,
         };
       }
     }

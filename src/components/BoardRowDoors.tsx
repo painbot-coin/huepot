@@ -1,4 +1,5 @@
 "use client";
+import { HouseButton } from "@/components/HouseUi";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -46,9 +47,9 @@ export function BoardRowDoors({
 
   return (
     <div className="board-doors">
-      <Link className="chip-btn chip-btn-ghost" href={door.sitHref}>
+      <HouseButton ghost href={door.sitHref}>
         {door.sitLabel}
-      </Link>
+      </HouseButton>
       {door.ask && !sent ? (
         <button className="li-ask" disabled={busy} onClick={() => void ask()} type="button">
           Ask

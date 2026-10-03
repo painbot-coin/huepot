@@ -64,6 +64,7 @@ export function ensureHouseUser(store: StoreData): User {
     headline: "",
     about: "",
     location: "",
+    seat: "",
   };
   ensureUserWallets(user);
   store.users[HOUSE_USER_ID] = user;

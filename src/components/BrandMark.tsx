@@ -5,7 +5,7 @@ export function BrandMark({ className = "brand-mark" }: { className?: string }) 
       <path
         d="M10 22 C10 16 16 12 24 12 C32 12 38 16 38 22 L36 36 C35 40 30 42 24 42 C18 42 13 40 12 36 Z"
         fill="#3a2412"
-        stroke="#d4af6a"
+        stroke="#2f9e62"
         strokeWidth="1.4"
       />
       <path

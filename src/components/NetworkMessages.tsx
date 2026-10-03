@@ -1,4 +1,5 @@
 "use client";
+import { HouseButton, HouseField } from "@/components/HouseUi";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -21,6 +22,7 @@ export function NetworkMessages() {
   const [needSignIn, setNeedSignIn] = useState(false);
   const [booted, setBooted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [reported, setReported] = useState<Record<string, boolean>>({});
   const { scroller, onScroll, pinBottom } = useChatScroll<HTMLUListElement>(
     `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
   );
@@ -58,6 +60,27 @@ export function NetworkMessages() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [withUser]);
 
+  async function report(id: string) {
+    if (!id || reported[id] || busy) return;
+    if (!window.confirm("Report this to the house?")) return;
+    setError("");
+    setBusy(true);
+    try {
+      const response = await fetch("/api/network/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "report", messageId: id }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not report");
+      setReported((current) => ({ ...current, [id]: true }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not report");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function send() {
     if (!peer || !draft.trim() || busy) return;
     setError("");
@@ -93,7 +116,7 @@ export function NetworkMessages() {
         <main className="li-main is-wide">
           <aside className="li-card li-inbox">
             <p className="lobby-label">Letters</p>
-            <p className="mt-3 text-sm text-zinc-500">Opening letters…</p>
+            <p className="mt-3 text-sm text-zinc-500">A letter stays a letter.</p>
           </aside>
           <section className="li-card li-chat">
             <p className="text-sm text-zinc-500">Opening this chat…</p>
@@ -109,6 +132,7 @@ export function NetworkMessages() {
       <main className={`li-main is-wide ${peer ? "is-thread" : ""}`}>
         <aside className="li-card li-inbox">
           <p className="lobby-label">Letters</p>
+          <p className="mt-2 text-sm text-zinc-500">A letter stays a letter.</p>
           {inbox.length === 0 ? (
             <p className="mt-3 text-sm text-zinc-500">No threads yet.</p>
           ) : (
@@ -140,9 +164,9 @@ export function NetworkMessages() {
                   Inbox
                 </Link>
                 <Link href={`/network/u/${encodeURIComponent(peer)}`}>@{peer}</Link>
-                <Link className="chip-btn" href={COMPANY_CLASSIC_HREF}>
+                <HouseButton href={COMPANY_CLASSIC_HREF}>
                   {sitClassicLabel()}
-                </Link>
+                </HouseButton>
               </p>
               <ul className="li-bubbles" onScroll={onScroll} ref={scroller}>
                 {messages.length === 0 ? (
@@ -150,7 +174,17 @@ export function NetworkMessages() {
                 ) : (
                   messages.map((item) => (
                     <li className={item.fromYou ? "is-you" : ""} key={item.id}>
-                      {item.body}
+                      <span>{item.body}</span>
+                      {!item.fromYou ? (
+                        <button
+                          className="nav-link bubble-report"
+                          disabled={busy || reported[item.id]}
+                          onClick={() => void report(item.id)}
+                          type="button"
+                        >
+                          {reported[item.id] ? "Reported" : "Report"}
+                        </button>
+                      ) : null}
                     </li>
                   ))
                 )}
@@ -163,16 +197,15 @@ export function NetworkMessages() {
                   void send();
                 }}
               >
-                <input
-                  className="field"
-                  maxLength={500}
+                <HouseField
+                  inputProps={{ maxLength: 500 }}
                   onChange={(event) => setDraft(event.target.value)}
                   placeholder={`Message @${peer}`}
                   value={draft}
                 />
-                <button className="chip-btn" disabled={busy || !draft.trim()} type="submit">
+                <HouseButton disabled={busy || !draft.trim()} type="submit">
                   {busy ? "Sending…" : "Send"}
-                </button>
+                </HouseButton>
               </form>
             </>
           ) : (

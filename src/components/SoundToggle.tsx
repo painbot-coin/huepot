@@ -20,7 +20,7 @@ export function SoundToggle({ className = "pit-ico" }: { className?: string }) {
         unlockSound();
         const next = toggleMuted();
         setMuted(next);
-        if (!next) playFx("click", "#ffb020");
+        if (!next) playFx("click", "#2f9e62");
       }}
       title={muted ? "Sound off" : "Sound on"}
       type="button"

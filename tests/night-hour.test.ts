@@ -26,7 +26,7 @@ const live: NightHour = { ...waiting, live: true };
 test("Night names 22:00 UTC and sits that table", () => {
   assert.equal(nightHourClock(22), "22:00 UTC");
   const at = Date.UTC(2026, 8, 14, 21, 50, 0);
-  assert.equal(nightHourSitLabel(waiting, at), "Sit Night · hour soon");
+  assert.equal(nightHourSitLabel(waiting, at), "Play Night · starting soon");
   assert.equal(nightHourLine(waiting, at).href, "/rooms/night");
   assert.equal(hourSendsToNight(waiting, at), true);
   assert.equal(nightHourAt(at, 22).live, false);
@@ -45,5 +45,5 @@ test("the lintel sends Night when Classic is quiet", () => {
   assert.equal(showHeaderHour("/news", classic, soonAt, waiting), true);
   assert.equal(showHeaderHour("/rooms/night", classic, soonAt, waiting), false);
   assert.equal(showHeaderHour("/news", classic, soonAt, live), true);
-  assert.equal(nightHourSitLabel(live, Date.UTC(2026, 8, 14, 22, 10, 0)), "Sit Night now");
+  assert.equal(nightHourSitLabel(live, Date.UTC(2026, 8, 14, 22, 10, 0)), "Play Night now");
 });

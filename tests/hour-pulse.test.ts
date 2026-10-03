@@ -29,10 +29,10 @@ function blockedOf(id: string) {
 
 test("the hour still names Classic and asks company to sit", () => {
   assert.equal(classicHourNoticeTitle(), "Classic hour is on");
-  assert.equal(classicHourNoticeBody(), "Sit Classic with company. The named hour just opened.");
-  assert.equal(fogCupNoticeBody("Sun 21:00 UTC"), "Sit Fog with company. Sun 21:00 UTC.");
+  assert.equal(classicHourNoticeBody(), "Play Classic with your network. The hour just opened.");
+  assert.equal(fogCupNoticeBody("Sun 21:00 UTC"), "Play Fog with your network. Sun 21:00 UTC.");
   assert.equal(nightHourNoticeTitle(), "Night hour is on");
-  assert.equal(nightHourNoticeBody(), "Sit Night with company. The named hour just opened.");
+  assert.equal(nightHourNoticeBody(), "Play Night with your network. The hour just opened.");
 });
 
 test("a sitter's company hears the hour; a block and the house do not", () => {

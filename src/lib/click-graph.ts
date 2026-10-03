@@ -29,6 +29,68 @@ export function elapsed01(remainingMs: number, durationMs: number) {
   return 1 - timeBarPct(remainingMs, durationMs) / 100;
 }
 
+export function playheadAt(now: number, startedAt: number, endsAt: number) {
+  const span = Math.max(1, endsAt - startedAt);
+  return Math.max(0, Math.min(1, (now - startedAt) / span));
+}
+
+export function remainingOf(now: number, endsAt: number) {
+  return Math.max(0, endsAt - now);
+}
+
+export function approachScale(current: number, target: number, dtMs = 16) {
+  if (!Number.isFinite(current) || current <= 0) return target;
+  if (!Number.isFinite(target) || target <= 0) return current;
+  const tau = target > current ? 160 : 420;
+  const alpha = 1 - Math.exp(-Math.max(0, dtMs) / tau);
+  const next = current + (target - current) * alpha;
+  return Math.abs(target - next) < 0.02 ? target : next;
+}
+
+export type RoundClock = {
+  perf: number;
+  remaining: number;
+  duration: number;
+};
+
+export function syncRoundClock(
+  clock: RoundClock,
+  remaining: number,
+  duration: number,
+  perf: number,
+  slack = 180,
+): RoundClock {
+  const next = {
+    perf,
+    remaining: Math.max(0, remaining),
+    duration: Math.max(1, duration),
+  };
+  if (clock.duration !== next.duration) return next;
+  const predicted = clock.remaining - (perf - clock.perf);
+  if (Math.abs(predicted - next.remaining) > slack) return next;
+  return clock;
+}
+
+export function readRoundClock(clock: RoundClock, perf: number) {
+  const left = Math.max(0, clock.remaining - (perf - clock.perf));
+  const t = Math.max(0, Math.min(1, 1 - left / Math.max(1, clock.duration)));
+  return { left, t };
+}
+
+export function holdScale(current: number, target: number) {
+  const next = niceMax(Math.max(1, target));
+  if (!Number.isFinite(current) || current <= 0) return next;
+  return Math.max(current, next);
+}
+
+export function axisTicks(scale: number) {
+  const max = Math.max(1, Math.round(scale));
+  if (max === 1) return [0, 1];
+  if (max <= 6) return Array.from({ length: max + 1 }, (_, i) => i);
+  const mid = Math.round(max / 2);
+  return [...new Set([0, mid, max])].sort((a, b) => a - b);
+}
+
 export function graphScale(totals: Record<string, number>, ids: readonly string[]) {
   return Math.max(1, ...ids.map((id) => totals[id] ?? 0));
 }
@@ -67,9 +129,13 @@ export function pushSample(
   const t = Math.max(0, Math.min(1, sample.t));
   const next = { t, totals: sample.totals };
   const last = series[series.length - 1];
-  if (last && t + 1e-6 < last.t) return [next];
+  if (last && t + 0.12 < last.t) return [next];
+  if (last && t + 1e-6 < last.t) return series;
   if (last && Math.abs(last.t - t) < 0.003 && sameTotals(last.totals, next.totals, ids)) {
     return series;
+  }
+  if (last && t - last.t >= 0.003 && !sameTotals(last.totals, next.totals, ids)) {
+    return [...series, { t, totals: last.totals }, next].slice(-limit);
   }
   return [...series, next].slice(-limit);
 }
@@ -83,12 +149,25 @@ export function withLiveTip(
   series: ClickSample[],
   t: number,
   totals: Record<string, number>,
+  ids?: readonly string[],
 ): ClickSample[] {
-  const tip = { t: Math.max(0, Math.min(1, t)), totals };
+  const tipT = Math.max(0, Math.min(1, t));
+  const keys = ids && ids.length ? ids : Object.keys(totals);
   const origin = { t: 0, totals: zeroed(totals) };
-  if (!series.length) return [origin, tip];
-  if (series[0].t > 0.02) return [origin, ...series, tip];
-  return [...series, tip];
+  let out =
+    !series.length ? [origin] : series[0].t > 0.02 ? [origin, ...series] : [...series];
+  const last = out[out.length - 1];
+  if (!last) return [origin, { t: tipT, totals }];
+  if (tipT > last.t + 1e-6) {
+    if (!sameTotals(last.totals, totals, keys)) {
+      return [...out, { t: tipT, totals: last.totals }, { t: tipT, totals }];
+    }
+    return [...out, { t: tipT, totals }];
+  }
+  if (!sameTotals(last.totals, totals, keys)) {
+    return [...out, { t: last.t, totals }];
+  }
+  return out;
 }
 
 export function plotX(t: number, box: PlotBox) {

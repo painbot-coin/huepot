@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { HouseAlert, HouseCheck, PageHead } from "@/components/HouseUi";
 import { MiniCoin } from "@/components/MiniCoin";
 import { GoogleButton } from "@/components/GoogleButton";
 import { CLASSIC_HOUR_UTC, FOG_CUP_HOUR_UTC, FOG_CUP_WEEKDAY, NIGHT_HOUR_UTC } from "@/lib/config";
@@ -88,32 +89,31 @@ export function SigninForm() {
           <MiniCoin id="amber" />
         </div>
       </div>
-      <p className="hall-kicker">The gate</p>
-      <h1 className="font-display text-4xl text-white">Enter the house</h1>
-      <p className="app-lead">
-        Google only. Tick 18+, then continue with the same Gmail you play with.
-      </p>
+      <PageHead
+        lead="Google only. Tick 18+. After you sign in, pick a role — game, AI, play, or betting — and meet people like you."
+        title="Join Huepot"
+      />
       <p className="mt-3 text-sm text-zinc-500">
-        Classic sits {classicHourClock(CLASSIC_HOUR_UTC)}. Night sits{" "}
+        Classic plays {classicHourClock(CLASSIC_HOUR_UTC)}. Night plays{" "}
         {nightHourClock(NIGHT_HOUR_UTC)}. Fog cup{" "}
         {fogCupClock(FOG_CUP_WEEKDAY, FOG_CUP_HOUR_UTC)}.
       </p>
       {sitNow ? <p className="lobby-hour mt-2">{sitNow}</p> : null}
-      <label className="mt-5 flex items-start gap-2 text-sm text-zinc-400">
-        <input
+      <div className="mt-5">
+        <HouseCheck
           checked={age}
-          className="mt-1"
-          onChange={(event) => setAge(event.target.checked)}
-          type="checkbox"
+          label={
+            <span>
+              I am 18 or older and agree to the{" "}
+              <Link className="text-zinc-200 underline" href="/terms">
+                terms
+              </Link>
+              .
+            </span>
+          }
+          onChange={setAge}
         />
-        <span>
-          I am 18 or older and agree to the{" "}
-          <Link className="text-zinc-200 underline" href="/terms">
-            terms
-          </Link>
-          .
-        </span>
-      </label>
+      </div>
       <div className="mt-5">
         <GoogleButton
           disabled={!age}
@@ -121,14 +121,14 @@ export function SigninForm() {
           label="Cross with Google"
         />
       </div>
-      {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+      {error ? <HouseAlert>{error}</HouseAlert> : null}
       {ref ? (
         <p className="mt-3 text-xs text-zinc-500">
           Invite code {ref} will tag this new Google account.
         </p>
       ) : null}
       {!age ? (
-        <p className="empty-note">The gate opens after you tick 18+.</p>
+        <p className="empty-note">Sign-in opens after you tick 18+.</p>
       ) : null}
     </div>
   );

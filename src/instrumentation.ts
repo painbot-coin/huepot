@@ -1,9 +1,7 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { assertProductReady } = await import("@/lib/product");
-  assertProductReady();
-  const { startChainWatcher } = await import("@/lib/chain");
-  const { startSitWindowWatcher } = await import("@/lib/sit-windows");
-  startChainWatcher();
-  startSitWindowWatcher();
+  const { atlasUri } = await import("@/lib/atlas-uri");
+  if (!atlasUri()) return;
+  const { primeJsonFromAtlas } = await import("@/lib/atlas-json");
+  await primeJsonFromAtlas();
 }

@@ -1,9 +1,12 @@
+import { HouseFloor } from "@/components/HouseFloor";
 import { LazySigninForm } from "@/components/LazyViews";
 
 export default function SigninPage() {
   return (
-    <main className="app-page">
-      <LazySigninForm />
-    </main>
+    <HouseFloor kicker="Sign in">
+      <main className="app-page is-in-floor">
+        <LazySigninForm />
+      </main>
+    </HouseFloor>
   );
 }

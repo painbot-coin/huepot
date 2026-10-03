@@ -48,7 +48,7 @@ export const LazyNetworkFeed = dynamic(
 
 export const LazyNetworkClient = dynamic(
   () => import("@/components/NetworkClient").then((mod) => mod.NetworkClient),
-  { loading: () => <PitLoader label="Opening the pit…" /> },
+  { loading: () => <PitLoader label="Opening the table…" /> },
 );
 
 export const LazyNetworkMessages = dynamic(
@@ -58,6 +58,11 @@ export const LazyNetworkMessages = dynamic(
 export const LazyNetworkProfile = dynamic(
   () => import("@/components/NetworkProfile").then((mod) => mod.NetworkProfile),
   { loading: () => <PitLoader label="Opening profile…" /> },
+);
+
+export const LazySeatPick = dynamic(
+  () => import("@/components/SeatPick").then((mod) => mod.SeatPick),
+  { loading: () => <PitLoader label="Opening your seat…" /> },
 );
 
 export const LazyCreateRoomForm = dynamic(

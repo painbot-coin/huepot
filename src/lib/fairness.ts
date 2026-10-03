@@ -229,3 +229,21 @@ export function settledTakeAmount(row: PublicSettledRound) {
 export function shortHash(value: string) {
   return `${value.slice(0, 8)}…${value.slice(-4)}`;
 }
+
+/** The last take opens its own fairness page. A list is only the fallback. */
+export function pitFairnessLink(input: {
+  roundId: string;
+  revealing: boolean;
+  kind?: string | null;
+  bookedId?: string | null;
+  bookedNumber?: number | null;
+}) {
+  if (input.revealing && input.kind && input.kind !== "empty") {
+    return { href: `/fairness/${input.roundId}`, label: "This take" };
+  }
+  if (input.bookedId) {
+    const number = input.bookedNumber ? ` #${input.bookedNumber}` : "";
+    return { href: `/fairness/${input.bookedId}`, label: `Last take${number}` };
+  }
+  return { href: "/fairness", label: "Fairness" };
+}

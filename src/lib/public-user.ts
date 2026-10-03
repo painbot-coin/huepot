@@ -1,3 +1,5 @@
+import { isManagerUser } from "@/lib/house-managers";
+import { isReviewerUser } from "@/lib/house-reviewers";
 import { effectiveLossCap, playBlock, playLossSince, userLimits } from "./limits";
 import { fromCents } from "./money";
 import { unreadCount } from "./notifications";
@@ -46,5 +48,11 @@ export function toPublicUser(user: User, txs: PublicUser["txs"], store?: StoreDa
     inviteEarned: fromCents(earned),
     inviteEarnedToday: fromCents(earnedToday),
     inviteDailyLeft: fromCents(Math.max(0, cap - earnedToday)),
+    seat: user.seat ?? "",
+    avatar: user.avatar ?? "",
+    cover: user.cover ?? "",
+    headline: user.headline ?? "",
+    manager: store ? isManagerUser(user) : Boolean(user.manager),
+    reviewer: store ? isReviewerUser(user) : Boolean(user.reviewer),
   };
 }

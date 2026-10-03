@@ -1,12 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HouseButton, HouseField, HouseTabs } from "@/components/HouseUi";
 import { formatUsdt } from "@/lib/money";
 import { hueExplorerTx, type HueClaim } from "@/lib/hue-claim";
 import type { Tx, Withdrawal } from "@/lib/types";
 import type { StaffUserRow } from "@/lib/staff";
 
-type Tab = "books" | "payouts" | "players" | "tables" | "ledger" | "reports" | "wire" | "log";
+type Tab = "books" | "payouts" | "players" | "tables" | "ledger" | "reports" | "posts" | "wire" | "log";
+
+const TAB_LABEL: Record<Tab, string> = {
+  books: "books",
+  payouts: "payouts",
+  players: "players",
+  tables: "tables",
+  ledger: "ledger",
+  reports: "reports",
+  posts: "applications",
+  wire: "wire",
+  log: "log",
+};
+
+type StaffPost = {
+  id: string;
+  jobId: string;
+  title: string;
+  username: string;
+  seat: string;
+  note: string;
+  href: string;
+  createdAt: number;
+};
 type ReportedPlayer = {
   username: string;
   open: number;
@@ -106,6 +130,7 @@ export function StaffConsole() {
   const [held, setHeld] = useState<HeldNews[]>([]);
   const [live, setLive] = useState<HeldNews[]>([]);
   const [heldCount, setHeldCount] = useState(0);
+  const [posts, setPosts] = useState<StaffPost[]>([]);
   const [house, setHouse] = useState<{ balance: number; percent: string } | null>(null);
   const [books, setBooks] = useState<Books | null>(null);
   const [mail, setMail] = useState<{ queued: number; sent: number; failed: number } | null>(null);
@@ -177,6 +202,7 @@ export function StaffConsole() {
         txs?: (Tx & { username?: string })[];
         reports?: ReportRow[];
         reported?: ReportedPlayer[];
+        posts?: StaffPost[];
       held?: HeldNews[];
         live?: HeldNews[];
         heldCount?: number;
@@ -204,6 +230,7 @@ export function StaffConsole() {
       if (data.txs) setTxs(data.txs);
       if (data.reports) setReports(data.reports);
       if (data.reported) setReported(data.reported);
+      if (data.posts) setPosts(data.posts);
       if (data.held) setHeld(data.held);
       if (data.live) setLive(data.live);
       if (typeof data.heldCount === "number") setHeldCount(data.heldCount);
@@ -306,9 +333,9 @@ export function StaffConsole() {
 
       {signedIn ? (
         <div className="mt-6 flex flex-wrap gap-3">
-          <button className="chip-btn chip-btn-ghost" disabled={busy} onClick={() => void signOut()} type="button">
+          <HouseButton disabled={busy} ghost onClick={() => void signOut()}>
             Sign out
-          </button>
+          </HouseButton>
         </div>
       ) : (
         <form
@@ -318,22 +345,20 @@ export function StaffConsole() {
             void signIn();
           }}
         >
-          <input
-            className="field"
+          <HouseField
             onChange={(event) => setName(event.target.value)}
             placeholder="Your name"
             value={name}
           />
-          <input
-            className="field"
+          <HouseField
             onChange={(event) => setSecret(event.target.value)}
             placeholder="Staff secret"
             type="password"
             value={secret}
           />
-          <button className="chip-btn justify-center whitespace-nowrap" disabled={busy || !secret} type="submit">
+          <HouseButton className="justify-center whitespace-nowrap" disabled={busy || !secret} type="submit">
             {busy ? "Opening…" : "Sign in"}
-          </button>
+          </HouseButton>
         </form>
       )}
       {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
@@ -358,17 +383,14 @@ export function StaffConsole() {
         </p>
       ) : null}
       {signedIn ? (
-      <div className="mt-6 flex flex-wrap gap-2">
-        {(["books", "payouts", "players", "tables", "ledger", "reports", "wire", "log"] as Tab[]).map((item) => (
-          <button
-            className={`chip-btn ${tab === item ? "" : "chip-btn-ghost"}`}
-            key={item}
-            onClick={() => void load(item)}
-            type="button"
-          >
-            {item}
-          </button>
-        ))}
+      <div className="mt-6">
+        <HouseTabs
+          items={(["books", "payouts", "players", "tables", "ledger", "reports", "posts", "wire", "log"] as Tab[]).map(
+            (item) => ({ id: item, label: TAB_LABEL[item] }),
+          )}
+          onChange={(id) => void load(id as Tab)}
+          value={tab}
+        />
       </div>
       ) : null}
 
@@ -504,26 +526,23 @@ export function StaffConsole() {
           <label className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
             Credit a send
           </label>
-          <input
-            className="field"
+          <HouseField
             onChange={(event) => setClaimHash(event.target.value)}
             placeholder="BscScan hash"
             value={claimHash}
           />
-          <button className="chip-btn" disabled={busy || !claimHash.trim()} type="submit">
+          <HouseButton disabled={busy || !claimHash.trim()} type="submit">
             {busy ? "Checking…" : "Credit this send"}
-          </button>
+          </HouseButton>
           {claimNote ? <p className="text-sm text-zinc-300">{claimNote}</p> : null}
         </form>
         {canSend ? (
-          <button
-            className="chip-btn"
+          <HouseButton
             disabled={busy || !inboxes?.count}
             onClick={() => void act({ action: "sweep" })}
-            type="button"
           >
             {busy ? "Sweeping…" : "Sweep inboxes to send wallet"}
-          </button>
+          </HouseButton>
         ) : null}
         {sweeps.length ? (
           <ul className="space-y-2">
@@ -566,17 +585,17 @@ export function StaffConsole() {
                 {row.status === "queued" || row.status === "sending" ? (
                   <div className="flex gap-2">
                     {canSend && row.status === "queued" ? (
-                      <button className="chip-btn" disabled={busy} onClick={() => void act({ action: "send", id: row.id })} type="button">
+                      <HouseButton disabled={busy} onClick={() => void act({ action: "send", id: row.id })}>
                         Send
-                      </button>
+                      </HouseButton>
                     ) : null}
-                    <button className="chip-btn" disabled={busy} onClick={() => void act({ action: "paid", id: row.id })} type="button">
+                    <HouseButton disabled={busy} onClick={() => void act({ action: "paid", id: row.id })}>
                       Paid
-                    </button>
+                    </HouseButton>
                     {row.status === "queued" ? (
-                      <button className="chip-btn chip-btn-ghost" disabled={busy} onClick={() => void act({ action: "rejected", id: row.id })} type="button">
+                      <HouseButton disabled={busy} ghost onClick={() => void act({ action: "rejected", id: row.id })}>
                         Reject
-                      </button>
+                      </HouseButton>
                     ) : null}
                   </div>
                 ) : null}
@@ -617,14 +636,14 @@ export function StaffConsole() {
                   {row.status === "queued" || row.status === "sending" ? (
                     <div className="flex gap-2">
                       {hueOn && row.status === "queued" ? (
-                        <button className="chip-btn" disabled={busy} onClick={() => void act({ action: "hue-send", id: row.id })} type="button">
+                        <HouseButton disabled={busy} onClick={() => void act({ action: "hue-send", id: row.id })}>
                           Send
-                        </button>
+                        </HouseButton>
                       ) : null}
                       {row.status === "queued" ? (
-                        <button className="chip-btn chip-btn-ghost" disabled={busy} onClick={() => void act({ action: "hue-reject", id: row.id })} type="button">
+                        <HouseButton disabled={busy} ghost onClick={() => void act({ action: "hue-reject", id: row.id })}>
                           Reject
-                        </button>
+                        </HouseButton>
                       ) : null}
                     </div>
                   ) : null}
@@ -639,24 +658,23 @@ export function StaffConsole() {
       {signedIn && tab === "players" ? (
         <section className="mt-8">
           <div className="flex gap-3">
-            <input
-              className="field"
+            <HouseField
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search username or email"
               value={query}
             />
-            <button className="chip-btn" disabled={busy} onClick={() => void load("players")} type="button">
+            <HouseButton disabled={busy} onClick={() => void load("players")}>
               Search
-            </button>
+            </HouseButton>
           </div>
-          <input
-            className="field mt-3"
+          <HouseField
+            className="mt-3"
             onChange={(event) => setNote(event.target.value)}
             placeholder="Reason / freeze note"
             value={note}
           />
-          <input
-            className="field mt-3"
+          <HouseField
+            className="mt-3"
             onChange={(event) => setAmount(event.target.value)}
             placeholder="Adjust amount (+ or −)"
             value={amount}
@@ -667,25 +685,48 @@ export function StaffConsole() {
                 <p className="text-zinc-200">
                   @{user.username} · {formatUsdt(user.balance)} USDT
                   {user.frozen ? " · frozen" : ""}
+                  {user.manager ? " · manager" : ""}
+                  {user.reviewer ? " · reviewer" : ""}
                 </p>
                 <p className="mt-1 text-xs">{user.email}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    className="chip-btn"
+                  <HouseButton
                     disabled={busy}
                     onClick={() => void act({ action: user.frozen ? "unfreeze" : "freeze", userId: user.id, note })}
-                    type="button"
                   >
                     {user.frozen ? "Unfreeze" : "Freeze"}
-                  </button>
-                  <button
-                    className="chip-btn chip-btn-ghost"
+                  </HouseButton>
+                  <HouseButton
                     disabled={busy}
+                    ghost
                     onClick={() => void act({ action: "adjust", userId: user.id, amount: Number(amount), note })}
-                    type="button"
                   >
                     Adjust
-                  </button>
+                  </HouseButton>
+                  <HouseButton
+                    disabled={busy}
+                    ghost
+                    onClick={() =>
+                      void act({
+                        action: user.manager ? "revoke-manager" : "grant-manager",
+                        userId: user.id,
+                      })
+                    }
+                  >
+                    {user.manager ? "Remove manager" : "Make manager"}
+                  </HouseButton>
+                  <HouseButton
+                    disabled={busy}
+                    ghost
+                    onClick={() =>
+                      void act({
+                        action: user.reviewer ? "revoke-reviewer" : "grant-reviewer",
+                        userId: user.id,
+                      })
+                    }
+                  >
+                    {user.reviewer ? "Remove reviewer" : "Make reviewer"}
+                  </HouseButton>
                 </div>
               </li>
             ))}
@@ -707,14 +748,13 @@ export function StaffConsole() {
                   </p>
                 </div>
                 {room.live ? (
-                  <button
-                    className="chip-btn chip-btn-ghost"
+                  <HouseButton
                     disabled={busy}
+                    ghost
                     onClick={() => void act({ action: "kill", slug: room.slug })}
-                    type="button"
                   >
                     Void round
-                  </button>
+                  </HouseButton>
                 ) : null}
               </div>
             </li>
@@ -791,22 +831,19 @@ export function StaffConsole() {
               <p className="mt-1 text-xs uppercase tracking-widest">{row.status}</p>
               {row.status === "open" ? (
                 <div className="mt-3 flex gap-2">
-                  <button
-                    className="chip-btn"
+                  <HouseButton
                     disabled={busy}
                     onClick={() => void act({ action: "hide-report", id: row.id })}
-                    type="button"
                   >
                     Hide + mute
-                  </button>
-                  <button
-                    className="chip-btn chip-btn-ghost"
+                  </HouseButton>
+                  <HouseButton
                     disabled={busy}
+                    ghost
                     onClick={() => void act({ action: "dismiss-report", id: row.id })}
-                    type="button"
                   >
                     Dismiss
-                  </button>
+                  </HouseButton>
                 </div>
               ) : null}
             </li>
@@ -814,39 +851,73 @@ export function StaffConsole() {
         </ul>
       ) : null}
 
+      {signedIn && tab === "posts" ? (
+        <ul className="mt-8 space-y-3">
+          {posts.length ? (
+            posts.map((row) => (
+              <li className="rounded-2xl border border-white/8 px-4 py-3" key={row.id}>
+                <p className="text-sm text-zinc-300">
+                  <a href={`/network/u/${encodeURIComponent(row.username)}`}>@{row.username}</a>
+                  {row.seat ? ` · ${row.seat}` : ""} ·{" "}
+                  <a href={`/jobs/${encodeURIComponent(row.jobId)}`}>{row.title}</a>
+                </p>
+                <p className="mt-2 text-sm text-zinc-200">{row.note}</p>
+                {row.href ? (
+                  <p className="mt-2 break-all text-xs text-zinc-500">
+                    <a href={row.href} rel="noreferrer noopener">
+                      {row.href}
+                    </a>
+                  </p>
+                ) : null}
+                <p className="mt-1 text-xs uppercase tracking-widest text-zinc-500">
+                  {new Date(row.createdAt).toLocaleString()}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <HouseButton href={`/network/messages?with=${encodeURIComponent(row.username)}`}>
+                    Message
+                  </HouseButton>
+                  <HouseButton ghost href={`/jobs/${encodeURIComponent(row.jobId)}`}>
+                    Job
+                  </HouseButton>
+                </div>
+              </li>
+            ))
+          ) : (
+            <li className="text-sm text-zinc-500">No applications yet.</li>
+          )}
+        </ul>
+      ) : null}
+
       {signedIn && tab === "wire" ? (
         <div className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-zinc-400">
-              Headlines publish themselves, every quarter of an hour, from
-              betting-game desks and the tape. Pull anything that should not be
-              there.
+              New headlines stay held until you publish one. Fetch pulls them
+              from betting-game desks and the tape. They do not go on the wire
+              by themselves.
             </p>
-            <button
-              className="chip-btn chip-btn-ghost"
+            <HouseButton
               disabled={busy}
+              ghost
               onClick={() => void act({ action: "wire-fetch" })}
-              type="button"
             >
               {busy ? "Fetching…" : "Fetch now"}
-            </button>
+            </HouseButton>
           </div>
 
           {heldCount > 0 ? (
             <div className="mt-4 rounded-2xl border border-amber-300/30 px-4 py-3">
               <p className="text-sm text-amber-200">
-                {heldCount} headline{heldCount === 1 ? "" : "s"} left over from when
-                publishing needed a click. They came from the same approved sources
-                as everything else.
+                {heldCount} headline{heldCount === 1 ? "" : "s"} waiting. A person
+                publishes one, or puts them all on the wire.
               </p>
-              <button
-                className="chip-btn mt-2"
+              <HouseButton
+                className="mt-2"
                 disabled={busy}
                 onClick={() => void act({ action: "wire-publish-all" })}
-                type="button"
               >
                 Put them all on the wire
-              </button>
+              </HouseButton>
             </div>
           ) : null}
 
@@ -864,14 +935,13 @@ export function StaffConsole() {
                   {row.source} · {row.tag}
                 </p>
                 <div className="mt-3">
-                  <button
-                    className="chip-btn chip-btn-ghost"
+                  <HouseButton
                     disabled={busy}
+                    ghost
                     onClick={() => void act({ action: "wire-drop", id: row.id })}
-                    type="button"
                   >
                     Pull from the wire
-                  </button>
+                  </HouseButton>
                 </div>
               </li>
             ))}
@@ -894,22 +964,19 @@ export function StaffConsole() {
                 </p>
                 <p className="mt-1 break-all text-xs text-zinc-500">{row.url}</p>
                 <div className="mt-3 flex gap-2">
-                  <button
-                    className="chip-btn"
+                  <HouseButton
                     disabled={busy}
                     onClick={() => void act({ action: "wire-publish", id: row.id })}
-                    type="button"
                   >
                     Publish
-                  </button>
-                  <button
-                    className="chip-btn chip-btn-ghost"
+                  </HouseButton>
+                  <HouseButton
                     disabled={busy}
+                    ghost
                     onClick={() => void act({ action: "wire-drop", id: row.id })}
-                    type="button"
                   >
                     Discard
-                  </button>
+                  </HouseButton>
                 </div>
               </li>
             ))}

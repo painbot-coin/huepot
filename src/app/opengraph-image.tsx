@@ -32,7 +32,7 @@ export default async function HouseImage() {
           backgroundColor: "#08070f",
           // Gradients only, so the PNG stays light.
           backgroundImage:
-            "radial-gradient(900px 620px at 80% 14%, #ffd27a24, transparent 70%), radial-gradient(760px 540px at 6% 98%, #8b5cff1f, transparent 70%)",
+            "radial-gradient(900px 620px at 80% 14%, #8ee4a824, transparent 70%), radial-gradient(760px 540px at 6% 98%, #8b5cff1f, transparent 70%)",
           color: "#f6f3ec",
           fontFamily: "Cinzel",
         }}
@@ -45,7 +45,7 @@ export default async function HouseImage() {
             width: 16,
             height: 630,
             display: "flex",
-            backgroundColor: "#ffd27a",
+            backgroundColor: "#2f9e62",
           }}
         />
         <div
@@ -59,7 +59,7 @@ export default async function HouseImage() {
             padding: "64px 76px 58px 98px",
           }}
         >
-          <div style={{ display: "flex", fontSize: 27, letterSpacing: 12, color: "#ffd27a" }}>
+          <div style={{ display: "flex", fontSize: 27, letterSpacing: 12, color: "#8ee4a8" }}>
             HUEPOT
           </div>
 
@@ -97,7 +97,7 @@ export default async function HouseImage() {
             <div style={{ display: "flex", fontSize: 25, letterSpacing: 4, color: "#9a9aa8" }}>
               CLICK A COLOR · 18+
             </div>
-            <div style={{ display: "flex", fontSize: 31, letterSpacing: 3, color: "#ffd27a" }}>
+            <div style={{ display: "flex", fontSize: 31, letterSpacing: 3, color: "#8ee4a8" }}>
               HUEPOT.NET
             </div>
           </div>

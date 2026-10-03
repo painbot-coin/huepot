@@ -1,21 +1,27 @@
 "use client";
 
-import { LogoutButton } from "@/components/LogoutButton";
 import { MessageLaunch } from "@/components/MessageDock";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PresencePing } from "@/components/PresencePing";
-import { SitClock } from "@/components/SitClock";
 import { SoundToggle } from "@/components/SoundToggle";
+import { YouMenu } from "@/components/YouMenu";
 
-export function SignedNav() {
+export function SignedNav({
+  username,
+  manager = false,
+  reviewer = false,
+}: {
+  username: string;
+  manager?: boolean;
+  reviewer?: boolean;
+}) {
   return (
     <>
-      <SitClock />
       <SoundToggle className="pit-ico header-sound" />
       <MessageLaunch />
       <NotificationBell />
       <PresencePing />
-      <LogoutButton />
+      <YouMenu manager={manager} reviewer={reviewer} username={username} />
     </>
   );
 }

@@ -1,9 +1,19 @@
+import { HouseFloor } from "@/components/HouseFloor";
 import { SUPPORT_EMAIL } from "@/lib/config";
 
 export default function PrivacyPage() {
   return (
-    <main className="prose-page">
-      <p className="hall-kicker">House law</p>
+    <HouseFloor
+      extra={[
+        { href: "/how-it-works", label: "How it works" },
+        { href: "/fairness", label: "Fairness" },
+        { href: "/terms", label: "Terms" },
+        { href: "/privacy", label: "Privacy", match: true },
+      ]}
+      kicker="Privacy"
+    >
+    <main className="prose-page is-in-floor">
+      <p className="hall-kicker">Privacy</p>
       <h1 className="font-display text-4xl text-white">Privacy</h1>
       <p>
         We store your email, username, Google account id, play
@@ -22,5 +32,6 @@ export default function PrivacyPage() {
         Account data lives in the Huepot database on the server.
       </p>
     </main>
+    </HouseFloor>
   );
 }

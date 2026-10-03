@@ -21,7 +21,7 @@ export default function GlobalError({
           minHeight: "100vh",
           display: "grid",
           placeItems: "center",
-          background: "#0b0b10",
+          background: "#16140f",
           color: "#e7e7ee",
           fontFamily: "system-ui, sans-serif",
           padding: "2rem",
@@ -34,7 +34,7 @@ export default function GlobalError({
               fontSize: "0.72rem",
               letterSpacing: "0.22em",
               textTransform: "uppercase",
-              color: "#ffd27a",
+              color: "#8ee4a8",
             }}
           >
             Huepot
@@ -52,7 +52,7 @@ export default function GlobalError({
               type="button"
               onClick={() => retry()}
               style={{
-                background: "#ffd27a",
+                background: "#2f9e62",
                 color: "#161019",
                 border: 0,
                 padding: "0.6rem 1.1rem",

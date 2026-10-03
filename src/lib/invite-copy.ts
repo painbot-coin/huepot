@@ -8,8 +8,8 @@ export function inviteSitLead(input: {
   cup?: { weekday: number; hour: number } | null;
 }) {
   return [
-    input.hour != null ? `Classic sits ${classicHourClock(input.hour)}.` : "",
-    input.night != null ? `Night sits ${nightHourClock(input.night)}.` : "",
+    input.hour != null ? `Classic plays ${classicHourClock(input.hour)}.` : "",
+    input.night != null ? `Night plays ${nightHourClock(input.night)}.` : "",
     input.cup ? `Fog cup ${fogCupClock(input.cup.weekday, input.cup.hour)}.` : "",
   ]
     .filter(Boolean)
@@ -26,5 +26,5 @@ export function inviteText(
 ) {
   const lead = sit ? inviteSitLead(sit) : "";
   const prefix = lead ? `${lead} ` : "";
-  return `${prefix}Enter the house with this link. If you sit, I get a slice of the house take only — not your bank.\n${url}`;
+  return `${prefix}Join Huepot with this link. If you play, I get a slice of house rake only — not your bank.\n${url}`;
 }

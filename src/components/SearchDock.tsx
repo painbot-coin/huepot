@@ -1,18 +1,28 @@
 "use client";
 
+import InputBase from "@mui/material/InputBase";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
+import Paper from "@mui/material/Paper";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Fade } from "@/components/Fade";
 import { IconSearch, IconUsers } from "@/components/Icons";
+import { HOUSE_SEATS } from "@/lib/house-seats";
 import { formatUsdt } from "@/lib/money";
 import type { SearchHit } from "@/lib/types";
+import { useCopy } from "@/components/LocaleRoot";
 
 export function SearchDock({
   onPickRoom,
+  className = "",
 }: {
   onPickRoom: (slug: string) => void;
+  className?: string;
 }) {
   const router = useRouter();
+  const { copy } = useCopy();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [hits, setHits] = useState<SearchHit>({ rooms: [], users: [] });
@@ -40,63 +50,81 @@ export function SearchDock({
   }, []);
 
   return (
-    <div className="search-dock" ref={box}>
+    <Paper
+      className={`search-dock ${className}`.trim()}
+      ref={box}
+      sx={{ display: "flex", alignItems: "center", px: 1.5, py: 0.25, width: "100%" }}
+    >
       <IconSearch />
-      <input
+      <InputBase
+        inputProps={{ "aria-label": copy.line.find }}
         onChange={(event) => {
           setQ(event.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Find a table or a seat…"
+        placeholder={copy.line.find}
+        sx={{ flex: 1 }}
         value={q}
       />
       <Fade className="search-pop" show={open}>
-          {q.trim().length < 2 ? (
-            <span>Type a table or a seat.</span>
-          ) : (
-            <>
-          <p aria-label="Tables">
-            <IconSearch />
-          </p>
-          {hits.rooms.length === 0 ? <span>No tables match.</span> : null}
-          {hits.rooms.map((room) => (
-            <button
-              key={room.slug}
-              onClick={() => {
-                onPickRoom(room.slug);
-                setOpen(false);
-                setQ("");
-              }}
-              type="button"
-            >
-              <strong>{room.name}</strong>
-              <em>
-                {room.buttonCount} coins · {formatUsdt(room.clickPrice)} · pot {formatUsdt(room.pot)}
-              </em>
-            </button>
-          ))}
-          <p aria-label="Seats">
-            <IconUsers />
-          </p>
-          {hits.users.length === 0 ? <span>No seats match.</span> : null}
-          {hits.users.map((user) => (
-            <button
-              key={user.username}
-              onClick={() => {
-                router.push(`/network/u/${encodeURIComponent(user.username)}`);
-                setOpen(false);
-                setQ("");
-              }}
-              type="button"
-            >
-              <strong>@{user.username}</strong>
-              <em>Seat</em>
-            </button>
-          ))}
-            </>
-          )}
+        {q.trim().length < 2 ? (
+          <span>{copy.line.findHint}</span>
+        ) : (
+          <>
+            <p aria-label="Tables">
+              <IconSearch />
+            </p>
+            <List dense disablePadding>
+              {hits.rooms.length === 0 ? <span>{copy.line.noTables}</span> : null}
+              {hits.rooms.map((room) => (
+                <ListItemButton
+                  key={room.slug}
+                  onClick={() => {
+                    onPickRoom(room.slug);
+                    setOpen(false);
+                    setQ("");
+                  }}
+                >
+                  <ListItemText
+                    primary={room.name}
+                    secondary={`${room.buttonCount} coins · ${formatUsdt(room.clickPrice)} · pot ${formatUsdt(room.pot)}`}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+            <p aria-label="People">
+              <IconUsers />
+            </p>
+            <List dense disablePadding>
+              {hits.users.length === 0 ? <span>No people match.</span> : null}
+              {hits.users.map((user) => (
+                <ListItemButton
+                  key={user.username}
+                  onClick={() => {
+                    router.push(`/network/u/${encodeURIComponent(user.username)}`);
+                    setOpen(false);
+                    setQ("");
+                  }}
+                >
+                  <ListItemText
+                    primary={`@${user.username}`}
+                    secondary={
+                      user.why
+                        ? user.why
+                        : user.headline &&
+                            user.headline !== "Huepot player" &&
+                            !HOUSE_SEATS.some((row) => row.label === user.headline)
+                          ? user.headline
+                          : "Seat"
+                    }
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          </>
+        )}
       </Fade>
-    </div>
+    </Paper>
   );
 }

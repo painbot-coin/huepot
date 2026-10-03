@@ -44,6 +44,7 @@ export async function accountExport(store: StoreData, user: User) {
       headline: user.headline ?? "",
       about: user.about ?? "",
       location: user.location ?? "",
+      seat: user.seat ?? "",
       avatar: user.avatar ?? "",
       pastNames: user.pastNames ?? [],
       withdrawAddress: user.withdrawAddress || null,

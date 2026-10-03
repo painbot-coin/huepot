@@ -11,8 +11,8 @@ export async function GET(request: Request) {
     const token = await getSessionToken();
     const q = new URL(request.url).searchParams.get("q") ?? "";
     const data = await withStoreRead((store) => {
-      const signedIn = Boolean(userFromToken(store, token));
-      return searchPit(store, q, signedIn);
+      const viewer = userFromToken(store, token);
+      return searchPit(store, q, Boolean(viewer), viewer);
     });
     return NextResponse.json(data);
   } catch (error) {

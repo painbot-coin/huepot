@@ -79,6 +79,22 @@ export const BASIC_ROOMS: BasicRoomDef[] = [
     fogSeconds: 8,
     blurb: "15-second rounds. Last 8 seconds, the board goes dark.",
   },
+  {
+    slug: "wheel",
+    name: "Wheel",
+    buttonCount: 8,
+    clickPrice: CLICK_PRICE,
+    roundSeconds: 60,
+    blurb: "Eight pockets. 1 USDT. The biggest pocket takes the pot. The house does not pay fixed odds.",
+  },
+  {
+    slug: "dice",
+    name: "Dice",
+    buttonCount: 6,
+    clickPrice: CLICK_PRICE,
+    roundSeconds: 30,
+    blurb: "Six faces. 1 USDT. The biggest face takes the pot.",
+  },
 ];
 
 export function isLiveFog(

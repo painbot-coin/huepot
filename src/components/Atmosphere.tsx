@@ -48,7 +48,7 @@ export function Atmosphere() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<"idle" | "urgent" | "take">("idle");
   const [foggy, setFoggy] = useState(false);
-  const [wash, setWash] = useState("#ffb020");
+  const [wash, setWash] = useState("#2f9e62");
   const reduced = useRef(false);
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export function Atmosphere() {
     function onFx(event: CustomEvent<FxDetail>) {
       const detail = event.detail;
       if (!detail) return;
-      const color = detail.color || "#ffb020";
+      const color = detail.color || "#2f9e62";
       if (detail.kind === "take") {
         setFoggy(false);
         setMode("take");
@@ -126,14 +126,14 @@ export function Atmosphere() {
     function onFx(event: CustomEvent<FxDetail>) {
       const detail = event.detail;
       if (!detail) return;
-      const color = detail.color || "#ffb020";
+      const color = detail.color || "#2f9e62";
       if (detail.kind === "take") {
         particles.push(...burst(w, h, color, 26));
         tossCoins(color, 6);
       } else if (detail.kind === "click") {
         particles.push(...burst(w, h, color, 6));
       } else if (detail.kind === "pot") {
-        tossCoins("#ffb020", 3, true);
+        tossCoins(color, 3, true);
       }
     }
 

@@ -17,8 +17,8 @@ import {
 import type { Notice } from "@/lib/types";
 
 test("the title names the table and the seat", () => {
-  assert.equal(sitPulseTitle("Classic Pit", "danny"), "Classic Pit · @danny is sitting");
-  assert.equal(sitPulseBody(), "Sit with them before the round ends.");
+  assert.equal(sitPulseTitle("Classic Pit", "danny"), "Classic Pit · @danny is playing");
+  assert.equal(sitPulseBody(), "Play with them before the round ends.");
 });
 
 test("a block or the house never gets the pulse", () => {

@@ -1,9 +1,12 @@
 "use client";
 
+import ChatBubbleOutlinedIcon from "@mui/icons-material/ChatBubbleOutlined";
+import IconButton from "@mui/material/IconButton";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
+import { HouseButton, HouseField, HouseLink } from "@/components/HouseUi";
 import { useChatScroll } from "@/components/useChatScroll";
 import { MESSAGE_OPEN, openMessageDock } from "@/lib/message-dock";
 import { COMPANY_CLASSIC_HREF, sitClassicLabel } from "@/lib/company-door";
@@ -26,20 +29,24 @@ export function MessageLaunch() {
   const path = usePathname();
   if (onPit(path)) {
     return (
-      <Link aria-label="Chat" className="notice-bell" href="/network/messages">
-        Chat
-      </Link>
+      <IconButton
+        aria-label="Chat"
+        className="notice-bell"
+        component={HouseLink}
+        href="/network/messages"
+      >
+        <ChatBubbleOutlinedIcon fontSize="small" />
+      </IconButton>
     );
   }
   return (
-    <button
+    <IconButton
       aria-label="Chat"
       className="notice-bell"
       onClick={() => openMessageDock()}
-      type="button"
     >
-      Chat
-    </button>
+      <ChatBubbleOutlinedIcon fontSize="small" />
+    </IconButton>
   );
 }
 
@@ -51,13 +58,13 @@ export function MessageLink({
   className?: string;
 }) {
   return (
-    <button
-      className={className ?? "chip-btn chip-btn-ghost"}
+    <HouseButton
+      className={className}
+      ghost
       onClick={() => openMessageDock(username)}
-      type="button"
     >
       Message
-    </button>
+    </HouseButton>
   );
 }
 
@@ -75,6 +82,7 @@ export function MessageDock() {
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reported, setReported] = useState<Record<string, boolean>>({});
   const { scroller, onScroll, pinBottom } = useChatScroll<HTMLUListElement>(
     `${peer}:${messages.at(-1)?.id ?? ""}:${messages.length}`,
   );
@@ -157,6 +165,27 @@ export function MessageDock() {
     return () => window.clearTimeout(id);
   }, [compose, query]);
 
+  async function report(id: string) {
+    if (!id || reported[id] || busy) return;
+    if (!window.confirm("Report this to the house?")) return;
+    setError("");
+    setBusy(true);
+    try {
+      const response = await fetch("/api/network/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "report", messageId: id }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not report");
+      setReported((current) => ({ ...current, [id]: true }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not report");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function send() {
     if (!peer || !draft.trim() || busy) return;
     setError("");
@@ -217,7 +246,17 @@ export function MessageDock() {
             ) : (
               messages.map((item) => (
                 <li className={item.fromYou ? "is-you" : ""} key={item.id}>
-                  {item.body}
+                  <span>{item.body}</span>
+                  {!item.fromYou ? (
+                    <button
+                      className="nav-link bubble-report"
+                      disabled={busy || reported[item.id]}
+                      onClick={() => void report(item.id)}
+                      type="button"
+                    >
+                      {reported[item.id] ? "Reported" : "Report"}
+                    </button>
+                  ) : null}
                 </li>
               ))
             )}
@@ -229,15 +268,15 @@ export function MessageDock() {
               void send();
             }}
           >
-            <input
-              maxLength={500}
+            <HouseField
+              inputProps={{ maxLength: 500 }}
               onChange={(event) => setDraft(event.target.value)}
               placeholder={`Message @${peer}`}
               value={draft}
             />
-            <button disabled={busy || !draft.trim()} type="submit">
+            <HouseButton disabled={busy || !draft.trim()} type="submit">
               {busy ? "Sending…" : "Send"}
-            </button>
+            </HouseButton>
           </form>
           {error ? <p className="msg-error">{error}</p> : null}
         </section>
@@ -245,13 +284,13 @@ export function MessageDock() {
 
       {!open ? (
         <button className="msg-tab is-fade-in" onClick={() => setOpen(true)} type="button">
-          Letters
+          Messages
           {unread ? <b>{unread}</b> : null}
         </button>
       ) : !(chatOpen && peer) ? (
         <section className="msg-panel msg-inbox is-fade-in">
           <header className="msg-bar">
-            <strong>Letters</strong>
+            <strong>Messages</strong>
             <span>
               <button
                 aria-label="New message"

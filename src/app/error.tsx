@@ -8,6 +8,7 @@
  */
 
 import Link from "next/link";
+import { HouseFloor } from "@/components/HouseFloor";
 
 export default function HouseError({
   error,
@@ -17,8 +18,9 @@ export default function HouseError({
   retry: () => void;
 }) {
   return (
-    <main className="prose-page">
-      <p className="hall-kicker">The house</p>
+    <HouseFloor kicker="Huepot">
+    <main className="prose-page is-in-floor">
+      <p className="hall-kicker">Huepot</p>
       <h1 className="font-display text-4xl text-white">That did not open</h1>
       <p>
         Something failed on our side, not yours. No click is taken and no
@@ -28,12 +30,13 @@ export default function HouseError({
         <button type="button" className="underline" onClick={() => retry()}>
           Try that again
         </button>{" "}
-        or <Link href="/">go back to the hall</Link>.
+        or <Link href="/">go back home</Link>.
       </p>
       {error.digest ? (
         // The only handle staff have to find this exact failure in the log.
         <p className="text-sm text-zinc-500">Reference {error.digest}</p>
       ) : null}
     </main>
+    </HouseFloor>
   );
 }

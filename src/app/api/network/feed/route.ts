@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionToken, requireUser, userFromToken } from "@/lib/auth";
 import { readyFriends } from "@/lib/friends";
 import { jsonError } from "@/lib/http";
+import { notifyNewReport } from "@/lib/house-reviewers";
 import { insertSocialReport } from "@/lib/reports";
 import {
   addComment,
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => ({}))) as {
       action?: string;
       body?: string;
+      kind?: string;
       postId?: string;
       commentId?: string;
       limit?: number;
@@ -55,7 +57,7 @@ export async function POST(request: Request) {
     await readySocial();
     const payload = await withStore(async (store) => {
       const user = requireUser(store, token);
-      if (body.action === "post") await createPost(store, user, body.body ?? "");
+      if (body.action === "post") await createPost(store, user, body.body ?? "", body.kind);
       else if (body.action === "like") await toggleLike(store, user, body.postId ?? "");
       else if (body.action === "comment") {
         await addComment(store, user, body.postId ?? "", body.body ?? "");
@@ -68,6 +70,7 @@ export async function POST(request: Request) {
         const target = kind === "post" ? (body.postId ?? "") : (body.commentId ?? "");
         const report = await reportSocial(store, user, kind, target);
         await insertSocialReport(report);
+        notifyNewReport(store, { id: report.id, reporterId: report.reporterId, username: report.username });
       } else {
         throw new Error("Unknown feed action.");
       }

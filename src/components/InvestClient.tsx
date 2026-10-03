@@ -1,10 +1,27 @@
 "use client";
+import { DeskTake } from "@/components/DeskTake";
+import { HouseButton, HouseField } from "@/components/HouseUi";
+import { WatchSit } from "@/components/WatchSit";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { HouseFloor, floorYou } from "@/components/HouseFloor";
 import { publishBank } from "@/lib/bank-sync";
 import { MIN_DEPOSIT } from "@/lib/config";
+import {
+  deskHref,
+  deskShowsWallet,
+  deskSitNeed,
+  deskSitShort,
+  vaultKeepsWatch,
+  vaultReturnLine,
+  vaultSitLine,
+  type PublicMark,
+} from "@/lib/house-mark-list";
+import type { WatchSit as WatchSitData } from "@/lib/lab-watch";
 import { formatUsdt } from "@/lib/money";
 import type { GameState, PublicWallet } from "@/lib/types";
+import { fetchWatch } from "@/lib/wait-play";
 
 type ChainStatus = {
   watching: boolean;
@@ -33,7 +50,7 @@ function txHashFromNote(note: string) {
   return match?.[0] ?? "";
 }
 
-export function InvestClient() {
+export function InvestClient({ back = "", sit = "" }: { back?: string; sit?: string }) {
   const [state, setState] = useState<GameState | null>(null);
   const [amount, setAmount] = useState(String(MIN_DEPOSIT));
   const [error, setError] = useState("");
@@ -44,6 +61,9 @@ export function InvestClient() {
   const [pending, setPending] = useState<PendingDeposit[]>([]);
   const [landed, setLanded] = useState("");
   const [claimHash, setClaimHash] = useState("");
+  const [vault, setVault] = useState<PublicMark | null>(null);
+  const [goldCents, setGoldCents] = useState(0);
+  const [watch, setWatch] = useState<WatchSitData | null>(null);
   const seenDeposits = useRef(new Set<string>());
 
   async function load() {
@@ -61,9 +81,28 @@ export function InvestClient() {
     const fresh = deposits.filter((tx) => !seenDeposits.current.has(tx.id));
     if (seenDeposits.current.size > 0 && fresh.length) {
       const newest = fresh[0];
-      setLanded(`Credited ${formatUsdt(newest.amount)} USDT. Sit a table or cash out.`);
+      setLanded(
+        sit
+          ? `Credited ${formatUsdt(newest.amount)} USDT. This gold stays on the sit you opened.`
+          : `Credited ${formatUsdt(newest.amount)} USDT. Sit a table or cash out.`,
+      );
     }
     for (const tx of deposits) seenDeposits.current.add(tx.id);
+    if (sit) {
+      try {
+        const marks = await fetch("/api/wait/marks");
+        const pack = (await marks.json()) as {
+          balanceCents?: number;
+          marks?: PublicMark[];
+        };
+        if (marks.ok) {
+          setGoldCents(pack.balanceCents ?? 0);
+          setVault(pack.marks?.find((row) => row.id === sit) ?? null);
+        }
+      } catch {
+        /* keep last sit */
+      }
+    }
   }
 
   async function loadPending() {
@@ -163,7 +202,11 @@ export function InvestClient() {
       if (data.claimed?.already) {
         setLanded("Already in your bank.");
       } else if (data.claimed?.credited) {
-        setLanded(`Credited ${formatUsdt(data.claimed.amount ?? 0)} USDT. Sit a table or cash out.`);
+        setLanded(
+          sit
+            ? `Credited ${formatUsdt(data.claimed.amount ?? 0)} USDT. This gold stays on the sit you opened.`
+            : `Credited ${formatUsdt(data.claimed.amount ?? 0)} USDT. Sit a table or cash out.`,
+        );
       }
       setClaimHash("");
       await load();
@@ -176,25 +219,97 @@ export function InvestClient() {
 
   if (!state?.user) {
     return (
-      <main className="app-page is-wide">
-        <p className="hall-kicker">The vault</p>
-        <h1 className="font-display text-4xl text-white">Add USDT</h1>
-        <p className="app-lead">Opening your deposit address…</p>
-      </main>
+      <VaultFloor sit={sit}>
+        <main className="app-page is-wide is-in-floor">
+          <p className="hall-kicker">The vault</p>
+          <h1 className="font-display text-4xl text-white">Add USDT</h1>
+          <p className="app-lead">Opening your deposit address…</p>
+        </main>
+      </VaultFloor>
     );
   }
+
+  const priced = vault && deskShowsWallet(vault) ? vault : null;
+  const need = priced ? deskSitNeed(priced) : 0;
+  const short = priced ? deskSitShort(goldCents, need) : false;
+  const keep = priced ? vaultKeepsWatch(priced, goldCents) : false;
+
+  useEffect(() => {
+    if (!sit || !keep) {
+      setWatch(null);
+      return;
+    }
+    let live = true;
+    void fetchWatch(sit)
+      .then((data) => {
+        if (!live || !data?.frames?.length || !data.id) return;
+        setWatch({
+          id: data.id,
+          kind: (data.kind as WatchSitData["kind"]) || "wait",
+          steps: data.steps ?? data.frames.length,
+          score: data.score ?? 0,
+          frames: data.frames,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [sit, keep]);
 
   const deposits = state.user.txs.filter((tx) => tx.type === "deposit");
 
   return (
-    <main className="app-page is-wide">
+    <VaultFloor
+      sit={sit}
+      you={state.user}
+      side={
+        <div>
+          <p className="lobby-label">Bank</p>
+          <p className="account-side-stat">
+            <strong>{formatUsdt(state.user.balance)} USDT</strong>
+            <em>Ready to sit. Sit chips stay in the house.</em>
+          </p>
+          <div className="li-profile-act">
+            <HouseButton href="/rooms/classic">
+              Play Classic
+            </HouseButton>
+            <HouseButton ghost href="/withdraw">
+              Cash out
+            </HouseButton>
+          </div>
+        </div>
+      }
+    >
+    <main className="app-page is-wide is-in-floor">
       <p className="hall-kicker">The vault</p>
       <h1 className="font-display text-4xl text-white">Add USDT</h1>
       <p className="app-lead">
         Gold in through this door. Send at least {MIN_DEPOSIT} USDT (BEP-20) on
         BNB Chain. Credit lands after {confirms} confirms. Any other chain is
         gone.
+        {priced ? ` ${vaultReturnLine(!short)}` : ""}
       </p>
+      {priced ? (
+        <section className="app-card vault-sit">
+          <p className="lobby-label">Priced sit</p>
+          <p className="font-display text-2xl text-white">{priced.name}</p>
+          <p>{vaultSitLine(priced, goldCents)}</p>
+          {keep && watch ? <WatchSit sit={watch} /> : null}
+          {short ? (
+            <p>Stay on this door. The watch stays until gold is enough.</p>
+          ) : (
+            <div className="wait-mark-actions">
+              <DeskTake key={priced.id} mark={priced} />
+              <HouseButton href={deskHref(sit)}>Back to this sit</HouseButton>
+            </div>
+          )}
+        </section>
+      ) : back ? (
+        <p className="guide-cta">
+          <HouseButton href={back}>Back to the desk</HouseButton>
+        </p>
+      ) : null}
 
       <p className="mt-6 font-display text-3xl text-white">
         {formatUsdt(state.user.balance)}{" "}
@@ -237,21 +352,19 @@ export function InvestClient() {
               <label className="mt-6 block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
                 Amount in USDT
               </label>
-              <input
-                className="field"
-                min={MIN_DEPOSIT}
+              <HouseField
+                inputProps={{ min: MIN_DEPOSIT, step: 1 }}
                 onChange={(event) => setAmount(event.target.value)}
-                step="1"
                 type="number"
                 value={amount}
               />
-              <button
-                className="chip-btn mt-4 w-full justify-center"
+              <HouseButton
+                className="mt-4 w-full justify-center"
                 disabled={busy || Number(amount) < MIN_DEPOSIT}
                 type="submit"
               >
                 {busy ? "Crediting…" : `Demo credit ${amount || "0"} USDT`}
-              </button>
+              </HouseButton>
             </form>
           ) : null}
           {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
@@ -271,19 +384,19 @@ export function InvestClient() {
             <label className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500">
               Sent and still waiting?
             </label>
-            <input
-              className="field mt-2"
+            <HouseField
+              className="mt-2"
               onChange={(event) => setClaimHash(event.target.value)}
               placeholder="Paste the BscScan hash"
               value={claimHash}
             />
-            <button
-              className="chip-btn mt-3 w-full justify-center"
+            <HouseButton
+              className="mt-3 w-full justify-center"
               disabled={busy || !claimHash.trim()}
               type="submit"
             >
               {busy ? "Checking…" : "Credit this send"}
-            </button>
+            </HouseButton>
           </form>
         </section>
       ) : (
@@ -356,5 +469,34 @@ export function InvestClient() {
         )}
       </ul>
     </main>
+    </VaultFloor>
+  );
+}
+
+function VaultFloor({
+  you,
+  side,
+  children,
+  sit = "",
+}: {
+  you?: GameState["user"];
+  side?: ReactNode;
+  children: ReactNode;
+  sit?: string;
+}) {
+  const gold = sit ? `/invest?sit=${sit}` : "/invest";
+  return (
+    <HouseFloor
+      extra={[
+        { href: gold, label: "Add gold", match: true },
+        { href: "/withdraw", label: "Cash out" },
+        { href: "/account", label: "Wallet" },
+      ]}
+      kicker="The vault"
+      side={side}
+      you={floorYou(you)}
+    >
+      {children}
+    </HouseFloor>
   );
 }

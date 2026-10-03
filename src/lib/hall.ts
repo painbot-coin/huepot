@@ -1,4 +1,4 @@
-export type HallId = "classic" | "lightning" | "duo" | "high" | "fog" | "night";
+export type HallId = "classic" | "lightning" | "duo" | "high" | "fog" | "night" | "wheel" | "dice";
 
 export type HallCharacter = {
   slug: HallId;
@@ -19,8 +19,8 @@ export function eventSoon(startAt: number, now = Date.now()) {
 export const HALLS: Record<HallId, HallCharacter> = {
   classic: {
     slug: "classic",
-    kicker: "Public hall",
-    enter: "Four coins. One minute. The house meets here.",
+    kicker: "Public table",
+    enter: "Four coins. One minute. Huepot meets here.",
     calm: "Classic is open.",
     clock: "Time",
     material: "#d4af6a",
@@ -28,7 +28,7 @@ export const HALLS: Record<HallId, HallCharacter> = {
   },
   lightning: {
     slug: "lightning",
-    kicker: "Fast hall",
+    kicker: "Fast table",
     enter: "Same price. Fifteen seconds.",
     calm: "Lightning is live.",
     clock: "Time",
@@ -44,7 +44,7 @@ export const HALLS: Record<HallId, HallCharacter> = {
   },
   high: {
     slug: "high",
-    kicker: "Heavy gold",
+    kicker: "High table",
     enter: "Five USDT a click. Same rule.",
     calm: "High Table is open.",
     clock: "Time",
@@ -52,21 +52,37 @@ export const HALLS: Record<HallId, HallCharacter> = {
   },
   fog: {
     slug: "fog",
-    kicker: "Dark hall",
+    kicker: "Fog table",
     enter: "Last twelve seconds, the board goes dark.",
-    calm: "Fog Pit is open.",
+    calm: "Fog is open.",
     clock: "Time",
     material: "#c9c4d8",
     cup: "Fog cup is on.",
   },
   night: {
     slug: "night",
-    kicker: "Night hall",
+    kicker: "Night table",
     enter: "Fifteen seconds. Last eight, the board goes dark.",
-    calm: "Night Pit is open.",
+    calm: "Night is open.",
     clock: "Time",
     material: "#6a7cff",
     hour: "Night hour is on.",
+  },
+  wheel: {
+    slug: "wheel",
+    kicker: "Wheel",
+    enter: "Eight pockets. The biggest takes the pot.",
+    calm: "Wheel is open.",
+    clock: "Time",
+    material: "#ff6a2a",
+  },
+  dice: {
+    slug: "dice",
+    kicker: "Dice",
+    enter: "Six faces. The biggest takes the pot.",
+    calm: "Dice is open.",
+    clock: "Time",
+    material: "#3dffb0",
   },
 };
 
@@ -77,7 +93,9 @@ export function hallFor(slug: string): HallCharacter | null {
     slug === "duo" ||
     slug === "high" ||
     slug === "fog" ||
-    slug === "night"
+    slug === "night" ||
+    slug === "wheel" ||
+    slug === "dice"
   ) {
     return HALLS[slug];
   }

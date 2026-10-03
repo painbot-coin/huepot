@@ -1,5 +1,19 @@
 import { prisma } from "@/lib/db";
+import {
+  type DeskReportRow,
+  type ReportedPlayer,
+  type ReportKind,
+} from "@/lib/report-desk";
 import type { StoreData } from "@/lib/types";
+
+export {
+  countOpenReportsOf,
+  deskReportOf,
+  hideReportLabel,
+  reportedPlayersOf,
+  reportWhere,
+} from "@/lib/report-desk";
+export type { ReportedPlayer, ReportKind };
 
 /**
  * One report shape for everything a player can report. It began as room chat
@@ -11,19 +25,7 @@ import type { StoreData } from "@/lib/types";
  * For chat, `target` is the room event and `roomSlug` says where. For the rest,
  * `target` is the row's id and `roomSlug` is empty.
  */
-export type ReportKind = "chat" | "post" | "comment" | "message";
-
-export type ChatReport = {
-  id: string;
-  kind: ReportKind;
-  roomSlug: string;
-  eventId: string;
-  reporterId: string;
-  username: string;
-  body: string;
-  createdAt: number;
-  status: "open" | "hidden" | "dismissed";
-};
+export type ChatReport = DeskReportRow;
 
 function esc(value: string) {
   return value.replace(/'/g, "''");
@@ -149,15 +151,6 @@ export async function listReports() {
   );
 }
 
-export type ReportedPlayer = {
-  username: string;
-  open: number;
-  total: number;
-  hidden: number;
-  reporters: number;
-  lastAt: number;
-};
-
 /**
  * Reports grouped by who was reported, because one row at a time cannot tell
  * a single annoyed player from a pattern. Sorted by how many separate people
@@ -201,4 +194,12 @@ export async function setReportStatus(id: string, status: ChatReport["status"]) 
   await prisma.$executeRawUnsafe(
     `UPDATE ChatReport SET status = '${esc(status)}' WHERE id = '${esc(id)}'`,
   );
+}
+
+export async function countOpenReports() {
+  await ensureReportTables();
+  const rows = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) AS n FROM ChatReport WHERE status = 'open'
+  `;
+  return Number(rows[0]?.n ?? 0);
 }

@@ -29,13 +29,13 @@ export function sitBank(user: Pick<User, "balance" | "bonus">) {
 
 /**
  * Cash implied from rows — the same rule the books use.
- * Out: withdraw, click. Bonus grants are chips, not cash. Sit is signed
+ * Out: withdraw, click, mark. Bonus grants are chips, not cash. Sit is signed
  * and offsets a click (or a refund) so sit chips cannot mint bank.
  */
 export function cashImpliedCents(txs: { type: string; amount: number }[]) {
   let cents = 0;
   for (const tx of txs) {
-    if (tx.type === "withdraw" || tx.type === "click") cents -= tx.amount;
+    if (tx.type === "withdraw" || tx.type === "click" || tx.type === "mark") cents -= tx.amount;
     else if (tx.type === "bonus") cents += 0;
     else cents += tx.amount;
   }

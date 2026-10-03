@@ -2,19 +2,19 @@
 export const COMPANY_CLASSIC_HREF = "/rooms/classic";
 
 export function sitClassicLabel() {
-  return "Sit Classic";
+  return "Play Classic";
 }
 
 export function sitWithThemLabel() {
-  return "Sit with them";
+  return "Play with them";
 }
 
 export function companyAskTitle() {
-  return "Company ask";
+  return "Connection request";
 }
 
 export function companyAskBody(username: string) {
-  return `@${username} wants you in company.`;
+  return `@${username} sent you a connection request.`;
 }
 
 export function companyAskHref() {
@@ -22,11 +22,11 @@ export function companyAskHref() {
 }
 
 export function companyFormedTitle() {
-  return "Company";
+  return "Connected";
 }
 
 export function companyFormedBody(username: string) {
-  return `@${username} is company. Sit Classic.`;
+  return `@${username} is connected. Play Classic.`;
 }
 
 export function companyFormedHref() {

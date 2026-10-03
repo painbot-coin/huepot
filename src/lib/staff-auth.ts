@@ -163,6 +163,11 @@ export async function getStaffToken() {
   return jar.get(STAFF_COOKIE)?.value;
 }
 
+/** Cookie only. Used to grant the first hiring manager without an IP check. */
+export async function hasStaffSession() {
+  return Boolean(await readSession(await getStaffToken()));
+}
+
 export async function setStaffCookie(token: string) {
   const jar = await cookies();
   jar.set(STAFF_COOKIE, token, {

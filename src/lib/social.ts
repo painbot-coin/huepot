@@ -3,15 +3,21 @@ import {
   findPlayer,
   friendCount,
   headlineOf,
+  listAlikeSeats,
   listPublicPeople,
   listSuggestedPeople,
   pendingInCount,
   playerRelation,
   seatedAt,
 } from "@/lib/friends";
+import { parseHouseSeat, seatOf } from "@/lib/house-seats";
+import { sitParam } from "@/lib/house-mark-list";
+import { doorsOf, parseDoors, parseSitSlug, sitSlugOf } from "@/lib/seat-alike";
+import { parseSeatNote, parseSitMark } from "@/lib/seat-note";
 import { avatarOf, parseAvatar } from "./avatar";
 import { blockedBetween, blockedIds } from "./friends";
 import { isHouseUser } from "@/lib/house";
+import { lineWriterOf } from "@/lib/line-writer";
 import { recommendPosts } from "@/lib/feed-rank";
 import { houseCardKind } from "@/lib/take-talk";
 import { playBlock } from "@/lib/limits";
@@ -23,6 +29,7 @@ import type {
   NetworkPost,
   NetworkProfile,
   NetworkThread,
+  SeatNote,
   StoreData,
   User,
 } from "@/lib/types";
@@ -31,11 +38,12 @@ const POST_MAX = 500;
 const COMMENT_MAX = 240;
 const MESSAGE_MAX = 500;
 const HEADLINE_MAX = 80;
-const ABOUT_MAX = 500;
+const ABOUT_MAX = 1600;
 const LOCATION_MAX = 40;
 const POST_DAY_CAP = 20;
 const MESSAGE_DAY_CAP = 40;
 const COMMENT_DAY_CAP = 80;
+const NOTE_DAY_CAP = 8;
 
 function esc(value: string) {
   return value.replace(/'/g, "''");
@@ -68,7 +76,7 @@ export async function ensureSocialTables() {
   `);
   // A post can carry a link card: a headline, the outlet, a picture and the
   // URL. Players never set these — they are how the wire reaches the feed.
-  for (const column of ["link", "image", "title", "source"]) {
+  for (const column of ["link", "image", "title", "source", "kind"]) {
     try {
       await prisma.$executeRawUnsafe(
         `ALTER TABLE NetworkPost ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`,
@@ -103,6 +111,17 @@ export async function ensureSocialTables() {
       read INTEGER NOT NULL DEFAULT 0
     )
   `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS SeatNote (
+      id TEXT PRIMARY KEY,
+      aboutId TEXT NOT NULL,
+      fromId TEXT NOT NULL,
+      body TEXT NOT NULL,
+      mark TEXT NOT NULL DEFAULT '',
+      createdAt BIGINT NOT NULL,
+      UNIQUE (aboutId, fromId)
+    )
+  `);
   socialReady = true;
 }
 
@@ -126,6 +145,7 @@ export function youPayload(viewer: User) {
     username: viewer.username,
     avatar: avatarOf(viewer),
     headline: headlineOf(viewer),
+    seat: viewer.seat ?? "",
     pendingIn: pendingInCount(viewer.id),
     unreadMessages: unreadCache.get(viewer.id) ?? 0,
     friends: friendCount(viewer.id),
@@ -158,6 +178,14 @@ export function publicProfile(
     place: null,
     lastTakes: [],
     inviteCode: self && viewer ? viewer.inviteCode || "" : "",
+    cover: (user.cover ?? "").trim(),
+    sitSlug: sitSlugOf(user),
+    book: sitParam(user.book),
+    doors: doorsOf(user),
+    seat: user.seat ?? "",
+    alike: listAlikeSeats(store, user, 6),
+    notes: [],
+    yourNote: null,
   };
 }
 
@@ -169,6 +197,11 @@ export function saveProfile(
     about?: string;
     location?: string;
     avatar?: string;
+    cover?: string;
+    sitSlug?: string;
+    book?: string;
+    seat?: string;
+    doors?: { x?: string; telegram?: string; discord?: string };
   },
 ) {
   if (typeof input.headline === "string") user.headline = clean(input.headline, HEADLINE_MAX);
@@ -176,6 +209,11 @@ export function saveProfile(
   if (typeof input.location === "string") user.location = clean(input.location, LOCATION_MAX);
   // Refuses anything that is not a house colour or a file from our own bucket.
   if (typeof input.avatar === "string") user.avatar = parseAvatar(input.avatar);
+  if (typeof input.cover === "string") user.cover = parseAvatar(input.cover);
+  if (typeof input.sitSlug === "string") user.sitSlug = parseSitSlug(input.sitSlug);
+  if (typeof input.book === "string") user.book = sitParam(input.book);
+  if (typeof input.seat === "string") user.seat = parseHouseSeat(input.seat);
+  if (input.doors && typeof input.doors === "object") user.doors = parseDoors(input.doors);
   return publicProfile(store, user, user.username);
 }
 
@@ -188,11 +226,12 @@ type PostRow = {
   image?: string | null;
   title?: string | null;
   source?: string | null;
+  kind?: string | null;
 };
 
 /** What every read of the feed selects, so the card fields travel with it. */
 const POST_SELECT =
-  "id, userId, body, link, image, title, source, CAST(createdAt AS TEXT) as createdAt";
+  "id, userId, body, link, image, title, source, kind, CAST(createdAt AS TEXT) as createdAt";
 
 async function hydratePosts(
   store: StoreData,
@@ -220,7 +259,8 @@ async function hydratePosts(
     if (!author) return [];
     // The house is not a player and its account never appears in the feed —
     // except for a house card. A link is what marks one, since players
-    // cannot set it. Takes stay in-house; the wire is everything else.
+    // cannot set it. Takes stay in-house. A news story is the wire. A door
+    // on this house is the daily desk.
     const kind = houseCardKind(post.link ?? "");
     if (isHouseUser(author) && !kind) return [];
     if (hidden.has(author.id)) return [];
@@ -229,8 +269,16 @@ async function hydratePosts(
       {
         id: post.id,
         username: author.username,
+        writer: lineWriterOf({ userId: author.id, username: author.username, link: post.link ?? "" }),
         avatar: avatarOf(author),
-        headline: kind === "take" ? "The take" : kind === "wire" ? "The wire" : headlineOf(author),
+        headline:
+          kind === "take"
+            ? "The take"
+            : kind === "wire"
+              ? "The wire"
+              : kind === "house"
+                ? "The house"
+                : headlineOf(author),
         body: post.body,
         link: (post.link ?? "").trim(),
         image: (post.image ?? "").trim(),
@@ -240,6 +288,7 @@ async function hydratePosts(
         likes: postLikes.length,
         liked: viewer ? postLikes.some((item) => item.userId === viewer.id) : false,
         relation: viewer ? playerRelation(viewer.id, author.id) : "none",
+        kind: (post.kind ?? "").trim() || seatOf(author.seat),
         comments: comments
           .filter((item) => item.postId === post.id)
           .slice(-4)
@@ -250,6 +299,7 @@ async function hydratePosts(
               {
                 id: item.id,
                 username: who.username,
+                writer: lineWriterOf({ userId: who.id, username: who.username }),
                 avatar: avatarOf(who),
                 body: item.body,
                 createdAt: Number(item.createdAt),
@@ -363,6 +413,134 @@ export async function countAuthorPosts(authorId: string) {
   return Number(rows[0]?.n ?? 0);
 }
 
+export async function listSeatRecommended(
+  store: StoreData,
+  viewer: User | null,
+  author: User,
+  alike: NetworkProfile["alike"],
+  limit = 12,
+): Promise<NetworkPost[]> {
+  const names = new Set([author.username.toLowerCase(), ...alike.map((seat) => seat.username.toLowerCase())]);
+  const inList = Object.values(store.users)
+    .filter((user) => names.has(user.username.toLowerCase()))
+    .map((user) => `'${esc(user.id)}'`)
+    .join(",");
+  if (!inList) return [];
+  const posts = await prisma.$queryRawUnsafe<PostRow[]>(
+    `SELECT ${POST_SELECT} FROM NetworkPost WHERE userId IN (` + inList + `) ORDER BY createdAt DESC LIMIT 80`,
+  );
+  const hydrated = await hydratePosts(store, viewer, posts);
+  return recommendPosts(hydrated, viewer?.username ?? "").slice(0, limit);
+}
+
+type NoteRow = {
+  id: string;
+  fromId: string;
+  body: string;
+  mark: string;
+  createdAt: number | bigint | string;
+};
+
+function toSeatNote(store: StoreData, viewerId: string, row: NoteRow): SeatNote | null {
+  const who = store.users[row.fromId];
+  if (!who || isHouseUser(who)) return null;
+  return {
+    id: row.id,
+    username: who.username,
+    avatar: avatarOf(who),
+    headline: headlineOf(who),
+    body: row.body,
+    mark: row.mark ?? "",
+    createdAt: Number(row.createdAt),
+    you: who.id === viewerId,
+  };
+}
+
+export async function listSeatNotes(
+  store: StoreData,
+  viewer: User | null,
+  aboutId: string,
+): Promise<{ notes: SeatNote[]; yourNote: SeatNote | null }> {
+  const hidden = viewer ? blockedIds(viewer.id) : new Set<string>();
+  const rows = await prisma.$queryRaw<{
+    id: string;
+    fromId: string;
+    body: string;
+    mark: string;
+    createdAt: number | bigint | string;
+  }[]>`
+    SELECT id, fromId, body, mark, CAST(createdAt AS TEXT) as createdAt
+    FROM SeatNote WHERE aboutId = ${aboutId} ORDER BY createdAt DESC LIMIT 40
+  `;
+  const notes = rows.flatMap((row) => {
+    if (hidden.has(row.fromId)) return [];
+    const note = toSeatNote(store, viewer?.id ?? "", row);
+    return note ? [note] : [];
+  });
+  return {
+    notes,
+    yourNote: notes.find((note) => note.you) ?? null,
+  };
+}
+
+export async function saveSeatNote(
+  store: StoreData,
+  viewer: User,
+  username: string,
+  raw: string,
+  markRaw: unknown,
+) {
+  assertCanSocialize(viewer);
+  const other = findPlayer(store, username);
+  if (other.id === viewer.id) throw new Error("Write about another seat.");
+  if (blockedBetween(viewer.id, other.id)) throw new Error("You cannot reach that player.");
+  const body = parseSeatNote(raw);
+  const mark = parseSitMark(markRaw);
+  const since = dayStart();
+  const today = await prisma.$queryRaw<{ n: number | bigint }[]>`
+    SELECT COUNT(*) as n FROM SeatNote WHERE fromId = ${viewer.id} AND createdAt >= ${since}
+  `;
+  const existing = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM SeatNote WHERE aboutId = ${other.id} AND fromId = ${viewer.id} LIMIT 1
+  `;
+  if (!existing[0] && Number(today[0]?.n ?? 0) >= NOTE_DAY_CAP) {
+    throw new Error("That is enough notes for today.");
+  }
+  const at = Date.now();
+  if (existing[0]) {
+    await prisma.$executeRaw`
+      UPDATE SeatNote SET body = ${body}, mark = ${mark}, createdAt = ${at}
+      WHERE id = ${existing[0].id}
+    `;
+  } else {
+    await prisma.$executeRaw`
+      INSERT INTO SeatNote (id, aboutId, fromId, body, mark, createdAt)
+      VALUES (${crypto.randomUUID()}, ${other.id}, ${viewer.id}, ${body}, ${mark}, ${at})
+    `;
+    notify(store, other.id, {
+      kind: "post",
+      title: "A note on your seat",
+      body: `@${viewer.username} wrote how you sit.`,
+      href: `/network/u/${encodeURIComponent(other.username)}`,
+    });
+  }
+  return listSeatNotes(store, viewer, other.id);
+}
+
+export async function deleteSeatNote(store: StoreData, viewer: User, noteId: string) {
+  const id = noteId.replace(/[^a-zA-Z0-9-]/g, "");
+  const rows = await prisma.$queryRaw<{ aboutId: string; fromId: string }[]>`
+    SELECT aboutId, fromId FROM SeatNote WHERE id = ${id} LIMIT 1
+  `;
+  const row = rows[0];
+  if (!row) throw new Error("That note is gone.");
+  if (row.fromId !== viewer.id && row.aboutId !== viewer.id) {
+    throw new Error("That is not yours to remove.");
+  }
+  await prisma.$executeRaw`DELETE FROM SeatNote WHERE id = ${id}`;
+  return listSeatNotes(store, viewer, row.aboutId);
+}
+
 function assertCanSocialize(user: User) {
   const block = playBlock(user);
   if (block?.kind === "frozen" || block?.kind === "self-exclude") {
@@ -370,10 +548,12 @@ function assertCanSocialize(user: User) {
   }
 }
 
-export async function createPost(store: StoreData, viewer: User, raw: string) {
+export async function createPost(store: StoreData, viewer: User, raw: string, kindRaw?: string) {
+  if (isHouseUser(viewer)) throw new Error("The house does not post as a seat.");
   assertCanSocialize(viewer);
   const body = raw.trim().slice(0, POST_MAX);
   if (body.length < 2) throw new Error("Write a little more.");
+  const kind = parseHouseSeat(kindRaw || viewer.seat || "") || "";
   const since = dayStart();
   const today = await prisma.$queryRaw<{ n: number | bigint }[]>`
     SELECT COUNT(*) as n FROM NetworkPost WHERE userId = ${viewer.id} AND createdAt >= ${since}
@@ -383,7 +563,7 @@ export async function createPost(store: StoreData, viewer: User, raw: string) {
   }
   const id = crypto.randomUUID();
   await prisma.$executeRaw`
-    INSERT INTO NetworkPost (id, userId, body, createdAt) VALUES (${id}, ${viewer.id}, ${body}, ${Date.now()})
+    INSERT INTO NetworkPost (id, userId, body, createdAt, kind) VALUES (${id}, ${viewer.id}, ${body}, ${Date.now()}, ${kind})
   `;
   return listFeed(store, viewer);
 }

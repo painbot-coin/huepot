@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { HouseButton } from "@/components/HouseUi";
 import { inviteText } from "@/lib/invite-copy";
 import type { GameState } from "@/lib/types";
 
@@ -38,8 +39,8 @@ export function AfterTakeButton({
   }
 
   return (
-    <button className="chip-btn" disabled={busy} onClick={() => void open()} type="button">
+    <HouseButton disabled={busy} onClick={() => void open()}>
       {label}
-    </button>
+    </HouseButton>
   );
 }

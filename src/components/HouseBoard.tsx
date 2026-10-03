@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BoardRowDoors } from "@/components/BoardRowDoors";
+import { HouseButton, PageHead } from "@/components/HouseUi";
 import { hueRule } from "@/lib/coin";
 import {
   COMPANY_CLASSIC_HREF,
@@ -37,28 +38,18 @@ export function HouseBoard({
   const rows = tab === "week" ? week : seats;
 
   return (
-    <main className="app-page is-wide">
-      <p className="hall-kicker">The board</p>
-      <h1 className="font-display text-4xl text-white">Who sat</h1>
-      <p className="app-lead">
-        HUE is standing from real play. {hueRule()} Takes are public. The bank
-        stays private. A row opens a sit.
-      </p>
+    <div>
+      <PageHead
+        lead={`HUE is standing from real play. ${hueRule()} Takes are public. The bank stays private.`}
+        title="Who sat"
+      />
       <div className="board-tabs">
-        <button
-          className={`chip-btn${tab === "book" ? "" : " chip-btn-ghost"}`}
-          onClick={() => setTab("book")}
-          type="button"
-        >
+        <HouseButton ghost={tab !== "book"} onClick={() => setTab("book")}>
           The book
-        </button>
-        <button
-          className={`chip-btn${tab === "week" ? "" : " chip-btn-ghost"}`}
-          onClick={() => setTab("week")}
-          type="button"
-        >
+        </HouseButton>
+        <HouseButton ghost={tab !== "week"} onClick={() => setTab("week")}>
           This week
-        </button>
+        </HouseButton>
       </div>
       <ul className="ledger-list board-list">
         {rows.map((seat) => {
@@ -81,7 +72,7 @@ export function HouseBoard({
                 <span className="board-mark">
                   <strong>{seat.coin.toLocaleString()} HUE</strong>
                   <em>
-                    {seat.takes} {seat.takes === 1 ? "take" : "takes"} ·{" "}
+                    {seat.takes} {seat.takes === 1 ? "win" : "wins"} ·{" "}
                     {formatUsdt(seat.taken)} USDT
                   </em>
                 </span>
@@ -103,7 +94,7 @@ export function HouseBoard({
         {rows.length === 0 ? (
           <li className="empty-note">
             {tab === "week"
-              ? "Nobody sat this UTC week yet. "
+              ? "Nobody played this UTC week yet. "
               : "The book starts when someone sits. "}
             <Link className="underline" href={COMPANY_CLASSIC_HREF}>
               {sitClassicLabel()}
@@ -112,6 +103,6 @@ export function HouseBoard({
           </li>
         ) : null}
       </ul>
-    </main>
+    </div>
   );
 }

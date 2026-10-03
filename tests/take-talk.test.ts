@@ -44,6 +44,9 @@ test("empty and unpaid pots stay quiet", () => {
   assert.equal(takePostHref(""), "");
   assert.equal(houseCardKind(""), "");
   assert.equal(houseCardKind("https://nypost.com/odds"), "wire");
+  assert.equal(houseCardKind(`/news/${"a".repeat(32)}`), "wire");
+  assert.equal(houseCardKind("/rooms/classic"), "house");
+  assert.equal(houseCardKind("/wait/store"), "house");
 });
 
 test("the same take queues once per settle, then drains", () => {

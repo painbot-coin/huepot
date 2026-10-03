@@ -16,14 +16,14 @@ import {
 } from "@/lib/company-door";
 
 test("becoming company opens Classic", () => {
-  assert.equal(companyFormedTitle(), "Company");
-  assert.equal(companyFormedBody("danny"), "@danny is company. Sit Classic.");
+  assert.equal(companyFormedTitle(), "Connected");
+  assert.equal(companyFormedBody("danny"), "@danny is connected. Play Classic.");
   assert.equal(companyFormedHref(), COMPANY_CLASSIC_HREF);
-  assert.equal(sitClassicLabel(), "Sit Classic");
+  assert.equal(sitClassicLabel(), "Play Classic");
 });
 
 test("an ask stays on the requests door", () => {
-  assert.equal(companyAskTitle(), "Company ask");
-  assert.equal(companyAskBody("bill"), "@bill wants you in company.");
+  assert.equal(companyAskTitle(), "Connection request");
+  assert.equal(companyAskBody("bill"), "@bill sent you a connection request.");
   assert.equal(companyAskHref(), "/network/people?tab=requests");
 });
