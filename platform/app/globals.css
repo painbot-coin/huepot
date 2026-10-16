@@ -1,0 +1,73 @@
+:root {
+  color-scheme: dark;
+  --bg: #10140f;
+  --panel: #1a2118;
+  --line: #2c3828;
+  --text: #f3f6ef;
+  --muted: #b7c3ae;
+  --accent: #d6ff4a;
+  --hot: #ffb020;
+  --bad: #ff8d7a;
+  font-family: "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+a { color: var(--accent); }
+header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: rgba(16, 20, 15, 0.94);
+}
+nav { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+nav a { color: var(--text); text-decoration: none; }
+nav a:hover { color: var(--accent); }
+main { max-width: 880px; margin: 0 auto; padding: 1.4rem 1.2rem 4rem; }
+h1 { font-size: 2rem; letter-spacing: -0.03em; margin: 0 0 0.4rem; }
+h2 { font-size: 1.15rem; margin: 0 0 0.4rem; }
+p { line-height: 1.45; }
+.muted { color: var(--muted); }
+.grid { display: grid; gap: 0.8rem; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; }
+.card, form.card, article {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+}
+label { display: grid; gap: 0.25rem; margin: 0.55rem 0; font-size: 0.92rem; }
+input, textarea, select, button {
+  font: inherit;
+  color: var(--text);
+  background: #0d120c;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+}
+textarea { min-height: 5rem; }
+button, .btn {
+  background: var(--accent);
+  color: #17200c;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.badge {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+  color: var(--hot);
+}
+.error { color: var(--bad); }
+.mark { font-variant-numeric: tabular-nums; }
