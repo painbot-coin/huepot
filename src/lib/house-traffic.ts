@@ -12,6 +12,10 @@ export type VisitDoor =
   | "home"
   | "news"
   | "jobs"
+  | "companies"
+  | "contracts"
+  | "agents"
+  | "board"
   | "games"
   | "network"
   | "table"
@@ -88,7 +92,20 @@ export function doorDays(
   return [...map.values()];
 }
 
-const DOOR_ORDER: VisitDoor[] = ["home", "news", "jobs", "games", "network", "table", "gate", "other"];
+const DOOR_ORDER: VisitDoor[] = [
+  "home",
+  "news",
+  "jobs",
+  "companies",
+  "contracts",
+  "agents",
+  "board",
+  "games",
+  "network",
+  "table",
+  "gate",
+  "other",
+];
 
 export function lastSeen(
   days: { day: string; userIds: string[] }[],
@@ -144,7 +161,20 @@ export function visitKey(kind: VisitKind, id: string) {
   return clean ? `${kind === "player" ? "p" : "g"}:${clean}` : "";
 }
 
-const DOORS: VisitDoor[] = ["home", "news", "jobs", "games", "network", "table", "gate", "other"];
+const DOORS: VisitDoor[] = [
+  "home",
+  "news",
+  "jobs",
+  "companies",
+  "contracts",
+  "agents",
+  "board",
+  "games",
+  "network",
+  "table",
+  "gate",
+  "other",
+];
 
 export function parseVisitDoor(raw: string): VisitDoor {
   const door = (raw ?? "").trim().toLowerCase();
@@ -156,6 +186,10 @@ export function visitDoor(path: string): VisitDoor {
   if (clean === "/") return "home";
   if (clean === "/news" || clean.startsWith("/news/")) return "news";
   if (clean === "/jobs" || clean.startsWith("/jobs/") || clean === "/manage") return "jobs";
+  if (clean === "/companies" || clean.startsWith("/companies/")) return "companies";
+  if (clean === "/contracts" || clean.startsWith("/contracts/")) return "contracts";
+  if (clean === "/atrium" || clean.startsWith("/atrium/")) return "agents";
+  if (clean === "/board" || clean.startsWith("/board/")) return "board";
   if (clean === "/wait" || clean.startsWith("/wait/")) return "games";
   if (clean === "/network" || clean.startsWith("/network/")) return "network";
   if (clean.startsWith("/rooms/") || clean.startsWith("/take/")) return "table";

@@ -14,6 +14,7 @@ import {
   cashImpliedCents,
   dailySitNote,
   nextSitGrantNote,
+  pageOpenMustWrite,
   returnSit,
   sitClickSuffix,
   sitFromClickNote,
@@ -139,4 +140,48 @@ test("click notes carry the sit portion so a restart can return it", () => {
   assert.equal(sitFromClickNote("Clicked Crimson in Classic #3"), 0);
   assert.equal(sitFromClickNote(`Clicked Crimson in Classic #3${sitClickSuffix(100)}`), 100);
   assert.equal(sitShortMessage(500, 100), "Sit chips do not cover this table. Add USDT to sit.");
+});
+
+test("a page open writes only when a chip or an invite code is still missing", () => {
+  const at = 1_700_000_000_000;
+  const day = dayIndex(at);
+  const ready = {
+    txs: [
+      { playerId: "p1", type: "bonus", note: FIRST_SIT_NOTE },
+      { playerId: "p1", type: "bonus", note: dailySitNote(day) },
+    ],
+  };
+  const seat = player({ inviteCode: "abcd" });
+  assert.equal(pageOpenMustWrite(ready, seat, at), false);
+  assert.equal(pageOpenMustWrite({ txs: [] }, seat, at), true);
+  assert.equal(
+    pageOpenMustWrite(
+      { txs: [{ playerId: "p1", type: "bonus", note: FIRST_SIT_NOTE }] },
+      seat,
+      at,
+    ),
+    true,
+  );
+  assert.equal(pageOpenMustWrite(ready, player({ inviteCode: "ab" }), at), true);
+  assert.equal(
+    pageOpenMustWrite(ready, player({ inviteCode: "abcd", invitedBy: undefined }), at),
+    true,
+  );
+  assert.equal(
+    pageOpenMustWrite({ txs: [] }, player({ inviteCode: "abcd", closedAt: 1 }), at),
+    false,
+  );
+  assert.equal(
+    pageOpenMustWrite(
+      { txs: [] },
+      player({
+        id: "house",
+        username: "house",
+        email: "house@huepot.internal",
+        inviteCode: "",
+      }),
+      at,
+    ),
+    false,
+  );
 });

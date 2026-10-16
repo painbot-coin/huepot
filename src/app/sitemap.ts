@@ -42,8 +42,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  // Real takes are the only durable public content the house produces. Guest
-  // tables are left out: they fall when their live time ends.
+  // A production build writes the door list and does not wait on the books.
+  // Takes and headlines fill in on the next pass. Guest tables stay out:
+  // they fall when their live time ends.
+  if (process.env.HUEPOT_BUILD === "1") return pages;
+
   try {
     const takes = await listSettledRounds(undefined, 80, "take");
     for (const row of takes) {

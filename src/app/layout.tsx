@@ -85,18 +85,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${outfit.variable} ${cinzel.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <link
-          href="https://chatzy-kb-store.s3.amazonaws.com/icons/5ab07987-b5db-477c-82ff-1287e0883acb"
-          rel="stylesheet"
-        />
-        <script
-          className="chatzy_widget_script"
-          defer
-          id="38f024d0-53cf-4388-8570-6c76bd34f293"
-          src="https://chatzy-kb-store.s3.amazonaws.com/icons/56706cc4-b3ba-4eba-9610-f2fb07008a5c"
-        />
-      </head>
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <InitColorSchemeScript attribute="data-mui-color-scheme" defaultMode="dark" />
         <MuiRoot>

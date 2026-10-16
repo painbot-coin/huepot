@@ -15,7 +15,7 @@ PREV=".next-prev"
 
 echo "building into $STAGE"
 rm -rf "$STAGE"
-NEXT_DIST_DIR="$STAGE" npm run build 2>&1 | tail -3
+NEXT_DIST_DIR="$STAGE" HUEPOT_BUILD=1 npm run build 2>&1 | tail -3
 
 if [ ! -f "$STAGE/BUILD_ID" ]; then
   echo "build produced no BUILD_ID, leaving the running version alone"

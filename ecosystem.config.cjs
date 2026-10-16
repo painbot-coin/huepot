@@ -11,7 +11,7 @@ module.exports = {
         NODE_ENV: "production",
         PORT: "3000",
         PRODUCT_MODE: "1",
-        APP_VERSION: "3.0.1",
+        APP_VERSION: "3.0.3",
       },
     },
   ],

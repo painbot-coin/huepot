@@ -1,6 +1,6 @@
 # Huepot UI — grow into a deep fantasy house
 
-Live: https://huepot.net · product **v3.0.1**.
+Live: https://huepot.net · product **v3.0.3**.
 
 This is the look-and-feel plan. The rule stays the same: same price, biggest color takes. The interface grows until Huepot feels like one house you enter — not a SaaS site with a fancy pit in the middle.
 
@@ -2421,6 +2421,18 @@ Snake keeps the same loop. A step that closes on the food is taken when it stays
 Break clears a full wall. While bricks are still up, the return off the pad keeps its line. When only a few remain, the pad sends the gold into a brick it can reach. The next ball is served with the pad already on the column where that ball comes down. The pot stays on Classic.
 
 **Stay on the house.** The stack styles have to look different in one minute. USDT is only to buy a priced file. The pot stays on Classic.
+
+## Phase 196 — a page open does not write (3.0.3)
+
+A signed-in seat opening a page used to take the write lane, copy the books, and ask about a sit chip that was already stored. That held the house. A page open now only reads, unless a chip, an invite code, or a wallet still has to be written. The chat mark loads after the hall is on the screen. A guest stays a guest. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
+
+## Phase 195 — the desk names the rail (3.0.2)
+
+Companies, Contracts, Agents, and Leaderboard are their own doors on the manage desk. A visit already filed as Other stays Other. A build writes the door list into the sitemap and does not wait on the books. Takes and headlines fill in on the next pass. A guest stays a count. The phone dock stays as it is. The vault amount stays off the desk. The house does not mint a wage. The pot stays on Classic.
+
+**Stay on the house.** The house does not mint a wage. No practice funds. No HUE/USDT pool. The pot stays on Classic.
 
 ## Phase 194 — a contract is a door (3.0.1)
 

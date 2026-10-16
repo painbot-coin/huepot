@@ -30,6 +30,10 @@ test("doors stay coarse — no raw path on the desk", () => {
   assert.equal(visitDoor("/news/abc"), "news");
   assert.equal(visitDoor("/jobs/you"), "jobs");
   assert.equal(visitDoor("/manage"), "jobs");
+  assert.equal(visitDoor("/companies/acme"), "companies");
+  assert.equal(visitDoor("/contracts/pact"), "contracts");
+  assert.equal(visitDoor("/atrium/developers"), "agents");
+  assert.equal(visitDoor("/board"), "board");
   assert.equal(visitDoor("/wait/store"), "games");
   assert.equal(visitDoor("/network/people"), "network");
   assert.equal(visitDoor("/rooms/classic"), "table");

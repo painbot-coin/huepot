@@ -9,6 +9,39 @@ export function dailySitNote(day: number) {
   return `Daily sit ${day}`;
 }
 
+function houseSeat(user: { id?: string; username?: string; email?: string }) {
+  return (
+    user.id === "house" ||
+    user.username?.toLowerCase() === "house" ||
+    user.email?.toLowerCase() === "house@huepot.internal"
+  );
+}
+
+/**
+ * Opening a page writes only when a sit chip or an invite code still has to
+ * be stored. A chip already in the books stays a read.
+ */
+export function pageOpenMustWrite(
+  store: { txs: { playerId: string; type: string; note: string }[] },
+  user: User,
+  at = Date.now(),
+) {
+  if (user.invitedBy === undefined) return true;
+  if (houseSeat(user)) return user.inviteCode == null;
+  const code = (user.inviteCode || "").trim().replace(/[^a-zA-Z0-9]/g, "");
+  if (code.length < 4) return true;
+  if (user.closedAt) return false;
+  if (user.bonus == null) return true;
+  const notes = new Set(
+    store.txs
+      .filter((tx) => tx.playerId === user.id && tx.type === "bonus")
+      .map((tx) => tx.note),
+  );
+  if (!notes.has(FIRST_SIT_NOTE)) return true;
+  if (!notes.has(dailySitNote(dayIndex(at)))) return true;
+  return false;
+}
+
 export function sitClickSuffix(sit: number) {
   return sit > 0 ? ` · sit:${sit}` : "";
 }

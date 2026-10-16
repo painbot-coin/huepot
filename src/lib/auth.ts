@@ -27,6 +27,7 @@ import { withdrawQueuedMail } from "./email-copy";
 import { applyInviteOnSignup, ensureInviteCode } from "./referrals";
 import { toPublicUser } from "./public-user";
 import { ensureSitChips } from "./bonus";
+import { pageOpenMustWrite } from "./sit-chips";
 import { withStore, withStoreRead } from "./store";
 import type { PublicUser, StoreData, User } from "./types";
 import { publicWallets, ensureUserWallets } from "./wallets";
@@ -408,6 +409,16 @@ export async function clearSessionCookie() {
 export async function getHeaderUser() {
   const token = await getSessionToken();
   if (!token) return null;
+  const glance = await withStoreRead((store) => {
+    const user = userFromToken(store, token);
+    if (!user) return null;
+    if (pageOpenMustWrite(store, user) || !user.wallets?.[LIVE_CHAIN_ID]) {
+      return { write: true as const };
+    }
+    return { write: false as const, user: toPublicUser(user, [], store) };
+  });
+  if (!glance) return null;
+  if (!glance.write) return glance.user;
   return withStore(async (store) => {
     const user = userFromToken(store, token);
     if (!user) return null;
